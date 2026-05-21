@@ -1,7 +1,16 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../lib/useAuth';
+import { useNotifications } from '../lib/useNotifications';
+import { useBirthdays } from '../lib/useBirthdays';
+import BirthdayBanner from '../components/BirthdayBanner';
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }: { navigation?: any }) {
+  const { user, isLoggedIn } = useAuth();
+  const { todayBirthdays } = useBirthdays();
+
+  // Registra push token se for líder/admin
+  useNotifications(user?.id);
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -21,7 +30,15 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
       <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
+
+        {/* ── Banner de Aniversário ─────────────────────────────────────── */}
+        {isLoggedIn && todayBirthdays.length > 0 && (
+          <BirthdayBanner birthdays={todayBirthdays} />
+        )}
+
+        {/* ── Versículo do dia ─────────────────────────────────────────────── */}
         <View style={styles.versiculo}>
           <Text style={styles.versiculoLabel}>Versiculo do dia</Text>
           <Text style={styles.versiculoTexto}>
@@ -39,6 +56,8 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ── Ao vivo ──────────────────────────────────────────────────────── */}
         <View style={styles.secaoHeader}>
           <Text style={styles.secaoTitulo}>Ao vivo agora</Text>
           <View style={styles.liveBadge}>
@@ -56,6 +75,8 @@ export default function HomeScreen() {
           </View>
           <Ionicons name="chevron-forward" size={18} color="#8B83D4" />
         </TouchableOpacity>
+
+        {/* ── Acesso Rápido ─────────────────────────────────────────────────── */}
         <Text style={styles.secaoTitulo}>Acesso rapido</Text>
         <View style={styles.quickGrid}>
           <TouchableOpacity style={styles.quickBtn}>
@@ -75,6 +96,28 @@ export default function HomeScreen() {
             <Text style={styles.quickTexto}>Grupos</Text>
           </TouchableOpacity>
         </View>
+
+        {/* ── Card Jovens ───────────────────────────────────────────────────── */}
+        <TouchableOpacity style={styles.jovensCard} activeOpacity={0.85}>
+          <View style={styles.jovensCardLeft}>
+            <View style={styles.jovensIcon}>
+              <Ionicons name="flame" size={26} color="#F5C842" />
+            </View>
+            <View>
+              <Text style={styles.jovensCardLabel}>Ministério</Text>
+              <Text style={styles.jovensCardTitle}>Jovens Peniel</Text>
+              <Text style={styles.jovensCardSub}>Eventos · Devocional · Comunidade</Text>
+            </View>
+          </View>
+          <View style={styles.jovensCardRight}>
+            <View style={styles.jovensEventoBadge}>
+              <Text style={styles.jovensEventoBadgeText}>2 eventos</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.4)" />
+          </View>
+        </TouchableOpacity>
+
+        {/* ── Próximos eventos ─────────────────────────────────────────────── */}
         <Text style={styles.secaoTitulo}>Proximos eventos</Text>
         <View style={styles.card}>
           <View style={styles.eventoRow}>
@@ -118,18 +161,19 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.eventoRow, { borderBottomWidth: 0 }]}>
             <View style={styles.eventoData}>
-              <Text style={styles.eventoDia}>16</Text>
+              <Text style={styles.eventoDia}>18</Text>
               <Text style={styles.eventoMes}>Mai</Text>
             </View>
             <View style={styles.eventoInfo}>
-              <Text style={styles.eventoNome}>Reuniao de Jovens</Text>
-              <Text style={styles.eventoMeta}>Sabado - 19h - Nas casas</Text>
+              <Text style={styles.eventoNome}>Encontro de Jovens</Text>
+              <Text style={styles.eventoMeta}>Sabado - 18h - Templo Principal</Text>
             </View>
-            <View style={styles.tagCasa}>
-              <Text style={styles.tagCasaTexto}>Casa</Text>
+            <View style={styles.tagJovens}>
+              <Text style={styles.tagJovensTexto}>🔥 Jovens</Text>
             </View>
           </View>
         </View>
+
         <View style={{ height: 20 }} />
       </ScrollView>
     </View>
@@ -146,6 +190,8 @@ const styles = StyleSheet.create({
   headerIcones: { flexDirection: 'row', gap: 10 },
   iconeBtn: { padding: 4 },
   scroll: { flex: 1, padding: 14 },
+
+  // Versículo
   versiculo: { backgroundColor: '#1A1740', borderRadius: 16, padding: 20, marginBottom: 16 },
   versiculoLabel: { fontSize: 11, fontWeight: '500', color: '#F5C842', letterSpacing: 1, marginBottom: 8 },
   versiculoTexto: { fontSize: 14, color: 'rgba(255,255,255,0.9)', lineHeight: 22, fontStyle: 'italic' },
@@ -155,6 +201,8 @@ const styles = StyleSheet.create({
   versiculoBtnTexto: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
   versiculoBtnDourado: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(245,200,66,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   versiculoBtnDouradoTexto: { fontSize: 12, color: '#F5C842' },
+
+  // Ao vivo
   secaoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   secaoTitulo: { fontSize: 14, fontWeight: '500', color: '#1A1740', marginBottom: 10 },
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E84B1A', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
@@ -165,9 +213,37 @@ const styles = StyleSheet.create({
   liveInfo: { flex: 1 },
   liveNome: { fontSize: 13, fontWeight: '500', color: '#1A1740' },
   liveMeta: { fontSize: 11, color: '#8B83D4', marginTop: 2 },
+
+  // Acesso rápido
   quickGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   quickBtn: { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 12, alignItems: 'center', gap: 5, borderWidth: 0.5, borderColor: 'rgba(83,74,183,0.13)' },
   quickTexto: { fontSize: 10, fontWeight: '500', color: '#534AB7' },
+
+  // Card Jovens
+  jovensCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#1A1740', borderRadius: 16, padding: 16, marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(108,61,232,0.4)',
+  },
+  jovensCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
+  jovensIcon: {
+    width: 52, height: 52, borderRadius: 14,
+    backgroundColor: 'rgba(108,61,232,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(108,61,232,0.5)',
+  },
+  jovensCardLabel: { fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 1 },
+  jovensCardTitle: { fontSize: 16, fontWeight: '800', color: '#fff', marginTop: 1 },
+  jovensCardSub: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 3 },
+  jovensCardRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  jovensEventoBadge: {
+    backgroundColor: 'rgba(108,61,232,0.3)', paddingHorizontal: 10,
+    paddingVertical: 4, borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(108,61,232,0.5)',
+  },
+  jovensEventoBadgeText: { fontSize: 11, color: '#B99EFF', fontWeight: '700' },
+
+  // Eventos
   card: { backgroundColor: '#fff', borderRadius: 16, borderWidth: 0.5, borderColor: 'rgba(83,74,183,0.13)', marginBottom: 16, overflow: 'hidden' },
   eventoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderBottomWidth: 0.5, borderBottomColor: 'rgba(83,74,183,0.08)' },
   eventoData: { backgroundColor: '#EEEDFE', borderRadius: 10, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -182,4 +258,6 @@ const styles = StyleSheet.create({
   tagOnlineTexto: { fontSize: 10, fontWeight: '500', color: '#085041' },
   tagCasa: { backgroundColor: '#FEF6DC', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
   tagCasaTexto: { fontSize: 10, fontWeight: '500', color: '#633806' },
+  tagJovens: { backgroundColor: 'rgba(108,61,232,0.12)', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  tagJovensTexto: { fontSize: 10, fontWeight: '700', color: '#6C3DE8' },
 });

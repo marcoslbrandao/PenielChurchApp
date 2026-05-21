@@ -5,8 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from './screens/HomeScreen';
 import BibleScreen from './screens/BibleScreen';
 import AgendaScreen from './screens/AgendaScreen';
-import OfertaScreen from './screens/OfertaScreen';
 import PerfilScreen from './screens/PerfilScreen';
+import MidiaScreen from './screens/MidiaScreen';
+import AreaMembroScreen from './screens/AreaMembroScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,7 +22,8 @@ export default function App() {
             borderTopColor: 'rgba(255,255,255,0.08)',
           },
           tabBarActiveTintColor: '#F5C842',
-          tabBarInactiveTintColor: 'rgba(255,255,255,0.35)',
+          tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         }}
       >
         <Tab.Screen
@@ -52,11 +54,20 @@ export default function App() {
           }}
         />
         <Tab.Screen
-          name="Oferta"
-          component={OfertaScreen}
+          name="Mídia"
+          component={MidiaScreen}
           options={{
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="heart-outline" size={size} color={color} />
+              <Ionicons name="play-circle-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Membros"
+          component={AreaMembroScreen}
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="people-outline" size={size} color={color} />
             ),
           }}
         />

@@ -70,8 +70,7 @@ async function registerForPushNotifications(userId: string) {
   }
 
   // Pega o token Expo Push
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId
-    ?? Constants.easConfig?.projectId;
+  const projectId = 'f53e9e07-9556-4ea8-80e0-da4487b38e56';
 
   if (!projectId) {
     console.log('projectId não encontrado — configure em app.json');

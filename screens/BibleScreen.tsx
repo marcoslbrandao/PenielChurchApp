@@ -1,84 +1,82 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Linking, Alert, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Share, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 
-// ─── Versões ──────────────────────────────────────────────────────────────────
+// ─── Versões com API IDs ──────────────────────────────────────────────────────
+// bible-api.com suporta: almeida, kjv, rv1960, lsg
 const versoes = [
-  { sigla: 'NVI', nome: 'Nova Versão Internacional', idioma: '🇧🇷 Português', apiId: 'almeida' },
-  { sigla: 'ARC', nome: 'Almeida Revista e Corrigida', idioma: '🇧🇷 Português', apiId: 'almeida' },
-  { sigla: 'NIV', nome: 'New International Version', idioma: '🇬🇧 English', apiId: 'kjv' },
-  { sigla: 'KJV', nome: 'King James Version', idioma: '🇬🇧 English', apiId: 'kjv' },
-  { sigla: 'NLT', nome: 'New Living Translation', idioma: '🇬🇧 English', apiId: 'kjv' },
-  { sigla: 'RVR', nome: 'Reina Valera Revisada', idioma: '🇪🇸 Español', apiId: 'rv1960' },
-  { sigla: 'LSG', nome: 'Louis Segond', idioma: '🇫🇷 Français', apiId: 'lsg' },
+  { sigla: 'Almeida', nome: 'Almeida Rev. e Corrigida', idioma: '🇧🇷 Português', apiId: 'almeida' },
+  { sigla: 'KJV',     nome: 'King James Version',        idioma: '🇬🇧 English',   apiId: 'kjv'     },
+  { sigla: 'RV1960',  nome: 'Reina Valera 1960',          idioma: '🇪🇸 Español',   apiId: 'rv1960'  },
+  { sigla: 'LSG',     nome: 'Louis Segond',               idioma: '🇫🇷 Français',  apiId: 'lsg'     },
 ];
 
-// ─── Livros completos ─────────────────────────────────────────────────────────
-const livrosAT = [
-  { nome: 'Gênesis', caps: 50, slug: 'genesis' },
-  { nome: 'Êxodo', caps: 40, slug: 'exodus' },
-  { nome: 'Levítico', caps: 27, slug: 'leviticus' },
-  { nome: 'Números', caps: 36, slug: 'numbers' },
-  { nome: 'Deuteronômio', caps: 34, slug: 'deuteronomy' },
-  { nome: 'Josué', caps: 24, slug: 'joshua' },
-  { nome: 'Juízes', caps: 21, slug: 'judges' },
-  { nome: 'Rute', caps: 4, slug: 'ruth' },
-  { nome: '1 Samuel', caps: 31, slug: '1+samuel' },
-  { nome: '2 Samuel', caps: 24, slug: '2+samuel' },
-  { nome: '1 Reis', caps: 22, slug: '1+kings' },
-  { nome: '2 Reis', caps: 25, slug: '2+kings' },
-  { nome: '1 Crônicas', caps: 29, slug: '1+chronicles' },
-  { nome: '2 Crônicas', caps: 36, slug: '2+chronicles' },
-  { nome: 'Esdras', caps: 10, slug: 'ezra' },
-  { nome: 'Neemias', caps: 13, slug: 'nehemiah' },
-  { nome: 'Ester', caps: 10, slug: 'esther' },
-  { nome: 'Jó', caps: 42, slug: 'job' },
-  { nome: 'Salmos', caps: 150, slug: 'psalms' },
-  { nome: 'Provérbios', caps: 31, slug: 'proverbs' },
-  { nome: 'Eclesiastes', caps: 12, slug: 'ecclesiastes' },
-  { nome: 'Cantares', caps: 8, slug: 'song+of+solomon' },
-  { nome: 'Isaías', caps: 66, slug: 'isaiah' },
-  { nome: 'Jeremias', caps: 52, slug: 'jeremiah' },
-  { nome: 'Lamentações', caps: 5, slug: 'lamentations' },
-  { nome: 'Ezequiel', caps: 48, slug: 'ezekiel' },
-  { nome: 'Daniel', caps: 12, slug: 'daniel' },
-  { nome: 'Oséias', caps: 14, slug: 'hosea' },
-  { nome: 'Joel', caps: 3, slug: 'joel' },
-  { nome: 'Amós', caps: 9, slug: 'amos' },
-  { nome: 'Jonas', caps: 4, slug: 'jonah' },
-  { nome: 'Miquéias', caps: 7, slug: 'micah' },
-  { nome: 'Habacuque', caps: 3, slug: 'habakkuk' },
-  { nome: 'Malaquias', caps: 4, slug: 'malachi' },
+// ─── Livros (multilíngue) ────────────────────────────────────────────────────
+const livrosAT: Livro[] = [
+  { slug: 'genesis',         caps: 50,  pt: 'Gênesis',       en: 'Genesis',         es: 'Génesis',       fr: 'Genèse'        },
+  { slug: 'exodus',          caps: 40,  pt: 'Êxodo',         en: 'Exodus',          es: 'Éxodo',         fr: 'Exode'         },
+  { slug: 'leviticus',       caps: 27,  pt: 'Levítico',      en: 'Leviticus',       es: 'Levítico',      fr: 'Lévitique'     },
+  { slug: 'numbers',         caps: 36,  pt: 'Números',       en: 'Numbers',         es: 'Números',       fr: 'Nombres'       },
+  { slug: 'deuteronomy',     caps: 34,  pt: 'Deuteronômio',  en: 'Deuteronomy',     es: 'Deuteronomio',  fr: 'Deutéronome'   },
+  { slug: 'joshua',          caps: 24,  pt: 'Josué',         en: 'Joshua',          es: 'Josué',         fr: 'Josué'         },
+  { slug: 'judges',          caps: 21,  pt: 'Juízes',        en: 'Judges',          es: 'Jueces',        fr: 'Juges'         },
+  { slug: 'ruth',            caps: 4,   pt: 'Rute',          en: 'Ruth',            es: 'Rut',           fr: 'Ruth'          },
+  { slug: '1+samuel',        caps: 31,  pt: '1 Samuel',      en: '1 Samuel',        es: '1 Samuel',      fr: '1 Samuel'      },
+  { slug: '2+samuel',        caps: 24,  pt: '2 Samuel',      en: '2 Samuel',        es: '2 Samuel',      fr: '2 Samuel'      },
+  { slug: '1+kings',         caps: 22,  pt: '1 Reis',        en: '1 Kings',         es: '1 Reyes',       fr: '1 Rois'        },
+  { slug: '2+kings',         caps: 25,  pt: '2 Reis',        en: '2 Kings',         es: '2 Reyes',       fr: '2 Rois'        },
+  { slug: '1+chronicles',    caps: 29,  pt: '1 Crônicas',    en: '1 Chronicles',    es: '1 Crónicas',    fr: '1 Chroniques'  },
+  { slug: '2+chronicles',    caps: 36,  pt: '2 Crônicas',    en: '2 Chronicles',    es: '2 Crónicas',    fr: '2 Chroniques'  },
+  { slug: 'ezra',            caps: 10,  pt: 'Esdras',        en: 'Ezra',            es: 'Esdras',        fr: 'Esdras'        },
+  { slug: 'nehemiah',        caps: 13,  pt: 'Neemias',       en: 'Nehemiah',        es: 'Nehemías',      fr: 'Néhémie'       },
+  { slug: 'esther',          caps: 10,  pt: 'Ester',         en: 'Esther',          es: 'Ester',         fr: 'Esther'        },
+  { slug: 'job',             caps: 42,  pt: 'Jó',            en: 'Job',             es: 'Job',           fr: 'Job'           },
+  { slug: 'psalms',          caps: 150, pt: 'Salmos',        en: 'Psalms',          es: 'Salmos',        fr: 'Psaumes'       },
+  { slug: 'proverbs',        caps: 31,  pt: 'Provérbios',    en: 'Proverbs',        es: 'Proverbios',    fr: 'Proverbes'     },
+  { slug: 'ecclesiastes',    caps: 12,  pt: 'Eclesiastes',   en: 'Ecclesiastes',    es: 'Eclesiastés',   fr: 'Ecclésiaste'   },
+  { slug: 'song+of+solomon', caps: 8,   pt: 'Cantares',      en: 'Song of Solomon', es: 'Cantares',      fr: 'Cantique'      },
+  { slug: 'isaiah',          caps: 66,  pt: 'Isaías',        en: 'Isaiah',          es: 'Isaías',        fr: 'Ésaïe'         },
+  { slug: 'jeremiah',        caps: 52,  pt: 'Jeremias',      en: 'Jeremiah',        es: 'Jeremías',      fr: 'Jérémie'       },
+  { slug: 'lamentations',    caps: 5,   pt: 'Lamentações',   en: 'Lamentations',    es: 'Lamentaciones', fr: 'Lamentations'  },
+  { slug: 'ezekiel',         caps: 48,  pt: 'Ezequiel',      en: 'Ezekiel',         es: 'Ezequiel',      fr: 'Ézéchiel'      },
+  { slug: 'daniel',          caps: 12,  pt: 'Daniel',        en: 'Daniel',          es: 'Daniel',        fr: 'Daniel'        },
+  { slug: 'hosea',           caps: 14,  pt: 'Oséias',        en: 'Hosea',           es: 'Oseas',         fr: 'Osée'          },
+  { slug: 'joel',            caps: 3,   pt: 'Joel',          en: 'Joel',            es: 'Joel',          fr: 'Joël'          },
+  { slug: 'amos',            caps: 9,   pt: 'Amós',          en: 'Amos',            es: 'Amós',          fr: 'Amos'          },
+  { slug: 'jonah',           caps: 4,   pt: 'Jonas',         en: 'Jonah',           es: 'Jonás',         fr: 'Jonas'         },
+  { slug: 'micah',           caps: 7,   pt: 'Miquéias',      en: 'Micah',           es: 'Miqueas',       fr: 'Michée'        },
+  { slug: 'habakkuk',        caps: 3,   pt: 'Habacuque',     en: 'Habakkuk',        es: 'Habacuc',       fr: 'Habacuc'       },
+  { slug: 'malachi',         caps: 4,   pt: 'Malaquias',     en: 'Malachi',         es: 'Malaquías',     fr: 'Malachie'      },
 ];
 
-const livrosNT = [
-  { nome: 'Mateus', caps: 28, slug: 'matthew' },
-  { nome: 'Marcos', caps: 16, slug: 'mark' },
-  { nome: 'Lucas', caps: 24, slug: 'luke' },
-  { nome: 'João', caps: 21, slug: 'john' },
-  { nome: 'Atos', caps: 28, slug: 'acts' },
-  { nome: 'Romanos', caps: 16, slug: 'romans' },
-  { nome: '1 Coríntios', caps: 16, slug: '1+corinthians' },
-  { nome: '2 Coríntios', caps: 13, slug: '2+corinthians' },
-  { nome: 'Gálatas', caps: 6, slug: 'galatians' },
-  { nome: 'Efésios', caps: 6, slug: 'ephesians' },
-  { nome: 'Filipenses', caps: 4, slug: 'philippians' },
-  { nome: 'Colossenses', caps: 4, slug: 'colossians' },
-  { nome: '1 Tessalonicenses', caps: 5, slug: '1+thessalonians' },
-  { nome: '2 Tessalonicenses', caps: 3, slug: '2+thessalonians' },
-  { nome: '1 Timóteo', caps: 6, slug: '1+timothy' },
-  { nome: '2 Timóteo', caps: 4, slug: '2+timothy' },
-  { nome: 'Tito', caps: 3, slug: 'titus' },
-  { nome: 'Filemom', caps: 1, slug: 'philemon' },
-  { nome: 'Hebreus', caps: 13, slug: 'hebrews' },
-  { nome: 'Tiago', caps: 5, slug: 'james' },
-  { nome: '1 Pedro', caps: 5, slug: '1+peter' },
-  { nome: '2 Pedro', caps: 3, slug: '2+peter' },
-  { nome: '1 João', caps: 5, slug: '1+john' },
-  { nome: '2 João', caps: 1, slug: '2+john' },
-  { nome: '3 João', caps: 1, slug: '3+john' },
-  { nome: 'Judas', caps: 1, slug: 'jude' },
-  { nome: 'Apocalipse', caps: 22, slug: 'revelation' },
+const livrosNT: Livro[] = [
+  { slug: 'matthew',         caps: 28, pt: 'Mateus',            en: 'Matthew',         es: 'Mateo',            fr: 'Matthieu'         },
+  { slug: 'mark',            caps: 16, pt: 'Marcos',            en: 'Mark',            es: 'Marcos',           fr: 'Marc'             },
+  { slug: 'luke',            caps: 24, pt: 'Lucas',             en: 'Luke',            es: 'Lucas',            fr: 'Luc'              },
+  { slug: 'john',            caps: 21, pt: 'João',              en: 'John',            es: 'Juan',             fr: 'Jean'             },
+  { slug: 'acts',            caps: 28, pt: 'Atos',              en: 'Acts',            es: 'Hechos',           fr: 'Actes'            },
+  { slug: 'romans',          caps: 16, pt: 'Romanos',           en: 'Romans',          es: 'Romanos',          fr: 'Romains'          },
+  { slug: '1+corinthians',   caps: 16, pt: '1 Coríntios',       en: '1 Corinthians',   es: '1 Corintios',      fr: '1 Corinthiens'    },
+  { slug: '2+corinthians',   caps: 13, pt: '2 Coríntios',       en: '2 Corinthians',   es: '2 Corintios',      fr: '2 Corinthiens'    },
+  { slug: 'galatians',       caps: 6,  pt: 'Gálatas',           en: 'Galatians',       es: 'Gálatas',          fr: 'Galates'          },
+  { slug: 'ephesians',       caps: 6,  pt: 'Efésios',           en: 'Ephesians',       es: 'Efesios',          fr: 'Éphésiens'        },
+  { slug: 'philippians',     caps: 4,  pt: 'Filipenses',        en: 'Philippians',     es: 'Filipenses',       fr: 'Philippiens'      },
+  { slug: 'colossians',      caps: 4,  pt: 'Colossenses',       en: 'Colossians',      es: 'Colosenses',       fr: 'Colossiens'       },
+  { slug: '1+thessalonians', caps: 5,  pt: '1 Tessalonicenses', en: '1 Thessalonians', es: '1 Tesalonicenses', fr: '1 Thessaloniciens'},
+  { slug: '2+thessalonians', caps: 3,  pt: '2 Tessalonicenses', en: '2 Thessalonians', es: '2 Tesalonicenses', fr: '2 Thessaloniciens'},
+  { slug: '1+timothy',       caps: 6,  pt: '1 Timóteo',         en: '1 Timothy',       es: '1 Timoteo',        fr: '1 Timothée'       },
+  { slug: '2+timothy',       caps: 4,  pt: '2 Timóteo',         en: '2 Timothy',       es: '2 Timoteo',        fr: '2 Timothée'       },
+  { slug: 'titus',           caps: 3,  pt: 'Tito',              en: 'Titus',           es: 'Tito',             fr: 'Tite'             },
+  { slug: 'philemon',        caps: 1,  pt: 'Filemom',           en: 'Philemon',        es: 'Filemón',          fr: 'Philémon'         },
+  { slug: 'hebrews',         caps: 13, pt: 'Hebreus',           en: 'Hebrews',         es: 'Hebreos',          fr: 'Hébreux'          },
+  { slug: 'james',           caps: 5,  pt: 'Tiago',             en: 'James',           es: 'Santiago',         fr: 'Jacques'          },
+  { slug: '1+peter',         caps: 5,  pt: '1 Pedro',           en: '1 Peter',         es: '1 Pedro',          fr: '1 Pierre'         },
+  { slug: '2+peter',         caps: 3,  pt: '2 Pedro',           en: '2 Peter',         es: '2 Pedro',          fr: '2 Pierre'         },
+  { slug: '1+john',          caps: 5,  pt: '1 João',            en: '1 John',          es: '1 Juan',           fr: '1 Jean'           },
+  { slug: '2+john',          caps: 1,  pt: '2 João',            en: '2 John',          es: '2 Juan',           fr: '2 Jean'           },
+  { slug: '3+john',          caps: 1,  pt: '3 João',            en: '3 John',          es: '3 Juan',           fr: '3 Jean'           },
+  { slug: 'jude',            caps: 1,  pt: 'Judas',             en: 'Jude',            es: 'Judas',            fr: 'Jude'             },
+  { slug: 'revelation',      caps: 22, pt: 'Apocalipse',        en: 'Revelation',      es: 'Apocalipsis',      fr: 'Apocalypse'       },
 ];
 
 const VERSICULO_DIA = {
@@ -86,28 +84,170 @@ const VERSICULO_DIA = {
   ref: 'Jeremias 29:11',
 };
 
+type Verso = { book_name: string; chapter: number; verse: number; text: string };
+type Livro = { slug: string; caps: number; pt: string; en: string; es: string; fr: string };
+type LangKey = 'pt' | 'en' | 'es' | 'fr';
+
+function getLangKey(apiId: string): LangKey {
+  if (apiId === 'kjv') return 'en';
+  if (apiId === 'rv1960') return 'es';
+  if (apiId === 'lsg') return 'fr';
+  return 'pt';
+}
+function nomeLivro(livro: Livro, langKey: LangKey): string { return livro[langKey]; }
+
+// ─── Leitor Modal ─────────────────────────────────────────────────────────────
+function LeitorModal({ livro, versao, onClose }: {
+  livro: Livro | null; versao: typeof versoes[0]; onClose: () => void;
+}) {
+  const [capitulo, setCapitulo] = useState(1);
+  const [versos, setVersos] = useState<Verso[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const langKey = getLangKey(versao.apiId);
+  const nomeExibido = livro ? nomeLivro(livro, langKey) : '';
+
+  const buscarCapitulo = async (cap: number) => {
+    if (!livro) return;
+    setLoading(true);
+    setError('');
+    setVersos([]);
+    try {
+      const url = `https://bible-api.com/${livro.slug}+${cap}?translation=${versao.apiId}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.error) { setError('Capítulo não encontrado nesta versão.'); }
+      else { setVersos(data.verses ?? []); }
+    } catch {
+      setError('Sem conexão. Verifique sua internet.');
+    }
+    setLoading(false);
+  };
+
+  // Carrega ao abrir e ao trocar capítulo
+  const [loaded, setLoaded] = useState(false);
+  if (livro && !loaded) { setLoaded(true); buscarCapitulo(1); }
+
+  const mudarCap = (cap: number) => {
+    if (!livro || cap < 1 || cap > livro.caps) return;
+    setCapitulo(cap);
+    buscarCapitulo(cap);
+  };
+
+  if (!livro) return null;
+
+  return (
+    <Modal visible={!!livro} animationType="slide" onRequestClose={onClose}>
+      <View style={lr.container}>
+        {/* Header */}
+        <View style={lr.header}>
+          <TouchableOpacity onPress={onClose} style={lr.closeBtn}>
+            <Ionicons name="chevron-down" size={22} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={lr.headerTitle}>{nomeExibido}</Text>
+            <Text style={lr.headerSub}>Chapter {capitulo} · {versao.sigla}</Text>
+          </View>
+          <TouchableOpacity onPress={() => {
+            const texto = versos.map(v => `${v.verse}. ${v.text.trim()}`).join('\n');
+            Share.share({ message: `${nomeExibido} ${capitulo}\n\n${texto}\n\n— ${versao.sigla}` });
+          }} style={lr.closeBtn}>
+            <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Navegação de capítulos */}
+        <View style={lr.capNav}>
+          <TouchableOpacity style={[lr.capBtn, capitulo <= 1 && lr.capBtnDisabled]} onPress={() => mudarCap(capitulo - 1)}>
+            <Ionicons name="chevron-back" size={18} color={capitulo <= 1 ? 'rgba(255,255,255,0.2)' : '#F5C842'} />
+          </TouchableOpacity>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={lr.capScroll}>
+            {Array.from({ length: livro.caps }, (_, i) => i + 1).map(cap => (
+              <TouchableOpacity
+                key={cap}
+                style={[lr.capNum, cap === capitulo && lr.capNumAtivo]}
+                onPress={() => mudarCap(cap)}
+              >
+                <Text style={[lr.capNumText, cap === capitulo && lr.capNumTextAtivo]}>{cap}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <TouchableOpacity style={[lr.capBtn, capitulo >= livro.caps && lr.capBtnDisabled]} onPress={() => mudarCap(capitulo + 1)}>
+            <Ionicons name="chevron-forward" size={18} color={capitulo >= livro.caps ? 'rgba(255,255,255,0.2)' : '#F5C842'} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Conteúdo */}
+        <ScrollView contentContainerStyle={lr.scroll}>
+          {loading && (
+            <View style={lr.loadingWrap}>
+              <ActivityIndicator color="#F5C842" size="large" />
+              <Text style={lr.loadingText}>Carregando...</Text>
+            </View>
+          )}
+          {!!error && (
+            <View style={lr.errorWrap}>
+              <Ionicons name="alert-circle-outline" size={32} color="rgba(255,255,255,0.4)" />
+              <Text style={lr.errorText}>{error}</Text>
+              <TouchableOpacity style={lr.retryBtn} onPress={() => buscarCapitulo(capitulo)}>
+                <Text style={lr.retryBtnText}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!loading && !error && versos.map(v => (
+            <View key={v.verse} style={lr.versoRow}>
+              <Text style={lr.versoNum}>{v.verse}</Text>
+              <Text style={lr.versoText}>{v.text.trim()}</Text>
+            </View>
+          ))}
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+const lr = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#1A1740' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 55, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: '#1A1740', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  closeBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
+  headerSub: { fontSize: 11, color: '#F5C842', marginTop: 2 },
+  capNav: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#241F5E', paddingVertical: 8 },
+  capBtn: { paddingHorizontal: 12 },
+  capBtnDisabled: { opacity: 0.3 },
+  capScroll: { flexDirection: 'row', gap: 4, paddingHorizontal: 4 },
+  capNum: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
+  capNumAtivo: { backgroundColor: '#F5C842' },
+  capNumText: { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '500' },
+  capNumTextAtivo: { color: '#1A1740', fontWeight: '800' },
+  scroll: { padding: 20 },
+  loadingWrap: { alignItems: 'center', paddingTop: 60, gap: 12 },
+  loadingText: { color: 'rgba(255,255,255,0.5)', fontSize: 14 },
+  errorWrap: { alignItems: 'center', paddingTop: 60, gap: 12 },
+  errorText: { color: 'rgba(255,255,255,0.5)', fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  retryBtn: { backgroundColor: 'rgba(245,200,66,0.2)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginTop: 8 },
+  retryBtnText: { color: '#F5C842', fontWeight: '600' },
+  versoRow: { flexDirection: 'row', marginBottom: 12, gap: 10 },
+  versoNum: { fontSize: 11, color: '#F5C842', fontWeight: '700', width: 22, paddingTop: 2 },
+  versoText: { flex: 1, fontSize: 17, color: 'rgba(255,255,255,0.9)', lineHeight: 28 },
+});
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function BibleScreen() {
   const [busca, setBusca] = useState('');
   const [aba, setAba] = useState<'AT' | 'NT'>('AT');
   const [versaoSelecionada, setVersaoSelecionada] = useState(versoes[0]);
-  const [modalVisivel, setModalVisivel] = useState(false);
+  const [modalVersoes, setModalVersoes] = useState(false);
+  const [livroAberto, setLivroAberto] = useState<Livro | null>(null);
 
   const livros = aba === 'AT' ? livrosAT : livrosNT;
+  const langKey = getLangKey(versaoSelecionada.apiId);
   const livrosFiltrados = busca
-    ? [...livrosAT, ...livrosNT].filter(l => l.nome.toLowerCase().includes(busca.toLowerCase()))
+    ? [...livrosAT, ...livrosNT].filter(l => l[langKey].toLowerCase().includes(busca.toLowerCase()))
     : livros;
 
   const idiomas = [...new Set(versoes.map(v => v.idioma))];
-
-  // Abre o livro no bible-api.com
-  const abrirLivro = (livro: { nome: string; slug: string; caps: number }) => {
-    const url = `https://bible-api.com/${livro.slug}+1?translation=${versaoSelecionada.apiId}`;
-    // Abre numa página de leitura amigável
-    const urlLeitura = `https://www.bible.com/pt/bible/129/${livro.slug.toUpperCase()}.1`;
-    Linking.openURL(urlLeitura).catch(() =>
-      Linking.openURL(`https://www.biblegateway.com/passage/?search=${livro.slug}+1&version=${versaoSelecionada.sigla}`)
-    );
-  };
 
   const partilharVersiculo = async () => {
     await Share.share({
@@ -124,7 +264,7 @@ export default function BibleScreen() {
             <Text style={styles.headerSub}>leitura e estudo</Text>
             <Text style={styles.headerTitulo}>Bíblia</Text>
           </View>
-          <TouchableOpacity style={styles.versaoBadge} onPress={() => setModalVisivel(true)}>
+          <TouchableOpacity style={styles.versaoBadge} onPress={() => setModalVersoes(true)}>
             <Text style={styles.bandeiraBadge}>{versaoSelecionada.idioma.split(' ')[0]}</Text>
             <Text style={styles.versaoTexto}>{versaoSelecionada.sigla}</Text>
             <Ionicons name="chevron-down" size={12} color="#F5C842" />
@@ -147,13 +287,13 @@ export default function BibleScreen() {
         </View>
       </View>
 
-      {/* Modal de versões */}
-      <Modal visible={modalVisivel} transparent animationType="slide" onRequestClose={() => setModalVisivel(false)}>
-        <TouchableOpacity style={styles.modalFundo} activeOpacity={1} onPress={() => setModalVisivel(false)}>
+      {/* Modal versões */}
+      <Modal visible={modalVersoes} transparent animationType="slide" onRequestClose={() => setModalVersoes(false)}>
+        <TouchableOpacity style={styles.modalFundo} activeOpacity={1} onPress={() => setModalVersoes(false)}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitulo}>Escolher versão</Text>
-              <TouchableOpacity onPress={() => setModalVisivel(false)}>
+              <TouchableOpacity onPress={() => setModalVersoes(false)}>
                 <Ionicons name="close" size={22} color="#1A1740" />
               </TouchableOpacity>
             </View>
@@ -165,7 +305,7 @@ export default function BibleScreen() {
                     <TouchableOpacity
                       key={versao.sigla}
                       style={[styles.versaoItem, versaoSelecionada.sigla === versao.sigla && styles.versaoItemAtivo]}
-                      onPress={() => { setVersaoSelecionada(versao); setModalVisivel(false); }}
+                      onPress={() => { setVersaoSelecionada(versao); setModalVersoes(false); }}
                     >
                       <View style={styles.versaoItemEsquerda}>
                         <Text style={styles.bandeira}>{versao.idioma.split(' ')[0]}</Text>
@@ -205,10 +345,6 @@ export default function BibleScreen() {
               <Ionicons name="bookmark-outline" size={13} color="#F5C842" />
               <Text style={[styles.versiculoBtnTexto, { color: '#F5C842' }]}>Salvar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.versiculoBtn} onPress={() => Alert.alert('Em breve', 'Notas estarão disponíveis em breve!')}>
-              <Ionicons name="create-outline" size={13} color="rgba(255,255,255,0.7)" />
-              <Text style={styles.versiculoBtnTexto}>Nota</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -226,26 +362,22 @@ export default function BibleScreen() {
           </View>
           <View style={styles.planoLeituras}>
             {[
-              { texto: 'Salmo 23', tempo: '3 min', feito: true, slug: 'psalms+23' },
-              { texto: 'Salmo 24', tempo: '2 min', feito: true, slug: 'psalms+24' },
-              { texto: 'Salmo 25 — hoje', tempo: '4 min', feito: false, slug: 'psalms+25' },
+              { texto: 'Salmo 23', feito: true,  slug: 'psalms', cap: 23 },
+              { texto: 'Salmo 24', feito: true,  slug: 'psalms', cap: 24 },
+              { texto: 'Salmo 25 — hoje', feito: false, slug: 'psalms', cap: 25 },
             ].map((leitura, idx) => (
               <TouchableOpacity
                 key={idx}
                 style={[styles.leituraItem, idx === 2 && { borderBottomWidth: 0 }]}
-                onPress={() => Linking.openURL(`https://www.bible.com/pt/bible/129/PSA.${idx + 23}`)}
+                onPress={() => setLivroAberto(livrosAT.find(l => l.slug === 'psalms') ?? null)}
               >
                 <View style={[styles.check, leitura.feito && styles.checkFeito]}>
                   {leitura.feito
                     ? <Ionicons name="checkmark" size={12} color="#fff" />
-                    : <Ionicons name="ellipse-outline" size={12} color="#534AB7" />
-                  }
+                    : <Ionicons name="ellipse-outline" size={12} color="#534AB7" />}
                 </View>
                 <Text style={[styles.leituraTexto, !leitura.feito && { color: '#534AB7', fontWeight: '500' }]}>
                   {leitura.texto}
-                </Text>
-                <Text style={[styles.leituraTempo, !leitura.feito && { color: '#534AB7' }]}>
-                  {leitura.tempo}
                 </Text>
                 <Ionicons name="chevron-forward" size={14} color="rgba(255,255,255,0.3)" />
               </TouchableOpacity>
@@ -281,12 +413,11 @@ export default function BibleScreen() {
               <TouchableOpacity
                 key={index}
                 style={styles.livroBtn}
-                onPress={() => abrirLivro(livro)}
+                onPress={() => setLivroAberto(livro)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.livroNome}>{livro.nome}</Text>
+                <Text style={styles.livroNome}>{nomeLivro(livro, langKey)}</Text>
                 <Text style={styles.livroCaps}>{livro.caps} cap.</Text>
-                <Ionicons name="open-outline" size={10} color="#8B83D4" style={{ marginTop: 4 }} />
               </TouchableOpacity>
             ))}
           </View>
@@ -294,6 +425,13 @@ export default function BibleScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* Leitor interno */}
+      <LeitorModal
+        livro={livroAberto}
+        versao={versaoSelecionada}
+        onClose={() => setLivroAberto(null)}
+      />
     </View>
   );
 }
@@ -340,7 +478,6 @@ const styles = StyleSheet.create({
   check: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: '#534AB7', alignItems: 'center', justifyContent: 'center' },
   checkFeito: { backgroundColor: '#534AB7', borderColor: '#534AB7' },
   leituraTexto: { flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.8)' },
-  leituraTempo: { fontSize: 11, color: 'rgba(255,255,255,0.4)' },
   abasContainer: { paddingHorizontal: 14 },
   abas: { flexDirection: 'row', backgroundColor: '#EEEDFE', borderRadius: 10, overflow: 'hidden', marginBottom: 12 },
   aba: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 10 },

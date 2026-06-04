@@ -1,10 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, StatusBar, Linking,
+  TextInput, KeyboardAvoidingView, Platform, StatusBar, Linking, Image,
+  ActivityIndicator, RefreshControl, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../lib/useAuth';
+import { supabase } from '../lib/supabase';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -73,26 +76,7 @@ const EVENTOS: Evento[] = [
   },
 ];
 
-const DEVOCIONAIS: Devocional[] = [
-  {
-    id: '1',
-    title: 'Não Desanime — Deus Está no Controle',
-    versiculo: '"Porque sei os planos que tenho para vocês, diz o Senhor, planos de fazê-los prosperar e não de causar dano, planos de dar a vocês esperança e um futuro."',
-    referencia: 'Jeremias 29:11',
-    reflexao: 'Quantas vezes nos sentimos perdidos, sem saber qual caminho tomar? O profeta Jeremias escreveu essas palavras para um povo em exílio — longe de casa, cheio de dúvidas. Mesmo assim, Deus afirma: "Eu tenho um plano para você." Isso não significa que a vida será fácil. Significa que você não está sozinho. Confie no processo, porque quem guia é o Senhor.',
-    autor: 'Pr. Marcos Brandão',
-    date: '13 Mai 2024',
-  },
-  {
-    id: '2',
-    title: 'Força na Fraqueza',
-    versiculo: '"Tudo posso naquele que me fortalece."',
-    referencia: 'Filipenses 4:13',
-    reflexao: 'Paulo escreveu isso de dentro de uma prisão. Não era um grito de super-herói — era a declaração de alguém que aprendeu que a força de Deus se aperfeiçoa na fraqueza. Hoje, quando você sentir que não aguenta mais, lembre: não é sobre sua força. É sobre a Dele em você.',
-    autor: 'Pr. Marcos Brandão',
-    date: '06 Mai 2024',
-  },
-];
+const DEVOCIONAIS: Devocional[] = []; // carregado do Supabase
 
 const CHAT_INIT: ChatMsg[] = [
   { id: '1', author: 'Lucas', text: 'Galera, alguém vai no encontro de sábado? 🙌', time: '15:00', mine: false },
@@ -122,7 +106,36 @@ export default function JovensScreen() {
   const [expandedDev, setExpandedDev] = useState<string | null>('1');
   const [chatMsg, setChatMsg] = useState('');
   const [messages, setMessages] = useState<ChatMsg[]>(CHAT_INIT);
-  const [isMember] = useState(false); // TODO: conectar ao Supabase
+  const { isLoggedIn } = useAuth();
+  const isMember = isLoggedIn;
+
+  // ── Devocionais do Supabase ────────────────────────────────────────────────
+  const [devocionais, setDevocionais] = useState<Devocional[]>([]);
+  const [loadingDev, setLoadingDev] = useState(true);
+  const [refreshingDev, setRefreshingDev] = useState(false);
+
+  const fetchDevocionais = useCallback(async () => {
+    const { data } = await supabase
+      .from('devocionais')
+      .select('*')
+      .order('data', { ascending: false })
+      .limit(10);
+    if (data) {
+      setDevocionais(data.map((d: any) => ({
+        id: d.id,
+        title: d.titulo,
+        versiculo: d.versiculo,
+        referencia: d.referencia,
+        reflexao: d.texto,
+        autor: d.autor ?? 'Peniel Church',
+        date: new Date(d.data).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }),
+      })));
+    }
+    setLoadingDev(false);
+    setRefreshingDev(false);
+  }, []);
+
+  useEffect(() => { fetchDevocionais(); }, [fetchDevocionais]);
   const scrollRef = useRef<ScrollView>(null);
 
   const sendMessage = () => {
@@ -142,10 +155,10 @@ export default function JovensScreen() {
     Linking.openURL(url).catch(() => {});
   };
 
-  const TABS: { id: Tab; icon: string; label: string }[] = [
+  const TABS: { id: Tab; icon: string; label: string; private?: boolean }[] = [
     { id: 'eventos', icon: 'calendar-outline', label: 'Eventos' },
     { id: 'devocional', icon: 'book-outline', label: 'Devocional' },
-    { id: 'chat', icon: 'chatbubbles-outline', label: 'Chat' },
+    { id: 'chat', icon: 'chatbubbles-outline', label: 'Chat', private: true },
     { id: 'louvor', icon: 'musical-notes-outline', label: 'Louvor' },
   ];
 
@@ -155,9 +168,16 @@ export default function JovensScreen() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={s.header}>
-        <View>
-          <Text style={s.headerTitle}>Jovens Peniel</Text>
-          <Text style={s.headerSub}>Ministério de Jovens</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Image
+            source={require('../assets/PenielAlive-Logo.jpg')}
+            style={{ width: 42, height: 42, borderRadius: 21 }}
+            resizeMode="cover"
+          />
+          <View>
+            <Text style={s.headerTitle}>Alive</Text>
+            <Text style={s.headerSub}>Ministério de Jovens</Text>
+          </View>
         </View>
         <View style={s.headerBadge}>
           <Text style={s.headerBadgeText}>🔥 {EVENTOS.filter(e => !e.membersOnly).length} eventos</Text>
@@ -182,9 +202,14 @@ export default function JovensScreen() {
               name={tab.icon as any} size={17}
               color={activeTab === tab.id ? C.primary : C.textMuted}
             />
-            <Text style={[s.tabLabel, activeTab === tab.id && s.tabLabelActive]}>
-              {tab.label}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Text style={[s.tabLabel, activeTab === tab.id && s.tabLabelActive]}>
+                {tab.label}
+              </Text>
+              {tab.private && !isMember && (
+                <Ionicons name="lock-closed" size={8} color={C.textDim} />
+              )}
+            </View>
           </TouchableOpacity>
         ))}
       </View>
@@ -235,49 +260,65 @@ export default function JovensScreen() {
 
       {/* ══ DEVOCIONAL ════════════════════════════════════════════════════════ */}
       {activeTab === 'devocional' && (
-        <ScrollView contentContainerStyle={s.tabContent}>
+        <ScrollView
+          contentContainerStyle={s.tabContent}
+          refreshControl={<RefreshControl refreshing={refreshingDev} onRefresh={() => { setRefreshingDev(true); fetchDevocionais(); }} />}
+        >
           <Text style={s.sectionLabel}>Devocionais da Semana</Text>
-          {DEVOCIONAIS.map(dev => {
-            const isOpen = expandedDev === dev.id;
-            return (
-              <View key={dev.id} style={[s.devCard, isOpen && s.devCardOpen]}>
-                <TouchableOpacity
-                  style={s.devHeader}
-                  onPress={() => setExpandedDev(isOpen ? null : dev.id)}
-                  activeOpacity={0.8}
-                >
-                  <View style={s.devBibleIcon}>
-                    <Ionicons name="book" size={18} color={C.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.devTitle}>{dev.title}</Text>
-                    <Text style={s.devRef}>{dev.referencia} · {dev.date}</Text>
-                  </View>
-                  <Ionicons
-                    name={isOpen ? 'chevron-up' : 'chevron-down'}
-                    size={18} color={C.textMuted}
-                  />
-                </TouchableOpacity>
 
-                {isOpen && (
-                  <View style={s.devBody}>
-                    {/* Versículo */}
-                    <View style={s.versiculoBox}>
-                      <Text style={s.versiculoText}>{dev.versiculo}</Text>
-                      <Text style={s.versiculoRef}>{dev.referencia}</Text>
+          {loadingDev ? (
+            <View style={{ alignItems: 'center', paddingTop: 40, gap: 12 }}>
+              <ActivityIndicator color={C.primary} />
+              <Text style={{ color: C.textMuted, fontSize: 13 }}>Carregando...</Text>
+            </View>
+          ) : devocionais.length === 0 ? (
+            <View style={{ alignItems: 'center', paddingTop: 40, gap: 12 }}>
+              <Ionicons name="book-outline" size={40} color={C.textDim} />
+              <Text style={{ color: C.textMuted, fontSize: 14 }}>Nenhum devocional publicado ainda</Text>
+            </View>
+          ) : (
+            devocionais.map(dev => {
+              const isOpen = expandedDev === dev.id;
+              return (
+                <View key={dev.id} style={[s.devCard, isOpen && s.devCardOpen]}>
+                  <TouchableOpacity
+                    style={s.devHeader}
+                    onPress={() => setExpandedDev(isOpen ? null : dev.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={s.devBibleIcon}>
+                      <Ionicons name="book" size={18} color={C.primary} />
                     </View>
-                    {/* Reflexão */}
-                    <Text style={s.reflexaoText}>{dev.reflexao}</Text>
-                    {/* Autor */}
-                    <View style={s.devAutorRow}>
-                      <Ionicons name="person-circle-outline" size={16} color={C.textMuted} />
-                      <Text style={s.devAutor}>{dev.autor}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.devTitle}>{dev.title}</Text>
+                      <Text style={s.devRef}>{dev.referencia} · {dev.date}</Text>
                     </View>
-                  </View>
-                )}
-              </View>
-            );
-          })}
+                    <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={C.textMuted} />
+                  </TouchableOpacity>
+
+                  {isOpen && (
+                    <View style={s.devBody}>
+                      <View style={s.versiculoBox}>
+                        <Text style={s.versiculoText}>"{dev.versiculo}"</Text>
+                        <Text style={s.versiculoRef}>{dev.referencia}</Text>
+                      </View>
+                      <Text style={s.reflexaoText}>{dev.reflexao}</Text>
+                      <View style={s.devAutorRow}>
+                        <Ionicons name="person-circle-outline" size={16} color={C.textMuted} />
+                        <Text style={s.devAutor}>{dev.autor}</Text>
+                        <TouchableOpacity
+                          style={{ marginLeft: 'auto' }}
+                          onPress={() => Share.share({ message: `${dev.title}\n\n"${dev.versiculo}"\n— ${dev.referencia}\n\n${dev.reflexao}\n\nPeniel Church App` })}
+                        >
+                          <Ionicons name="share-outline" size={16} color={C.textMuted} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          )}
         </ScrollView>
       )}
 

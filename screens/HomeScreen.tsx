@@ -10,9 +10,8 @@ import BirthdayBanner from '../components/BirthdayBanner';
 const YOUTUBE_LIVE_URL = 'https://www.youtube.com/@PenielChurchOfficial/streams';
 const YOUTUBE_CHANNEL  = 'https://www.youtube.com/@PenielChurchOfficial';
 const WHATSAPP_NUMBER  = '447540880456';
-
-// Mude para true quando estiver ao vivo
-const IS_LIVE = false;
+const YOUTUBE_API_KEY  = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
+const CHANNEL_ID       = 'UCeipicy-AS_b66Asu65TBQQ';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function proximaData(diaSemana: number): { dia: number; mes: string } {
@@ -39,8 +38,49 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
 
   // Animação pisca do botão LIVE
   const blink = useRef(new Animated.Value(1)).current;
+
+  // ── Detecção automática de LIVE ───────────────────────────────────────────
+  const [isLive, setIsLive] = useState(false);
+  const [liveTitle, setLiveTitle] = useState('Peniel Church — YouTube');
+
   useEffect(() => {
-    if (!IS_LIVE) return;
+    const checkLive = async () => {
+      try {
+        // Busca vídeos ao vivo do canal
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.items && data.items.length > 0) {
+          setIsLive(true);
+          setLiveTitle(data.items[0].snippet.title);
+        } else {
+          // Fallback: busca vídeos recentes e verifica se é ao vivo
+          const url2 = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&maxResults=1&order=date&type=video&key=${YOUTUBE_API_KEY}`;
+          const res2 = await fetch(url2);
+          const data2 = await res2.json();
+          if (data2.items && data2.items.length > 0) {
+            const snippet = data2.items[0].snippet;
+            if (snippet.liveBroadcastContent === 'live') {
+              setIsLive(true);
+              setLiveTitle(snippet.title);
+            } else {
+              setIsLive(false);
+            }
+          } else {
+            setIsLive(false);
+          }
+        }
+      } catch {
+        setIsLive(false);
+      }
+    };
+    checkLive();
+    // Verifica a cada 2 minutos
+    const interval = setInterval(checkLive, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+  useEffect(() => {
+    if (!isLive) return;
     const anim = Animated.loop(
       Animated.sequence([
         Animated.timing(blink, { toValue: 0.2, duration: 600, useNativeDriver: true }),
@@ -49,9 +89,9 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
     );
     anim.start();
     return () => anim.stop();
-  }, []);
+  }, [isLive]);
 
-  const openYouTube = () => Linking.openURL(IS_LIVE ? YOUTUBE_LIVE_URL : YOUTUBE_CHANNEL);
+  const openYouTube = () => Linking.openURL(isLive ? YOUTUBE_LIVE_URL : YOUTUBE_CHANNEL);
   const openWhatsApp = (msg = '') => {
     const url = `https://wa.me/${WHATSAPP_NUMBER}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`;
     Linking.openURL(url).catch(() => Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.'));
@@ -103,11 +143,14 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
           </Text>
           <Text style={styles.versiculoRef}>Jeremias 29:11 - NVI</Text>
           <View style={styles.versiculoBtns}>
-            <TouchableOpacity style={styles.versiculoBtn}>
+            <TouchableOpacity style={styles.versiculoBtn} onPress={() => {
+              const { Share } = require('react-native');
+              Share.share({ message: '"Porque eu sei os planos que tenho para vocês, planos de prosperidade e não de calamidade."\n\n— Jeremias 29:11 - NVI\n\n📖 Peniel Church App' });
+            }}>
               <Ionicons name="share-outline" size={14} color="rgba(255,255,255,0.7)" />
-              <Text style={styles.versiculoBtnTexto}>Partilhar</Text>
+              <Text style={styles.versiculoBtnTexto}>Compartilhar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.versiculoBtnDourado}>
+            <TouchableOpacity style={styles.versiculoBtnDourado} onPress={() => Alert.alert('Salvo! 🔖', 'Versículo salvo nos seus favoritos.\n\nEm breve você poderá ver todos os versículos salvos no seu Perfil.')}>
               <Ionicons name="bookmark-outline" size={14} color="#F5C842" />
               <Text style={styles.versiculoBtnDouradoTexto}>Salvar</Text>
             </TouchableOpacity>
@@ -117,7 +160,7 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
         {/* ── Ao vivo ──────────────────────────────────────────────────────── */}
         <View style={styles.secaoHeader}>
           <Text style={styles.secaoTitulo}>Ao vivo agora</Text>
-          {IS_LIVE ? (
+          {isLive ? (
             <Animated.View style={[styles.liveBadge, { opacity: blink }]}>
               <View style={styles.livePonto} />
               <Text style={styles.liveTexto}>LIVE</Text>
@@ -129,16 +172,16 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
           )}
         </View>
 
-        <TouchableOpacity style={[styles.liveCard, IS_LIVE && styles.liveCardAtivo]} onPress={openYouTube} activeOpacity={0.8}>
-          <View style={[styles.liveThumb, IS_LIVE && { backgroundColor: '#C0392B' }]}>
-            <Ionicons name="logo-youtube" size={28} color={IS_LIVE ? '#fff' : '#E84B1A'} />
+        <TouchableOpacity style={[styles.liveCard, isLive && styles.liveCardAtivo]} onPress={openYouTube} activeOpacity={0.8}>
+          <View style={[styles.liveThumb, isLive && { backgroundColor: '#C0392B' }]}>
+            <Ionicons name="logo-youtube" size={28} color={isLive ? '#fff' : '#E84B1A'} />
           </View>
           <View style={styles.liveInfo}>
             <Text style={styles.liveNome}>
-              {IS_LIVE ? '🔴 Culto ao Vivo agora!' : 'Peniel Church — YouTube'}
+              {isLive ? `🔴 ${liveTitle}` : 'Peniel Church — YouTube'}
             </Text>
             <Text style={styles.liveMeta}>
-              {IS_LIVE ? 'Toque para assistir ao vivo' : 'Toque para ver nosso canal'}
+              {isLive ? 'Toque para assistir ao vivo' : 'Toque para ver nosso canal'}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color="#8B83D4" />

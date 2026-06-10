@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, StatusBar, Alert,
-  ActivityIndicator, Animated,
+  ActivityIndicator, Animated, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,7 +42,17 @@ export default function AuthScreen() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
-    if (error) Alert.alert('Erro ao entrar', error.message);
+    if (error) {
+      if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+        Alert.alert(
+          'E-mail não confirmado',
+          'Verifique a sua caixa de entrada e clique no link de confirmação que enviámos.\n\nNão recebeu? Verifique a pasta de spam.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Erro ao entrar', error.message);
+      }
+    }
   };
 
   // ── Cadastro ───────────────────────────────────────────────────────────────
@@ -58,8 +68,11 @@ export default function AuthScreen() {
     if (error) {
       Alert.alert('Erro ao cadastrar', error.message);
     } else {
-      // Vai para a tela de código de convite
-      setMode('invite');
+      Alert.alert(
+        'Cadastro realizado! 🎉',
+        'Enviamos um e-mail de confirmação para:\n\n' + email + '\n\nClique no link do e-mail para ativar a sua conta e depois volte aqui para fazer o login.\n\n⚠️ Verifique também a pasta de spam.',
+        [{ text: 'OK, entendi!', onPress: () => setMode('login') }]
+      );
     }
   };
 
@@ -213,9 +226,11 @@ export default function AuthScreen() {
 
           {/* Logo */}
           <View style={s.logoWrap}>
-            <View style={s.logoCircle}>
-              <Ionicons name="flame" size={36} color={C.accent} />
-            </View>
+            <Image
+              source={require('../assets/Peniel Logo.png')}
+              style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 16 }}
+              resizeMode="cover"
+            />
             <Text style={s.appName}>Peniel Church</Text>
             <Text style={s.appSub}>
               {mode === 'login' && 'Entre na sua conta'}

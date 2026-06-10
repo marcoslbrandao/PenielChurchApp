@@ -9,6 +9,7 @@ import MembrosScreen from './MembrosScreen';
 import JovensScreen from './JovensScreen';
 import AdminScreen from './AdminScreen';
 import AuthScreen from './AuthScreen';
+import GruposScreen from './GruposScreen';
 import { useAuth } from '../lib/useAuth';
 
 // ─── Componente de código de convite para visitantes ─────────────────────────
@@ -74,29 +75,6 @@ const C = {
 };
 
 // ─── Placeholder screens ──────────────────────────────────────────────────────
-function GruposScreen() {
-  return (
-    <SafeAreaView style={ph.safe} edges={['top']}>
-      <View style={ph.center}>
-        <Ionicons name="people-outline" size={48} color={C.textMuted} />
-        <Text style={ph.title}>Grupos</Text>
-        <Text style={ph.sub}>Em construção — em breve!</Text>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-function MidiasScreen() {
-  return (
-    <SafeAreaView style={ph.safe} edges={['top']}>
-      <View style={ph.center}>
-        <Ionicons name="share-social-outline" size={48} color={C.textMuted} />
-        <Text style={ph.title}>Mídias</Text>
-        <Text style={ph.sub}>Em construção — em breve!</Text>
-      </View>
-    </SafeAreaView>
-  );
-}
 
 const ph = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
@@ -175,6 +153,15 @@ export default function AreaMembroScreen() {
           tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
         }}
       >
+        <Tab.Screen
+          name="Grupos"
+          component={GruposScreen}
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="people-circle-outline" size={size} color={color} />
+            ),
+          }}
+        />
         <Tab.Screen
           name="Admin"
           component={AdminScreen}

@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Share, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 // ─── Versões com API IDs ──────────────────────────────────────────────────────
 // bible-api.com suporta: almeida, kjv, rv1960, lsg
@@ -124,9 +124,15 @@ function LeitorModal({ livro, versao, onClose }: {
     setLoading(false);
   };
 
-  // Carrega ao abrir e ao trocar capítulo
-  const [loaded, setLoaded] = useState(false);
-  if (livro && !loaded) { setLoaded(true); buscarCapitulo(1); }
+  // Carrega capítulo 1 ao abrir ou trocar de livro
+  useEffect(() => {
+    if (livro) {
+      setCapitulo(1);
+      setVersos([]);
+      setError('');
+      buscarCapitulo(1);
+    }
+  }, [livro?.slug, versao.apiId]);
 
   const mudarCap = (cap: number) => {
     if (!livro || cap < 1 || cap > livro.caps) return;
@@ -339,7 +345,7 @@ export default function BibleScreen() {
           <View style={styles.versiculoBtns}>
             <TouchableOpacity style={styles.versiculoBtn} onPress={partilharVersiculo}>
               <Ionicons name="share-outline" size={13} color="rgba(255,255,255,0.7)" />
-              <Text style={styles.versiculoBtnTexto}>Partilhar</Text>
+              <Text style={styles.versiculoBtnTexto}>Compartilhar</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.versiculoBtn} onPress={() => Alert.alert('Salvo! 🔖', 'Versículo salvo nos seus favoritos.')}>
               <Ionicons name="bookmark-outline" size={13} color="#F5C842" />

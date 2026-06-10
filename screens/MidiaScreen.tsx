@@ -26,7 +26,7 @@ const C = {
 
 type Tab = 'videos' | 'avisos' | 'podcast' | 'social';
 type Aviso = { id: string; titulo: string; texto: string; data: string; tipo: string; };
-type Video = { id: string; title: string; thumbnail: string; publishedAt: string; videoId: string; };
+type Video = { id: string; title: string; thumbnail: string; publishedAt: string; videoId: string; isLive?: boolean; };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function timeAgo(dateStr: string): string {
@@ -59,20 +59,38 @@ export default function MidiaScreen() {
   // ── Busca vídeos do YouTube ──────────────────────────────────────────────────
   const fetchVideos = useCallback(async () => {
     try {
+      // Busca vídeos ao vivo primeiro
+      const liveUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&maxResults=3&key=${YOUTUBE_API_KEY}`;
+      const liveRes = await fetch(liveUrl);
+      const liveData = await liveRes.json();
+
+      // Busca últimos vídeos
       const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&maxResults=10&order=date&type=video&key=${YOUTUBE_API_KEY}`;
       const res = await fetch(url);
       const data = await res.json();
 
       if (data.items && data.items.length > 0) {
-        setVideos(data.items.map((item: any) => ({
+        // Combina lives (primeiro) + vídeos recentes
+        const liveItems = liveData.items ?? [];
+        const allItems = [...liveItems, ...data.items];
+        // Remove duplicatas
+        const seen = new Set();
+        const unique = allItems.filter((item: any) => {
+          const id = item.id.videoId;
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+        setVideos(unique.slice(0, 10).map((item: any) => ({
           id: item.id.videoId,
           videoId: item.id.videoId,
           title: item.snippet.title,
           thumbnail: item.snippet.thumbnails.medium?.url ?? item.snippet.thumbnails.default?.url,
           publishedAt: item.snippet.publishedAt,
+          isLive: item.snippet.liveBroadcastContent === 'live',
         })));
       } else {
-        console.log('YouTube API response:', JSON.stringify(data));
+        console.log('YouTube error:', JSON.stringify(data.error));
       }
     } catch (err) {
       console.log('YouTube fetch error:', err);
@@ -172,6 +190,12 @@ export default function MidiaScreen() {
                   <View style={s.playOverlay}>
                     <Ionicons name="play-circle" size={40} color="rgba(255,255,255,0.9)" />
                   </View>
+                  {video.isLive && (
+                    <View style={s.liveBadge}>
+                      <View style={s.liveDot} />
+                      <Text style={s.liveBadgeText}>AO VIVO</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={s.videoInfo}>
                   <Text style={s.videoTitle} numberOfLines={2}>{video.title}</Text>
@@ -288,10 +312,15 @@ export default function MidiaScreen() {
             </TouchableOpacity>
           ))}
 
-          <View style={s.socialDica}>
-            <Ionicons name="heart" size={16} color="#E1306C" />
-            <Text style={s.socialDicaText}>Siga-nos e ative as notificações para não perder nada!</Text>
-          </View>
+          <TouchableOpacity
+            style={[s.socialDica, { justifyContent: 'center' }]}
+            onPress={() => Linking.openURL('https://www.instagram.com/penielchurchofficial/')}
+          >
+            <Ionicons name="logo-instagram" size={16} color="#E1306C" />
+            <Text style={[s.socialDicaText, { color: '#E1306C', fontWeight: '700' }]}>
+              Seguir no Instagram @penielchurchofficial
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
     </SafeAreaView>
@@ -324,6 +353,9 @@ const s = StyleSheet.create({
   thumbWrap: { position: 'relative' },
   thumb: { width: '100%', height: 190 },
   playOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.2)' },
+  liveBadge: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E84B1A', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
+  liveBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 1 },
   videoInfo: { padding: 12 },
   videoTitle: { fontSize: 14, fontWeight: '600', color: C.text, lineHeight: 20, marginBottom: 6 },
   videoMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },

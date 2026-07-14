@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ const C = {
 type Mode = 'login' | 'signup' | 'reset' | 'invite';
 
 export default function AuthScreen() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>('login');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -38,27 +40,27 @@ export default function AuthScreen() {
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const handleLogin = async () => {
-    if (!email || !password) { Alert.alert('Atenção', 'Preencha e-mail e senha.'); return; }
+    if (!email || !password) { Alert.alert(t('common.atencao'), t('auth.preencherEmailSenha')); return; }
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
         Alert.alert(
-          'E-mail não confirmado',
-          'Verifique a sua caixa de entrada e clique no link de confirmação que enviámos.\n\nNão recebeu? Verifique a pasta de spam.',
-          [{ text: 'OK' }]
+          t('auth.emailNaoConfirmadoTitulo'),
+          t('auth.emailNaoConfirmadoMsg'),
+          [{ text: t('common.ok') }]
         );
       } else {
-        Alert.alert('Erro ao entrar', error.message);
+        Alert.alert(t('auth.erroAoEntrar'), error.message);
       }
     }
   };
 
   // ── Cadastro ───────────────────────────────────────────────────────────────
   const handleSignup = async () => {
-    if (!fullName || !email || !password) { Alert.alert('Atenção', 'Preencha todos os campos.'); return; }
-    if (password.length < 6) { Alert.alert('Atenção', 'A senha deve ter pelo menos 6 caracteres.'); return; }
+    if (!fullName || !email || !password) { Alert.alert(t('common.atencao'), t('auth.preencherTodosCampos')); return; }
+    if (password.length < 6) { Alert.alert(t('common.atencao'), t('auth.senhaMinima')); return; }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email, password,
@@ -66,19 +68,19 @@ export default function AuthScreen() {
     });
     setLoading(false);
     if (error) {
-      Alert.alert('Erro ao cadastrar', error.message);
+      Alert.alert(t('auth.erroAoCadastrar'), error.message);
     } else {
       Alert.alert(
-        'Cadastro realizado! 🎉',
-        'Enviamos um e-mail de confirmação para:\n\n' + email + '\n\nClique no link do e-mail para ativar a sua conta e depois volte aqui para fazer o login.\n\n⚠️ Verifique também a pasta de spam.',
-        [{ text: 'OK, entendi!', onPress: () => setMode('login') }]
+        t('auth.cadastroRealizadoTitulo'),
+        t('auth.cadastroRealizadoMsg', { email }),
+        [{ text: t('auth.okEntendi'), onPress: () => setMode('login') }]
       );
     }
   };
 
   // ── Usar código de convite ─────────────────────────────────────────────────
   const handleInviteCode = async () => {
-    if (!inviteCode.trim()) { setInviteError('Digite o código de convite.'); return; }
+    if (!inviteCode.trim()) { setInviteError(t('auth.digiteCodigoConviteErro')); return; }
     setLoading(true);
     setInviteError('');
 
@@ -89,7 +91,7 @@ export default function AuthScreen() {
     setLoading(false);
 
     if (error || !data?.success) {
-      setInviteError(data?.error ?? 'Código inválido ou expirado.');
+      setInviteError(data?.error ?? t('auth.codigoInvalido'));
     } else {
       setInviteSuccess(true);
       setTimeout(() => {
@@ -102,26 +104,28 @@ export default function AuthScreen() {
   // ── Pular convite (continuar como visitante) ───────────────────────────────
   const handleSkipInvite = () => {
     Alert.alert(
-      'Continuar como visitante?',
-      'Você poderá inserir o código depois no seu Perfil. Sem o código, o acesso à Área do Membro será limitado.',
+      t('auth.continuarVisitanteTitulo'),
+      t('auth.continuarVisitanteMsg'),
       [
-        { text: 'Inserir código', style: 'cancel' },
-        { text: 'Continuar visitante', onPress: () => supabase.auth.refreshSession() },
+        { text: t('auth.inserirCodigo'), style: 'cancel' },
+        { text: t('auth.continuarVisitante'), onPress: () => supabase.auth.refreshSession() },
       ]
     );
   };
 
   // ── Reset de senha ─────────────────────────────────────────────────────────
   const handleReset = async () => {
-    if (!email) { Alert.alert('Atenção', 'Informe seu e-mail.'); return; }
+    if (!email) { Alert.alert(t('common.atencao'), t('auth.informeSeuEmail')); return; }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'penielchurch://reset-password',
+    });
     setLoading(false);
     if (error) {
-      Alert.alert('Erro', error.message);
+      Alert.alert(t('common.erro'), error.message);
     } else {
-      Alert.alert('E-mail enviado ✅', 'Verifique sua caixa de entrada para redefinir a senha.',
-        [{ text: 'OK', onPress: () => setMode('login') }]
+      Alert.alert(t('perfil.emailEnviadoTitulo'), t('auth.emailEnviadoResetMsg'),
+        [{ text: t('common.ok'), onPress: () => setMode('login') }]
       );
     }
   };
@@ -150,12 +154,12 @@ export default function AuthScreen() {
                 }
               </View>
               <Text style={s.appName}>
-                {inviteSuccess ? 'Bem-vindo, membro! 🎉' : 'Código de Convite'}
+                {inviteSuccess ? t('auth.bemVindoMembro') : t('auth.codigoConvite')}
               </Text>
               <Text style={s.appSub}>
                 {inviteSuccess
-                  ? 'Seu acesso de membro foi ativado com sucesso!'
-                  : 'Digite o código enviado pelo seu líder para ativar o acesso de membro.'
+                  ? t('auth.acessoAtivado')
+                  : t('auth.digiteCodigoConvite')
                 }
               </Text>
             </View>
@@ -164,7 +168,7 @@ export default function AuthScreen() {
               <View style={s.form}>
                 {/* Campo de código */}
                 <View style={s.fieldWrap}>
-                  <Text style={s.fieldLabel}>Código de Convite</Text>
+                  <Text style={s.fieldLabel}>{t('auth.codigoConvite')}</Text>
                   <View style={[s.fieldRow, !!inviteError && { borderColor: C.danger }]}>
                     <Ionicons name="ticket-outline" size={18} color={C.textMuted} style={s.fieldIcon} />
                     <TextInput
@@ -196,18 +200,18 @@ export default function AuthScreen() {
                     ? <ActivityIndicator color="#fff" />
                     : <>
                         <Ionicons name="shield-checkmark-outline" size={18} color="#fff" />
-                        <Text style={s.submitBtnText}>Ativar acesso de membro</Text>
+                        <Text style={s.submitBtnText}>{t('auth.ativarAcesso')}</Text>
                       </>
                   }
                 </TouchableOpacity>
 
                 {/* Pular */}
                 <TouchableOpacity style={s.skipBtn} onPress={handleSkipInvite}>
-                  <Text style={s.skipText}>Não tenho código — continuar como visitante</Text>
+                  <Text style={s.skipText}>{t('auth.naoTenhoCodigo')}</Text>
                 </TouchableOpacity>
 
                 <Text style={s.inviteHint}>
-                  💬 Peça o código ao seu pastor ou líder de ministério.
+                  {t('auth.dicaCodigoConvite')}
                 </Text>
               </View>
             )}
@@ -233,9 +237,9 @@ export default function AuthScreen() {
             />
             <Text style={s.appName}>Peniel Church</Text>
             <Text style={s.appSub}>
-              {mode === 'login' && 'Entre na sua conta'}
-              {mode === 'signup' && 'Crie sua conta'}
-              {mode === 'reset' && 'Recuperar senha'}
+              {mode === 'login' && t('auth.entrarNaConta')}
+              {mode === 'signup' && t('auth.criarConta')}
+              {mode === 'reset' && t('auth.recuperarSenha')}
             </Text>
           </View>
 
@@ -245,11 +249,11 @@ export default function AuthScreen() {
             {/* Nome — só no cadastro */}
             {mode === 'signup' && (
               <View style={s.fieldWrap}>
-                <Text style={s.fieldLabel}>Nome completo</Text>
+                <Text style={s.fieldLabel}>{t('auth.nomeCompleto')}</Text>
                 <View style={s.fieldRow}>
                   <Ionicons name="person-outline" size={18} color={C.textMuted} style={s.fieldIcon} />
                   <TextInput
-                    style={s.fieldInput} placeholder="Seu nome" placeholderTextColor={C.textDim}
+                    style={s.fieldInput} placeholder={t('auth.seuNome')} placeholderTextColor={C.textDim}
                     value={fullName} onChangeText={setFullName} autoCapitalize="words"
                   />
                 </View>
@@ -258,7 +262,7 @@ export default function AuthScreen() {
 
             {/* E-mail */}
             <View style={s.fieldWrap}>
-              <Text style={s.fieldLabel}>E-mail</Text>
+              <Text style={s.fieldLabel}>{t('auth.email')}</Text>
               <View style={s.fieldRow}>
                 <Ionicons name="mail-outline" size={18} color={C.textMuted} style={s.fieldIcon} />
                 <TextInput
@@ -271,7 +275,7 @@ export default function AuthScreen() {
             {/* Senha */}
             {mode !== 'reset' && (
               <View style={s.fieldWrap}>
-                <Text style={s.fieldLabel}>Senha</Text>
+                <Text style={s.fieldLabel}>{t('auth.senha')}</Text>
                 <View style={s.fieldRow}>
                   <Ionicons name="lock-closed-outline" size={18} color={C.textMuted} style={s.fieldIcon} />
                   <TextInput
@@ -289,7 +293,7 @@ export default function AuthScreen() {
             {/* Esqueci a senha */}
             {mode === 'login' && (
               <TouchableOpacity onPress={() => setMode('reset')} style={s.forgotBtn}>
-                <Text style={s.forgotText}>Esqueci minha senha</Text>
+                <Text style={s.forgotText}>{t('auth.esqueciSenha')}</Text>
               </TouchableOpacity>
             )}
 
@@ -301,9 +305,9 @@ export default function AuthScreen() {
               {loading ? <ActivityIndicator color="#fff" /> : (
                 <>
                   <Text style={s.submitBtnText}>
-                    {mode === 'login' && 'Entrar'}
-                    {mode === 'signup' && 'Criar conta'}
-                    {mode === 'reset' && 'Enviar e-mail'}
+                    {mode === 'login' && t('auth.entrar')}
+                    {mode === 'signup' && t('auth.criarContaBtn')}
+                    {mode === 'reset' && t('auth.enviarEmail')}
                   </Text>
                   <Ionicons name="arrow-forward" size={18} color="#fff" />
                 </>
@@ -314,29 +318,29 @@ export default function AuthScreen() {
             <View style={s.switchRow}>
               {mode === 'login' && (
                 <>
-                  <Text style={s.switchText}>Não tem conta? </Text>
+                  <Text style={s.switchText}>{t('auth.naoTemConta')}</Text>
                   <TouchableOpacity onPress={() => setMode('signup')}>
-                    <Text style={s.switchLink}>Cadastre-se</Text>
+                    <Text style={s.switchLink}>{t('auth.cadastreSe')}</Text>
                   </TouchableOpacity>
                 </>
               )}
               {mode === 'signup' && (
                 <>
-                  <Text style={s.switchText}>Já tem conta? </Text>
+                  <Text style={s.switchText}>{t('auth.jaTemConta')}</Text>
                   <TouchableOpacity onPress={() => setMode('login')}>
-                    <Text style={s.switchLink}>Entrar</Text>
+                    <Text style={s.switchLink}>{t('auth.entrar')}</Text>
                   </TouchableOpacity>
                 </>
               )}
               {mode === 'reset' && (
                 <TouchableOpacity onPress={() => setMode('login')}>
-                  <Text style={s.switchLink}>← Voltar para o login</Text>
+                  <Text style={s.switchLink}>{t('auth.voltarParaLogin')}</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
 
-          <Text style={s.footer}>Peniel Church App · Área do Membro</Text>
+          <Text style={s.footer}>{t('auth.rodape')}</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

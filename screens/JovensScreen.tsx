@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../lib/useAuth';
 import { supabase } from '../lib/supabase';
 
@@ -96,18 +97,20 @@ const MUSICAS: MusicaJovem[] = [
 const EVENT_TYPE_COLOR: Record<Evento['type'], string> = {
   encontro: C.primary, retiro: C.secondary, culto: C.green, outro: C.accent,
 };
-const EVENT_TYPE_LABEL: Record<Evento['type'], string> = {
-  encontro: 'Encontro', retiro: 'Retiro', culto: 'Culto', outro: 'Outro',
-};
+function eventTypeLabel(t: (k: string) => string): Record<Evento['type'], string> {
+  return { encontro: t('jovens.tipoEncontro'), retiro: t('jovens.tipoRetiro'), culto: t('jovens.tipoCulto'), outro: t('jovens.tipoOutro') };
+}
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function JovensScreen() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('eventos');
   const [expandedDev, setExpandedDev] = useState<string | null>('1');
   const [chatMsg, setChatMsg] = useState('');
   const [messages, setMessages] = useState<ChatMsg[]>(CHAT_INIT);
   const { isLoggedIn } = useAuth();
   const isMember = isLoggedIn;
+  const EVENT_TYPE_LABEL = eventTypeLabel(t);
 
   // ── Devocionais do Supabase ────────────────────────────────────────────────
   const [devocionais, setDevocionais] = useState<Devocional[]>([]);
@@ -156,10 +159,10 @@ export default function JovensScreen() {
   };
 
   const TABS: { id: Tab; icon: string; label: string; private?: boolean }[] = [
-    { id: 'eventos', icon: 'calendar-outline', label: 'Eventos' },
-    { id: 'devocional', icon: 'book-outline', label: 'Devocional' },
-    { id: 'chat', icon: 'chatbubbles-outline', label: 'Chat', private: true },
-    { id: 'louvor', icon: 'musical-notes-outline', label: 'Louvor' },
+    { id: 'eventos', icon: 'calendar-outline', label: t('jovens.tabEventos') },
+    { id: 'devocional', icon: 'book-outline', label: t('jovens.tabDevocional') },
+    { id: 'chat', icon: 'chatbubbles-outline', label: t('jovens.tabChat'), private: true },
+    { id: 'louvor', icon: 'musical-notes-outline', label: t('jovens.tabLouvor') },
   ];
 
   return (
@@ -176,18 +179,18 @@ export default function JovensScreen() {
           />
           <View>
             <Text style={s.headerTitle}>Alive</Text>
-            <Text style={s.headerSub}>Ministério de Jovens</Text>
+            <Text style={s.headerSub}>{t('home.ministerioJovens')}</Text>
           </View>
         </View>
         <View style={s.headerBadge}>
-          <Text style={s.headerBadgeText}>🔥 {EVENTOS.filter(e => !e.membersOnly).length} eventos</Text>
+          <Text style={s.headerBadgeText}>🔥 {EVENTOS.filter(e => !e.membersOnly).length} {t('jovens.eventos')}</Text>
         </View>
       </View>
 
       {/* ── Hero banner ──────────────────────────────────────────────────────── */}
       <View style={s.hero}>
-        <Text style={s.heroVerse}>"Que ninguém te despreze por seres jovem."</Text>
-        <Text style={s.heroRef}>1 Timóteo 4:12</Text>
+        <Text style={s.heroVerse}>{t('jovens.heroVerse')}</Text>
+        <Text style={s.heroRef}>{t('jovens.heroRef')}</Text>
       </View>
 
       {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
@@ -217,7 +220,7 @@ export default function JovensScreen() {
       {/* ══ EVENTOS ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'eventos' && (
         <ScrollView contentContainerStyle={s.tabContent}>
-          <Text style={s.sectionLabel}>Próximos Eventos</Text>
+          <Text style={s.sectionLabel}>{t('jovens.proximosEventos')}</Text>
           {EVENTOS.map(ev => (
             <View key={ev.id} style={[s.eventoCard, { borderLeftColor: EVENT_TYPE_COLOR[ev.type] }]}>
               {/* Date block */}
@@ -233,7 +236,7 @@ export default function JovensScreen() {
                   {ev.membersOnly && (
                     <View style={s.membersBadge}>
                       <Ionicons name="lock-closed-outline" size={10} color={C.accent} />
-                      <Text style={s.membersBadgeText}>Membros</Text>
+                      <Text style={s.membersBadgeText}>{t('jovens.membros')}</Text>
                     </View>
                   )}
                 </View>
@@ -264,17 +267,17 @@ export default function JovensScreen() {
           contentContainerStyle={s.tabContent}
           refreshControl={<RefreshControl refreshing={refreshingDev} onRefresh={() => { setRefreshingDev(true); fetchDevocionais(); }} />}
         >
-          <Text style={s.sectionLabel}>Devocionais da Semana</Text>
+          <Text style={s.sectionLabel}>{t('jovens.devocionaisDaSemana')}</Text>
 
           {loadingDev ? (
             <View style={{ alignItems: 'center', paddingTop: 40, gap: 12 }}>
               <ActivityIndicator color={C.primary} />
-              <Text style={{ color: C.textMuted, fontSize: 13 }}>Carregando...</Text>
+              <Text style={{ color: C.textMuted, fontSize: 13 }}>{t('jovens.carregando')}</Text>
             </View>
           ) : devocionais.length === 0 ? (
             <View style={{ alignItems: 'center', paddingTop: 40, gap: 12 }}>
               <Ionicons name="book-outline" size={40} color={C.textDim} />
-              <Text style={{ color: C.textMuted, fontSize: 14 }}>Nenhum devocional publicado ainda</Text>
+              <Text style={{ color: C.textMuted, fontSize: 14 }}>{t('jovens.nenhumDevocionalPublicado')}</Text>
             </View>
           ) : (
             devocionais.map(dev => {
@@ -334,7 +337,7 @@ export default function JovensScreen() {
             <View style={s.memberGate}>
               <Ionicons name="lock-closed-outline" size={16} color={C.accent} />
               <Text style={s.memberGateText}>
-                Entre na Área do Membro para participar do chat
+                {t('jovens.entreAreaMembro')}
               </Text>
             </View>
           )}
@@ -356,7 +359,7 @@ export default function JovensScreen() {
           <View style={s.chatInputRow}>
             <TextInput
               style={[s.chatField, !isMember && { opacity: 0.4 }]}
-              placeholder={isMember ? 'Mensagem...' : 'Apenas membros podem enviar mensagens'}
+              placeholder={isMember ? t('jovens.mensagemPlaceholder') : t('jovens.apenasMembrosPodemEnviar')}
               placeholderTextColor={C.textDim}
               value={chatMsg}
               onChangeText={setChatMsg}
@@ -377,7 +380,7 @@ export default function JovensScreen() {
       {/* ══ LOUVOR ════════════════════════════════════════════════════════════ */}
       {activeTab === 'louvor' && (
         <ScrollView contentContainerStyle={s.tabContent}>
-          <Text style={s.sectionLabel}>Playlist dos Jovens</Text>
+          <Text style={s.sectionLabel}>{t('jovens.playlistDosJovens')}</Text>
 
           {/* Spotify banner */}
           <TouchableOpacity
@@ -387,8 +390,8 @@ export default function JovensScreen() {
           >
             <Ionicons name="musical-notes" size={24} color={C.green} />
             <View style={{ flex: 1 }}>
-              <Text style={s.spotifyBannerTitle}>Playlist no Spotify</Text>
-              <Text style={s.spotifyBannerSub}>Ouça as músicas que tocamos nos encontros</Text>
+              <Text style={s.spotifyBannerTitle}>{t('jovens.playlistSpotify')}</Text>
+              <Text style={s.spotifyBannerSub}>{t('jovens.oucaAsMusicas')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
           </TouchableOpacity>

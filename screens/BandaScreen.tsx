@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -15,8 +16,6 @@ const C = {
   accent: '#1DB954', accentDim: '#0D5C28', gold: '#F5C842',
   text: '#F1F1F3', textMuted: '#8A8A96', textDim: '#4A4A55', danger: '#FF4D4D',
 };
-
-const INVITE_CODE = 'PENIEL2024';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Song = {
@@ -49,12 +48,29 @@ function spotifyUrl(id: string) { return `https://open.spotify.com/track/${id}`;
 function youtubeUrl(id: string) { return `https://www.youtube.com/watch?v=${id}`; }
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
-const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const DAYS_PT = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
-function formatDateLabel(iso: string): string {
+// Nomes de mês/dia da semana por idioma do app, para exibir a data do culto
+// (ex: "Domingo, 12 de Julho" / "Sunday, 12 July") de forma coerente com o
+// idioma escolhido em Perfil > Idioma.
+const MONTHS_BY_LANG: Record<string, string[]> = {
+  pt: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'],
+  en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+  es: ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],
+  fr: ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],
+};
+const DAYS_BY_LANG: Record<string, string[]> = {
+  pt: ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'],
+  en: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+  es: ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'],
+  fr: ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'],
+};
+function formatDateLabel(iso: string, lang: string = 'pt'): string {
+  const meses = MONTHS_BY_LANG[lang] ?? MONTHS_BY_LANG.pt;
+  const dias = DAYS_BY_LANG[lang] ?? DAYS_BY_LANG.pt;
   const [y, m, d] = iso.split('-').map(Number);
   const dt = new Date(y, m - 1, d);
-  return `${DAYS_PT[dt.getDay()]}, ${d} de ${MONTHS_PT[m - 1]}`;
+  return lang === 'en'
+    ? `${dias[dt.getDay()]}, ${d} ${meses[m - 1]}`
+    : `${dias[dt.getDay()]}, ${d} de ${meses[m - 1]}`;
 }
 function todayISO(): string {
   const d = new Date();
@@ -75,39 +91,53 @@ const CHAT_INIT: ChatMsg[] = [
 
 // ─── Gate ─────────────────────────────────────────────────────────────────────
 function InviteGate({ onUnlock }: { onUnlock: () => void }) {
+  const { t } = useTranslation();
   const [code, setCode] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
+  const [checking, setChecking] = useState(false);
   const shake = useRef(new Animated.Value(0)).current;
-  const tryUnlock = () => {
-    if (code.trim().toUpperCase() === INVITE_CODE) { onUnlock(); return; }
-    setError(true);
+
+  const dispararErro = (msg: string) => {
+    setError(msg);
     Animated.sequence([
       Animated.timing(shake, { toValue: 10, duration: 60, useNativeDriver: true }),
       Animated.timing(shake, { toValue: -10, duration: 60, useNativeDriver: true }),
       Animated.timing(shake, { toValue: 6, duration: 60, useNativeDriver: true }),
       Animated.timing(shake, { toValue: 0, duration: 60, useNativeDriver: true }),
     ]).start();
-    setTimeout(() => setError(false), 2000);
+    setTimeout(() => setError(''), 3000);
   };
+
+  const tryUnlock = async () => {
+    if (!code.trim()) return;
+    setChecking(true);
+    const { data, error: rpcError } = await supabase.rpc('use_banda_code', { p_code: code.trim() });
+    setChecking(false);
+    if (rpcError) { dispararErro(t('banda.erroValidarCodigo')); return; }
+    if (!data?.success) { dispararErro(data?.error ?? t('banda.codigoInvalido')); return; }
+    onUnlock();
+  };
+
   return (
     <SafeAreaView style={gate.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={gate.kav}>
         <View style={gate.inner}>
           <View style={gate.iconRing}><Ionicons name="musical-notes" size={36} color={C.primary} /></View>
-          <Text style={gate.title}>Banda Peniel</Text>
-          <Text style={gate.subtitle}>Ministério de Louvor</Text>
-          <Text style={gate.body}>Área exclusiva para membros da banda.{'\n'}Insira o código de acesso recebido do líder.</Text>
+          <Text style={gate.title}>{t('banda.titulo')}</Text>
+          <Text style={gate.subtitle}>{t('banda.subtitulo')}</Text>
+          <Text style={gate.body}>{t('banda.gateBody')}</Text>
           <Animated.View style={{ transform: [{ translateX: shake }], width: '100%' }}>
-            <TextInput style={[gate.input, error && gate.inputError]} placeholder="CÓDIGO DE ACESSO" placeholderTextColor={C.textDim}
-              value={code} onChangeText={t => setCode(t.toUpperCase())} autoCapitalize="characters" returnKeyType="go" onSubmitEditing={tryUnlock} />
+            <TextInput style={[gate.input, !!error && gate.inputError]} placeholder={t('banda.codigoDeAcesso')} placeholderTextColor={C.textDim}
+              value={code} onChangeText={t => setCode(t.toUpperCase())} autoCapitalize="characters" returnKeyType="go" onSubmitEditing={tryUnlock} editable={!checking} />
           </Animated.View>
-          {error && <Text style={gate.errorText}>Código inválido. Tente novamente.</Text>}
-          <TouchableOpacity style={gate.btn} onPress={tryUnlock} activeOpacity={0.85}>
-            <Text style={gate.btnText}>Entrar</Text>
-            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          {!!error && <Text style={gate.errorText}>{error}</Text>}
+          <TouchableOpacity style={[gate.btn, checking && { opacity: 0.7 }]} onPress={tryUnlock} activeOpacity={0.85} disabled={checking}>
+            {checking ? <ActivityIndicator color="#fff" /> : (
+              <><Text style={gate.btnText}>{t('banda.entrar')}</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>
+            )}
           </TouchableOpacity>
-          <Text style={gate.hint}>Não tem o código? Fale com o líder da banda.</Text>
+          <Text style={gate.hint}>{t('banda.gateHint')}</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -132,6 +162,7 @@ const gate = StyleSheet.create({
 function NovaMusicaModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const empty = { title: '', artist: '', song_key: '', bpm: '', youtube_id: '', spotify_id: '' };
   const [form, setForm] = useState(empty);
   const [errors, setErrors] = useState<Partial<typeof empty>>({});
@@ -140,10 +171,10 @@ function NovaMusicaModal({ visible, onClose, onSaved }: {
 
   const handleSave = async () => {
     const e: Partial<typeof empty> = {};
-    if (!form.title.trim()) e.title = 'Obrigatório';
-    if (!form.artist.trim()) e.artist = 'Obrigatório';
-    if (!form.song_key.trim()) e.song_key = 'Obrigatório';
-    if (!form.bpm.trim() || isNaN(Number(form.bpm))) e.bpm = 'Número válido';
+    if (!form.title.trim()) e.title = t('banda.obrigatorio');
+    if (!form.artist.trim()) e.artist = t('banda.obrigatorio');
+    if (!form.song_key.trim()) e.song_key = t('banda.obrigatorio');
+    if (!form.bpm.trim() || isNaN(Number(form.bpm))) e.bpm = t('banda.numeroValido');
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
     const { error } = await supabase.from('songs').insert({
@@ -153,7 +184,7 @@ function NovaMusicaModal({ visible, onClose, onSaved }: {
       in_repertoire: true,
     });
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     setForm(empty); setErrors({});
     onSaved(); onClose();
   };
@@ -167,34 +198,34 @@ function NovaMusicaModal({ visible, onClose, onSaved }: {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
           <View style={nm.sheet}>
             <View style={nm.header}>
-              <Text style={nm.title}>Nova Música</Text>
+              <Text style={nm.title}>{t('banda.novaMusica')}</Text>
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
               {/* Título */}
               <View style={nm.fieldWrap}>
-                <Text style={nm.fieldLabel}>Título *</Text>
-                <TextInput style={[nm.fieldInput, !!errors.title && nm.fieldInputError]} placeholder="Nome da música" placeholderTextColor={C.textDim} value={form.title} onChangeText={v => { set('title')(v); setErrors(p => ({ ...p, title: undefined })); }} />
+                <Text style={nm.fieldLabel}>{t('banda.tituloObrigatorio')}</Text>
+                <TextInput style={[nm.fieldInput, !!errors.title && nm.fieldInputError]} placeholder={t('banda.nomeDaMusica')} placeholderTextColor={C.textDim} value={form.title} onChangeText={v => { set('title')(v); setErrors(p => ({ ...p, title: undefined })); }} />
                 {!!errors.title && <Text style={nm.fieldError}>{errors.title}</Text>}
               </View>
               {/* Artista */}
               <View style={nm.fieldWrap}>
-                <Text style={nm.fieldLabel}>Artista *</Text>
-                <TextInput style={[nm.fieldInput, !!errors.artist && nm.fieldInputError]} placeholder="Artista ou ministério" placeholderTextColor={C.textDim} value={form.artist} onChangeText={v => { set('artist')(v); setErrors(p => ({ ...p, artist: undefined })); }} />
+                <Text style={nm.fieldLabel}>{t('banda.artistaObrigatorio')}</Text>
+                <TextInput style={[nm.fieldInput, !!errors.artist && nm.fieldInputError]} placeholder={t('banda.artistaOuMinisterio')} placeholderTextColor={C.textDim} value={form.artist} onChangeText={v => { set('artist')(v); setErrors(p => ({ ...p, artist: undefined })); }} />
                 {!!errors.artist && <Text style={nm.fieldError}>{errors.artist}</Text>}
               </View>
               {/* Tom + BPM */}
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <View style={nm.fieldWrap}>
-                    <Text style={nm.fieldLabel}>Tom *</Text>
+                    <Text style={nm.fieldLabel}>{t('banda.tomObrigatorio')}</Text>
                     <TextInput style={[nm.fieldInput, !!errors.song_key && nm.fieldInputError]} placeholder="Ex: G" placeholderTextColor={C.textDim} value={form.song_key} onChangeText={v => { set('song_key')(v.toUpperCase()); setErrors(p => ({ ...p, song_key: undefined })); }} autoCapitalize="characters" maxLength={3} />
                     {!!errors.song_key && <Text style={nm.fieldError}>{errors.song_key}</Text>}
                   </View>
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={nm.fieldWrap}>
-                    <Text style={nm.fieldLabel}>BPM *</Text>
+                    <Text style={nm.fieldLabel}>{t('banda.bpmObrigatorio')}</Text>
                     <TextInput style={[nm.fieldInput, !!errors.bpm && nm.fieldInputError]} placeholder="Ex: 72" placeholderTextColor={C.textDim} value={form.bpm} onChangeText={v => { set('bpm')(v); setErrors(p => ({ ...p, bpm: undefined })); }} keyboardType="numeric" maxLength={3} />
                     {!!errors.bpm && <Text style={nm.fieldError}>{errors.bpm}</Text>}
                   </View>
@@ -202,25 +233,25 @@ function NovaMusicaModal({ visible, onClose, onSaved }: {
               </View>
               {/* YouTube */}
               <View style={nm.fieldWrap}>
-                <Text style={nm.fieldLabel}>ID do YouTube (opcional)</Text>
+                <Text style={nm.fieldLabel}>{t('banda.idYoutubeOpcional')}</Text>
                 <TextInput style={nm.fieldInput} placeholder="Ex: dy9nwe9TTpk" placeholderTextColor={C.textDim} value={form.youtube_id} onChangeText={set('youtube_id')} autoCorrect={false} />
               </View>
               {/* Spotify */}
               <View style={nm.fieldWrap}>
-                <Text style={nm.fieldLabel}>ID do Spotify (opcional)</Text>
+                <Text style={nm.fieldLabel}>{t('banda.idSpotifyOpcional')}</Text>
                 <TextInput style={nm.fieldInput} placeholder="Ex: 3vv9phNO5HfDkHvVtJYTNa" placeholderTextColor={C.textDim} value={form.spotify_id} onChangeText={set('spotify_id')} autoCorrect={false} />
               </View>
               {/* Preview links */}
               {previewTitle && previewArtist && (
                 <View style={nm.previewBox}>
-                  <Text style={nm.previewTitle}>Links automáticos gerados:</Text>
+                  <Text style={nm.previewTitle}>{t('banda.linksAutomaticos')}</Text>
                   <Text style={nm.previewLink}>📄 cifraclub.com.br/{slug(previewArtist)}/{slug(previewTitle)}/</Text>
                   <Text style={nm.previewLink}>🎵 letras.mus.br/{slug(previewArtist)}/{slug(previewTitle)}/</Text>
                 </View>
               )}
             </ScrollView>
             <TouchableOpacity style={[nm.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
-              {saving ? <ActivityIndicator color="#fff" /> : <><Ionicons name="musical-note-outline" size={18} color="#fff" /><Text style={nm.saveBtnText}>Adicionar Música</Text></>}
+              {saving ? <ActivityIndicator color="#fff" /> : <><Ionicons name="musical-note-outline" size={18} color="#fff" /><Text style={nm.saveBtnText}>{t('banda.adicionarMusica')}</Text></>}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -249,6 +280,7 @@ const nm = StyleSheet.create({
 function NovoCultoModal({ visible, onClose, onSaved, songs }: {
   visible: boolean; onClose: () => void; onSaved: () => void; songs: Song[];
 }) {
+  const { t, i18n } = useTranslation();
   const [date, setDate] = useState('');
   const [entries, setEntries] = useState<CultoSongEntry[]>([]);
   const [dateError, setDateError] = useState('');
@@ -276,18 +308,18 @@ function NovoCultoModal({ visible, onClose, onSaved, songs }: {
   const handleSave = async () => {
     const parts = date.split('/');
     if (parts.length !== 3 || parts[0].length !== 2 || parts[1].length !== 2 || parts[2].length !== 4) {
-      setDateError('Use o formato DD/MM/AAAA'); return;
+      setDateError(t('banda.usarFormatoData')); return;
     }
-    if (entries.length === 0) { Alert.alert('Atenção', 'Selecione ao menos uma música.'); return; }
+    if (entries.length === 0) { Alert.alert(t('common.atencao'), t('banda.selecioneUmaMusica')); return; }
     const [d, m, y] = parts;
     const iso = `${y}-${m}-${d}`;
-    const label = formatDateLabel(iso);
+    const label = formatDateLabel(iso, i18n.language);
     setSaving(true);
 
     // 1. Cria o culto
     const { data: cultoData, error: cultoError } = await supabase
       .from('cultos').insert({ label, date: iso }).select().single();
-    if (cultoError || !cultoData) { Alert.alert('Erro', cultoError?.message); setSaving(false); return; }
+    if (cultoError || !cultoData) { Alert.alert(t('common.erro'), cultoError?.message); setSaving(false); return; }
 
     // 2. Insere as músicas do culto
     const cultoSongs = entries.map(e => ({
@@ -296,7 +328,7 @@ function NovoCultoModal({ visible, onClose, onSaved, songs }: {
     }));
     const { error: songsError } = await supabase.from('culto_songs').insert(cultoSongs);
     setSaving(false);
-    if (songsError) { Alert.alert('Erro ao salvar músicas', songsError.message); return; }
+    if (songsError) { Alert.alert(t('banda.erroSalvarMusicas'), songsError.message); return; }
 
     setDate(''); setEntries([]); setDateError('');
     onSaved(); onClose();
@@ -308,13 +340,13 @@ function NovoCultoModal({ visible, onClose, onSaved, songs }: {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
           <View style={md.sheet}>
             <View style={md.header}>
-              <Text style={md.title}>Novo Culto</Text>
+              <Text style={md.title}>{t('banda.novoCulto')}</Text>
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
-            <Text style={md.label}>Data do Culto</Text>
+            <Text style={md.label}>{t('banda.dataDoCulto')}</Text>
             <TextInput style={[md.input, !!dateError && md.inputError]} placeholder="DD/MM/AAAA" placeholderTextColor={C.textDim} value={date} onChangeText={formatDateInput} keyboardType="numeric" maxLength={10} />
             {!!dateError && <Text style={md.errorText}>{dateError}</Text>}
-            <Text style={[md.label, { marginTop: 16 }]}>Músicas ({entries.length} selecionadas)</Text>
+            <Text style={[md.label, { marginTop: 16 }]}>{t('banda.musicasSelecionadas', { n: entries.length })}</Text>
             <ScrollView style={md.songList} showsVerticalScrollIndicator={false}>
               {songs.map(song => {
                 const selected = isSongSelected(song.id);
@@ -336,14 +368,14 @@ function NovoCultoModal({ visible, onClose, onSaved, songs }: {
                     {selected && entry && (
                       <View style={md.overrideRow}>
                         <View style={md.overrideField}>
-                          <Text style={md.overrideLabel}>Tom</Text>
+                          <Text style={md.overrideLabel}>{t('banda.tomLabel')}</Text>
                           <TextInput style={md.overrideInput} value={entry.song_key} onChangeText={v => updateEntry(song.id, 'song_key', v)} autoCapitalize="characters" maxLength={3} placeholderTextColor={C.textDim} />
                         </View>
                         <View style={md.overrideField}>
-                          <Text style={md.overrideLabel}>BPM</Text>
+                          <Text style={md.overrideLabel}>{t('banda.bpm')}</Text>
                           <TextInput style={md.overrideInput} value={entry.bpm} onChangeText={v => updateEntry(song.id, 'bpm', v)} keyboardType="numeric" maxLength={3} placeholderTextColor={C.textDim} />
                         </View>
-                        <Text style={md.overrideHint}>Ajuste para este culto</Text>
+                        <Text style={md.overrideHint}>{t('banda.ajusteParaEsteCulto')}</Text>
                       </View>
                     )}
                   </View>
@@ -351,7 +383,7 @@ function NovoCultoModal({ visible, onClose, onSaved, songs }: {
               })}
             </ScrollView>
             <TouchableOpacity style={[md.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
-              {saving ? <ActivityIndicator color="#fff" /> : <><Ionicons name="save-outline" size={18} color="#fff" /><Text style={md.saveBtnText}>Salvar Culto</Text></>}
+              {saving ? <ActivityIndicator color="#fff" /> : <><Ionicons name="save-outline" size={18} color="#fff" /><Text style={md.saveBtnText}>{t('banda.salvarCulto')}</Text></>}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -388,6 +420,7 @@ const md = StyleSheet.create({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 function BandaMain() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('hoje');
   const [songs, setSongs] = useState<Song[]>([]);
   const [cultos, setCultos] = useState<Culto[]>([]);
@@ -441,9 +474,9 @@ function BandaMain() {
   const handleRefresh = () => { setRefreshing(true); fetchSongs(); fetchCultos(); };
 
   const deleteCulto = (id: string) => {
-    Alert.alert('Remover Culto', 'Deseja remover este culto?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: async () => {
+    Alert.alert(t('banda.removerCulto'), t('banda.desejaRemoverCulto'), [
+      { text: t('common.cancelar'), style: 'cancel' },
+      { text: t('common.remover'), style: 'destructive', onPress: async () => {
         await supabase.from('cultos').delete().eq('id', id);
         fetchCultos();
       }},
@@ -451,8 +484,8 @@ function BandaMain() {
   };
 
   const openLink = (url: string, label: string) => {
-    if (!url) { Alert.alert('Sem link', `Esta música ainda não tem ${label} cadastrado.`); return; }
-    Linking.openURL(url).catch(() => Alert.alert('Erro', 'Não foi possível abrir o link.'));
+    if (!url) { Alert.alert(t('banda.semLink'), t('banda.semLinkMsg', { label })); return; }
+    Linking.openURL(url).catch(() => Alert.alert(t('common.erro'), t('banda.erroAbrirLink')));
   };
 
   const sendMessage = () => {
@@ -468,11 +501,11 @@ function BandaMain() {
   const filteredSongs = filter === 'repertoire' ? songs.filter(sg => sg.in_repertoire) : songs;
 
   const TABS: { id: Tab; icon: string; label: string }[] = [
-    { id: 'hoje', icon: 'sunny-outline', label: 'Hoje' },
-    { id: 'repertorio', icon: 'musical-notes-outline', label: 'Repertório' },
-    { id: 'cultos', icon: 'mic-outline', label: 'Cultos' },
-    { id: 'ensaios', icon: 'calendar-outline', label: 'Ensaios' },
-    { id: 'chat', icon: 'chatbubbles-outline', label: 'Chat' },
+    { id: 'hoje', icon: 'sunny-outline', label: t('banda.tabHoje') },
+    { id: 'repertorio', icon: 'musical-notes-outline', label: t('banda.tabRepertorio') },
+    { id: 'cultos', icon: 'mic-outline', label: t('banda.tabCultos') },
+    { id: 'ensaios', icon: 'calendar-outline', label: t('banda.tabEnsaios') },
+    { id: 'chat', icon: 'chatbubbles-outline', label: t('banda.tabChat') },
   ];
 
   return (
@@ -482,12 +515,12 @@ function BandaMain() {
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.headerTitle}>Banda Peniel</Text>
-          <Text style={s.headerSub}>Ministério de Louvor</Text>
+          <Text style={s.headerTitle}>{t('banda.titulo')}</Text>
+          <Text style={s.headerSub}>{t('banda.subtitulo')}</Text>
         </View>
         <View style={s.headerRight}>
           <View style={s.onlineDot} />
-          <Text style={s.onlineText}>{songs.length} músicas</Text>
+          <Text style={s.onlineText}>{songs.length} {t('banda.musicas')}</Text>
         </View>
       </View>
 
@@ -505,23 +538,23 @@ function BandaMain() {
       {activeTab === 'hoje' && (
         <ScrollView contentContainerStyle={s.tabContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}>
           {loadingCultos ? (
-            <View style={s.loadingWrap}><ActivityIndicator color={C.primary} /><Text style={s.loadingText}>Carregando...</Text></View>
+            <View style={s.loadingWrap}><ActivityIndicator color={C.primary} /><Text style={s.loadingText}>{t('banda.carregando')}</Text></View>
           ) : cultoDoDia ? (
             <>
               <View style={s.hojeBanner}>
                 <View style={s.hojeBannerLeft}>
                   <Ionicons name="sunny" size={20} color={C.gold} />
                   <View>
-                    <Text style={s.hojeBannerLabel}>{cultoDoDia.date === today ? 'Culto de Hoje' : 'Próximo Culto'}</Text>
+                    <Text style={s.hojeBannerLabel}>{cultoDoDia.date === today ? t('banda.cultoDeHoje') : t('banda.proximoCulto')}</Text>
                     <Text style={s.hojeBannerDate}>{cultoDoDia.label}</Text>
                   </View>
                 </View>
                 <View style={s.hojeSongCount}>
                   <Text style={s.hojeSongCountNum}>{cultoDoDia.entries.length}</Text>
-                  <Text style={s.hojeSongCountLabel}>músicas</Text>
+                  <Text style={s.hojeSongCountLabel}>{t('banda.musicas')}</Text>
                 </View>
               </View>
-              <Text style={s.sectionLabel}>Setlist</Text>
+              <Text style={s.sectionLabel}>{t('banda.setlist')}</Text>
               {cultoDoDia.entries.map((entry, idx) => {
                 const song = songs.find(sg => sg.id === entry.song_id);
                 if (!song) return null;
@@ -533,11 +566,11 @@ function BandaMain() {
                       <Text style={s.hojeSongArtist}>{song.artist}</Text>
                     </View>
                     <View style={s.hojeTomBadge}>
-                      <Text style={s.hojeTomLabel}>TOM</Text>
+                      <Text style={s.hojeTomLabel}>{t('banda.tom')}</Text>
                       <Text style={s.hojeTomValue}>{entry.song_key}</Text>
                     </View>
                     <View style={s.hojeBpmBadge}>
-                      <Text style={s.hojeBpmLabel}>BPM</Text>
+                      <Text style={s.hojeBpmLabel}>{t('banda.bpm')}</Text>
                       <Text style={s.hojeBpmValue}>{entry.bpm}</Text>
                     </View>
                     {!!song.spotify_id && (
@@ -550,16 +583,16 @@ function BandaMain() {
               })}
               <View style={s.hojeTip}>
                 <Ionicons name="information-circle-outline" size={14} color={C.textDim} />
-                <Text style={s.hojeTipText}>Tom e BPM definidos para este culto. Edite em Cultos.</Text>
+                <Text style={s.hojeTipText}>{t('banda.dicaTomBpm')}</Text>
               </View>
             </>
           ) : (
             <View style={s.emptyState}>
               <Ionicons name="sunny-outline" size={48} color={C.textDim} />
-              <Text style={s.emptyTitle}>Nenhum culto agendado</Text>
-              <Text style={s.emptyDesc}>Crie um culto na aba Cultos para ver o setlist aqui.</Text>
+              <Text style={s.emptyTitle}>{t('banda.nenhumCultoAgendado')}</Text>
+              <Text style={s.emptyDesc}>{t('banda.crieUmCulto')}</Text>
               <TouchableOpacity style={s.emptyBtn} onPress={() => setActiveTab('cultos')}>
-                <Text style={s.emptyBtnText}>Ir para Cultos</Text>
+                <Text style={s.emptyBtnText}>{t('banda.irParaCultos')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -573,7 +606,7 @@ function BandaMain() {
             <View style={s.filterRow}>
               {(['all', 'repertoire'] as const).map(f => (
                 <TouchableOpacity key={f} style={[s.pill, filter === f && s.pillActive]} onPress={() => setFilter(f)}>
-                  <Text style={[s.pillText, filter === f && s.pillTextActive]}>{f === 'all' ? 'Todas' : 'No Repertório'}</Text>
+                  <Text style={[s.pillText, filter === f && s.pillTextActive]}>{f === 'all' ? t('banda.todas') : t('banda.noRepertorio')}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -599,7 +632,7 @@ function BandaMain() {
                     <Text style={s.songTitle}>{item.title}</Text>
                     <Text style={s.songArtist}>{item.artist}</Text>
                     <View style={s.songMeta}>
-                      <View style={s.songMetaChip}><Text style={s.songMetaText}>Tom {item.song_key}</Text></View>
+                      <View style={s.songMetaChip}><Text style={s.songMetaText}>{t('banda.tomLabel')} {item.song_key}</Text></View>
                       <View style={s.songMetaChip}><Text style={s.songMetaText}>{item.bpm} BPM</Text></View>
                     </View>
                   </View>
@@ -629,10 +662,10 @@ function BandaMain() {
       {activeTab === 'cultos' && (
         <View style={{ flex: 1 }}>
           <View style={s.cultosToolbar}>
-            <Text style={s.cultosCount}>{cultos.length} culto{cultos.length !== 1 ? 's' : ''}</Text>
+            <Text style={s.cultosCount}>{cultos.length} {cultos.length !== 1 ? t('banda.tabCultos').toLowerCase() : t('banda.cultoSingular')}</Text>
             <TouchableOpacity style={s.newCultoBtn} onPress={() => setCultosModal(true)} activeOpacity={0.85}>
               <Ionicons name="add" size={18} color="#fff" />
-              <Text style={s.newCultoBtnText}>Novo Culto</Text>
+              <Text style={s.newCultoBtnText}>{t('banda.novoCulto')}</Text>
             </TouchableOpacity>
           </View>
           {loadingCultos ? (
@@ -640,8 +673,8 @@ function BandaMain() {
           ) : cultos.length === 0 ? (
             <View style={s.emptyState}>
               <Ionicons name="mic-outline" size={48} color={C.textDim} />
-              <Text style={s.emptyTitle}>Nenhum culto ainda</Text>
-              <Text style={s.emptyDesc}>Toque em "Novo Culto" para adicionar o primeiro setlist.</Text>
+              <Text style={s.emptyTitle}>{t('banda.nenhumCultoAinda')}</Text>
+              <Text style={s.emptyDesc}>{t('banda.toqueNovoCulto')}</Text>
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
@@ -655,7 +688,7 @@ function BandaMain() {
                         <View style={[s.cultoDot, culto.date === today && { backgroundColor: C.gold }]} />
                         <View>
                           <Text style={s.cultoLabel}>{culto.label}</Text>
-                          <Text style={s.cultoMeta}>{culto.entries.length} música{culto.entries.length !== 1 ? 's' : ''}{culto.date === today ? ' · Hoje' : ''}</Text>
+                          <Text style={s.cultoMeta}>{culto.entries.length} {culto.entries.length !== 1 ? t('banda.musicas') : t('banda.musica')}{culto.date === today ? t('banda.hojeSufixo') : ''}</Text>
                         </View>
                       </View>
                       <View style={s.cultoHeaderRight}>
@@ -668,9 +701,9 @@ function BandaMain() {
                     {isOpen && (
                       <View style={s.cultoSongs}>
                         <View style={s.cultoColHeader}>
-                          <Text style={[s.cultoColLabel, { flex: 1, marginLeft: 52 }]}>Música</Text>
-                          <Text style={[s.cultoColLabel, { width: 44, textAlign: 'center' }]}>Tom</Text>
-                          <Text style={[s.cultoColLabel, { width: 44, textAlign: 'center' }]}>BPM</Text>
+                          <Text style={[s.cultoColLabel, { flex: 1, marginLeft: 52 }]}>{t('banda.colunaMusica')}</Text>
+                          <Text style={[s.cultoColLabel, { width: 44, textAlign: 'center' }]}>{t('banda.tomLabel')}</Text>
+                          <Text style={[s.cultoColLabel, { width: 44, textAlign: 'center' }]}>{t('banda.bpm')}</Text>
                           <View style={{ width: 28 }} />
                         </View>
                         {culto.entries.map((entry, idx) => {
@@ -707,7 +740,7 @@ function BandaMain() {
       {/* ══ ENSAIOS ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'ensaios' && (
         <ScrollView contentContainerStyle={s.tabContent}>
-          <Text style={s.sectionLabel}>Próximos Ensaios</Text>
+          <Text style={s.sectionLabel}>{t('banda.proximosEnsaios')}</Text>
           {ENSAIOS.map(e => (
             <View key={e.id} style={s.ensaioCard}>
               <View style={s.ensaioDate}>
@@ -748,7 +781,7 @@ function BandaMain() {
             ))}
           </ScrollView>
           <View style={s.chatInput}>
-            <TextInput style={s.chatField} placeholder="Mensagem..." placeholderTextColor={C.textDim} value={chatMsg} onChangeText={setChatMsg} returnKeyType="send" onSubmitEditing={sendMessage} />
+            <TextInput style={s.chatField} placeholder={t('banda.mensagemPlaceholder')} placeholderTextColor={C.textDim} value={chatMsg} onChangeText={setChatMsg} returnKeyType="send" onSubmitEditing={sendMessage} />
             <TouchableOpacity style={s.sendBtn} onPress={sendMessage}>
               <Ionicons name="send" size={18} color="#fff" />
             </TouchableOpacity>

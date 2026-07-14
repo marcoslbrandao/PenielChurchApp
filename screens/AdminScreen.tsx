@@ -2,10 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, StatusBar, ActivityIndicator,
-  Share, RefreshControl, Modal,
+  Share, RefreshControl, Modal, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/useAuth';
 import { useBirthdays } from '../lib/useBirthdays';
@@ -23,11 +26,39 @@ const C = {
 type InviteCode = {
   id: string; code: string; assigned_to_email: string | null;
   is_used: boolean; used_at: string | null; expires_at: string | null;
-  created_at: string;
+  created_at: string; tipo: string;
 };
 
 type Stats = {
   total: number; membros: number; lideres: number; visitantes: number; admins: number;
+};
+
+type Offering = {
+  id: string; user_id: string; valor: number; tipo: string; metodo: string | null;
+  data: string; observacoes: string | null;
+  profiles?: { full_name: string | null } | null;
+};
+
+type ProfileLite = { id: string; full_name: string | null };
+
+type Aviso = { id: string; titulo: string; texto: string; data: string; tipo: string };
+
+type DevocionalGeral = {
+  id: string; titulo: string; versiculo: string; referencia: string;
+  texto: string; autor: string | null; data: string;
+};
+
+type AgendaEvento = {
+  id: string; nome: string; tipo: string; recorrente: boolean; dia_semana: number | null;
+  data: string | null; horario: string; local: string; descricao: string | null;
+  link_zoom: string | null; especial: boolean; cor: string | null;
+};
+
+type ShortVideo = { id: string; titulo: string; url: string; plataforma: string };
+
+type MensagemBlog = {
+  id: string; titulo: string; resumo: string; conteudo: string;
+  imagem_url: string | null; autor: string; data: string;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -48,10 +79,13 @@ function formatDate(iso: string | null): string {
 function NovoConviteModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const [tipo, setTipo] = useState<'membro' | 'banda'>('membro');
   const [email, setEmail] = useState('');
   const [days, setDays] = useState('30');
-  const [code] = useState(generateCode());
+  const [code, setCode] = useState(generateCode());
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (visible) setCode(generateCode()); }, [visible]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -60,6 +94,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
 
     const { error } = await supabase.from('invite_codes').insert({
       code,
+      tipo,
       assigned_to_email: email.trim() || null,
       expires_at: expiresAt.toISOString(),
     });
@@ -68,10 +103,10 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
     if (error) { Alert.alert('Erro', error.message); return; }
 
     // Compartilhar o código
-    await Share.share({
-      message: `🔑 Seu convite para o app Peniel Church:\n\nCódigo: ${code}\n\nAbra o app, vá em Membros e insira este código para ativar seu acesso.\n\nVálido por ${days} dias.`,
-      title: 'Convite Peniel Church',
-    });
+    const mensagem = tipo === 'banda'
+      ? `🎵 Seu convite para a área da Banda de Louvor — Peniel Church:\n\nCódigo: ${code}\n\nAbra o app, vá em Membros → Banda, e insira este código para ativar seu acesso.\n\nVálido por ${days} dias. Uso único.`
+      : `🔑 Seu convite para o app Peniel Church:\n\nCódigo: ${code}\n\nAbra o app, vá em Membros e insira este código para ativar seu acesso.\n\nVálido por ${days} dias.`;
+    await Share.share({ message: mensagem, title: 'Convite Peniel Church' });
 
     setEmail('');
     onSaved();
@@ -87,6 +122,19 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
+          </View>
+
+          {/* Tipo de convite */}
+          <View style={mo.fieldWrap}>
+            <Text style={mo.fieldLabel}>Tipo de convite</Text>
+            <View style={mo.daysRow}>
+              <TouchableOpacity style={[mo.dayPill, tipo === 'membro' && mo.dayPillActive]} onPress={() => setTipo('membro')}>
+                <Text style={[mo.dayPillText, tipo === 'membro' && mo.dayPillTextActive]}>👤 Membro</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[mo.dayPill, tipo === 'banda' && mo.dayPillActive]} onPress={() => setTipo('banda')}>
+                <Text style={[mo.dayPillText, tipo === 'banda' && mo.dayPillTextActive]}>🎵 Banda</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Código gerado */}
@@ -156,6 +204,741 @@ const mo = StyleSheet.create({
   saveBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });
 
+// ─── Nova Oferta Modal (registro manual) ──────────────────────────────────────
+function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
+  visible: boolean; onClose: () => void; onSaved: () => void; adminId: string | undefined;
+}) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<ProfileLite[]>([]);
+  const [selected, setSelected] = useState<ProfileLite | null>(null);
+  const [valor, setValor] = useState('');
+  const [tipo, setTipo] = useState<'dizimo' | 'oferta' | 'missoes' | 'outro'>('oferta');
+  const [metodo, setMetodo] = useState<'sumup' | 'pix' | 'dinheiro' | 'transferencia'>('sumup');
+  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      setQuery(''); setResults([]); setSelected(null); setValor('');
+      setTipo('oferta'); setMetodo('sumup'); setData(new Date().toISOString().slice(0, 10));
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return; }
+    const t = setTimeout(() => {
+      supabase.from('profiles').select('id, full_name').ilike('full_name', `%${query.trim()}%`).limit(8)
+        .then(({ data }) => setResults((data as ProfileLite[]) ?? []));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const handleSave = async () => {
+    if (!selected) { Alert.alert('Atenção', 'Selecione o membro.'); return; }
+    const valorNum = Number(valor.replace(',', '.'));
+    if (!valorNum || valorNum <= 0) { Alert.alert('Atenção', 'Informe um valor válido.'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('offerings').insert({
+      user_id: selected.id, valor: valorNum, tipo, metodo, data, registrado_por: adminId,
+    });
+    setSaving(false);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={mo.overlay}>
+        <View style={[mo.sheet, { maxHeight: '85%' }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={mo.header}>
+              <Text style={mo.title}>Registrar Oferta</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Membro</Text>
+              {selected ? (
+                <View style={[mo.fieldRow, { justifyContent: 'space-between' }]}>
+                  <Text style={{ fontSize: 15, color: C.text, fontWeight: '600' }}>{selected.full_name ?? 'Sem nome'}</Text>
+                  <TouchableOpacity onPress={() => { setSelected(null); setQuery(''); }}>
+                    <Ionicons name="close-circle" size={18} color={C.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <View style={mo.fieldRow}>
+                    <Ionicons name="search-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
+                    <TextInput
+                      style={mo.fieldInput} placeholder="Buscar pelo nome..."
+                      placeholderTextColor={C.textDim} value={query} onChangeText={setQuery}
+                    />
+                  </View>
+                  {results.map(r => (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border }}
+                      onPress={() => setSelected(r)}
+                    >
+                      <Text style={{ fontSize: 14, color: C.text }}>{r.full_name ?? 'Sem nome'}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Valor (£)</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="0.00" placeholderTextColor={C.textDim}
+                  value={valor} onChangeText={setValor} keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Tipo</Text>
+              <View style={mo.daysRow}>
+                {(['dizimo', 'oferta', 'missoes', 'outro'] as const).map(t => (
+                  <TouchableOpacity key={t} style={[mo.dayPill, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
+                    <Text style={[mo.dayPillText, tipo === t && mo.dayPillTextActive]}>
+                      {t === 'dizimo' ? 'Dízimo' : t === 'oferta' ? 'Oferta' : t === 'missoes' ? 'Missões' : 'Outro'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Método</Text>
+              <View style={mo.daysRow}>
+                {(['sumup', 'pix', 'dinheiro', 'transferencia'] as const).map(m => (
+                  <TouchableOpacity key={m} style={[mo.dayPill, metodo === m && mo.dayPillActive]} onPress={() => setMetodo(m)}>
+                    <Text style={[mo.dayPillText, metodo === m && mo.dayPillTextActive]}>
+                      {m === 'sumup' ? 'SumUp' : m === 'pix' ? 'PIX' : m === 'dinheiro' ? 'Dinheiro' : 'Transferência'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Data (AAAA-MM-DD)</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} value={data} onChangeText={setData}
+                  placeholder="2026-07-09" placeholderTextColor={C.textDim}
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" /> : (
+                <><Ionicons name="checkmark" size={18} color="#fff" /><Text style={mo.saveBtnText}>Registrar Oferta</Text></>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Novo Aviso Modal ──────────────────────────────────────────────────────────
+function NovoAvisoModal({ visible, onClose, onSaved }: {
+  visible: boolean; onClose: () => void; onSaved: () => void;
+}) {
+  const [titulo, setTitulo] = useState('');
+  const [texto, setTexto] = useState('');
+  const [tipo, setTipo] = useState<'geral' | 'evento' | 'urgente'>('geral');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!visible) { setTitulo(''); setTexto(''); setTipo('geral'); }
+  }, [visible]);
+
+  const handleSave = async () => {
+    if (!titulo.trim() || !texto.trim()) { Alert.alert('Atenção', 'Preencha o título e o texto do aviso.'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('avisos').insert({
+      titulo: titulo.trim(), texto: texto.trim(), tipo, data: new Date().toISOString(),
+    });
+    setSaving(false);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={mo.overlay}>
+        <View style={[mo.sheet, { maxHeight: '85%' }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={mo.header}>
+              <Text style={mo.title}>Novo Aviso</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Tipo</Text>
+              <View style={mo.daysRow}>
+                {(['geral', 'evento', 'urgente'] as const).map(t => (
+                  <TouchableOpacity key={t} style={[mo.dayPill, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
+                    <Text style={[mo.dayPillText, tipo === t && mo.dayPillTextActive]}>
+                      {t === 'geral' ? '📢 Geral' : t === 'evento' ? '📅 Evento' : '🚨 Urgente'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Título</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="Ex: Culto especial de Ação de Graças"
+                  placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo}
+                />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Texto</Text>
+              <TextInput
+                style={[mo.fieldRow, { height: 100, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
+                placeholder="Escreva o aviso..." placeholderTextColor={C.textDim}
+                value={texto} onChangeText={setTexto} multiline
+              />
+            </View>
+
+            <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" /> : (
+                <><Ionicons name="megaphone-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Aviso</Text></>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Novo Devocional Modal ────────────────────────────────────────────────────
+function NovoDevocionalModal({ visible, onClose, onSaved }: {
+  visible: boolean; onClose: () => void; onSaved: () => void;
+}) {
+  const [titulo, setTitulo] = useState('');
+  const [versiculo, setVersiculo] = useState('');
+  const [referencia, setReferencia] = useState('');
+  const [texto, setTexto] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!visible) { setTitulo(''); setVersiculo(''); setReferencia(''); setTexto(''); }
+  }, [visible]);
+
+  const handleSave = async () => {
+    if (!titulo.trim() || !versiculo.trim() || !referencia.trim() || !texto.trim()) {
+      Alert.alert('Atenção', 'Preencha todos os campos do devocional.');
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from('devocionais').insert({
+      titulo: titulo.trim(), versiculo: versiculo.trim(), referencia: referencia.trim(),
+      texto: texto.trim(), autor: 'Peniel Church', data: new Date().toISOString(), grupo: null,
+    });
+    setSaving(false);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={mo.overlay}>
+        <View style={[mo.sheet, { maxHeight: '85%' }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={mo.header}>
+              <Text style={mo.title}>Novo Devocional</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Título</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="Ex: Confiando no tempo de Deus"
+                  placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo}
+                />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Versículo</Text>
+              <TextInput
+                style={[mo.fieldRow, { height: 70, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
+                placeholder='Ex: "Tudo posso naquele que me fortalece."'
+                placeholderTextColor={C.textDim} value={versiculo} onChangeText={setVersiculo} multiline
+              />
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Referência</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="Ex: Filipenses 4:13"
+                  placeholderTextColor={C.textDim} value={referencia} onChangeText={setReferencia}
+                />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Reflexão</Text>
+              <TextInput
+                style={[mo.fieldRow, { height: 120, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
+                placeholder="Escreva a reflexão do devocional..." placeholderTextColor={C.textDim}
+                value={texto} onChangeText={setTexto} multiline
+              />
+            </View>
+
+            <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" /> : (
+                <><Ionicons name="book-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Devocional</Text></>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Novo Evento (Agenda) Modal ───────────────────────────────────────────────
+const DIAS_SEMANA_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function NovoEventoModal({ visible, onClose, onSaved }: {
+  visible: boolean; onClose: () => void; onSaved: () => void;
+}) {
+  const [nome, setNome] = useState('');
+  const [tipo, setTipo] = useState<'presencial' | 'online' | 'casa'>('presencial');
+  const [recorrente, setRecorrente] = useState(true);
+  const [diaSemana, setDiaSemana] = useState(0);
+  const [data, setData] = useState(''); // YYYY-MM-DD
+  const [horario, setHorario] = useState('');
+  const [local, setLocal] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [linkZoom, setLinkZoom] = useState('');
+  const [mapUrl, setMapUrl] = useState('');
+  const [especial, setEspecial] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      setNome(''); setTipo('presencial'); setRecorrente(true); setDiaSemana(0);
+      setData(''); setHorario(''); setLocal(''); setDescricao('');
+      setLinkZoom(''); setMapUrl(''); setEspecial(false);
+    }
+  }, [visible]);
+
+  const handleSave = async () => {
+    if (!nome.trim() || !horario.trim() || !local.trim()) {
+      Alert.alert('Atenção', 'Preencha ao menos nome, horário e local.');
+      return;
+    }
+    if (!recorrente && !data.trim()) {
+      Alert.alert('Atenção', 'Informe a data no formato AAAA-MM-DD para um evento não recorrente.');
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from('agenda_eventos').insert({
+      nome: nome.trim(), tipo, recorrente,
+      dia_semana: recorrente ? diaSemana : null,
+      data: !recorrente ? data.trim() : null,
+      horario: horario.trim(), local: local.trim(),
+      descricao: descricao.trim() || null,
+      link_zoom: tipo === 'online' ? (linkZoom.trim() || null) : null,
+      map_url: tipo === 'presencial' ? (mapUrl.trim() || null) : null,
+      especial,
+      cor: especial ? '#E84B1A' : null,
+    });
+    setSaving(false);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={mo.overlay}>
+        <View style={[mo.sheet, { maxHeight: '90%' }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={mo.header}>
+              <Text style={mo.title}>Novo Evento</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Nome do evento</Text>
+              <View style={mo.fieldRow}>
+                <TextInput style={mo.fieldInput} placeholder="Ex: Culto de Jovens" placeholderTextColor={C.textDim} value={nome} onChangeText={setNome} />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Tipo de local</Text>
+              <View style={mo.daysRow}>
+                {(['presencial', 'online', 'casa'] as const).map(t => (
+                  <TouchableOpacity key={t} style={[mo.dayPill, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
+                    <Text style={[mo.dayPillText, tipo === t && mo.dayPillTextActive]}>
+                      {t === 'presencial' ? '⛪ Igreja' : t === 'online' ? '💻 Online' : '🏠 Nas casas'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Repetição</Text>
+              <View style={mo.daysRow}>
+                <TouchableOpacity style={[mo.dayPill, recorrente && mo.dayPillActive]} onPress={() => setRecorrente(true)}>
+                  <Text style={[mo.dayPillText, recorrente && mo.dayPillTextActive]}>🔁 Toda semana</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[mo.dayPill, !recorrente && mo.dayPillActive]} onPress={() => setRecorrente(false)}>
+                  <Text style={[mo.dayPillText, !recorrente && mo.dayPillTextActive]}>📅 Data única</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {recorrente ? (
+              <View style={mo.fieldWrap}>
+                <Text style={mo.fieldLabel}>Dia da semana</Text>
+                <View style={mo.daysRow}>
+                  {DIAS_SEMANA_LABELS.map((label, idx) => (
+                    <TouchableOpacity key={idx} style={[mo.dayPill, diaSemana === idx && mo.dayPillActive]} onPress={() => setDiaSemana(idx)}>
+                      <Text style={[mo.dayPillText, diaSemana === idx && mo.dayPillTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              <View style={mo.fieldWrap}>
+                <Text style={mo.fieldLabel}>Data (AAAA-MM-DD)</Text>
+                <View style={mo.fieldRow}>
+                  <TextInput style={mo.fieldInput} placeholder="Ex: 2026-08-28" placeholderTextColor={C.textDim} value={data} onChangeText={setData} />
+                </View>
+              </View>
+            )}
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Horário</Text>
+              <View style={mo.fieldRow}>
+                <TextInput style={mo.fieldInput} placeholder="Ex: 19h00" placeholderTextColor={C.textDim} value={horario} onChangeText={setHorario} />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Local</Text>
+              <View style={mo.fieldRow}>
+                <TextInput style={mo.fieldInput} placeholder="Ex: Abbey Square, Reading" placeholderTextColor={C.textDim} value={local} onChangeText={setLocal} />
+              </View>
+            </View>
+
+            {tipo === 'online' && (
+              <View style={mo.fieldWrap}>
+                <Text style={mo.fieldLabel}>Link do Zoom</Text>
+                <View style={mo.fieldRow}>
+                  <TextInput style={mo.fieldInput} placeholder="https://..." placeholderTextColor={C.textDim} value={linkZoom} onChangeText={setLinkZoom} autoCapitalize="none" />
+                </View>
+              </View>
+            )}
+
+            {tipo === 'presencial' && (
+              <View style={mo.fieldWrap}>
+                <Text style={mo.fieldLabel}>Link do Google Maps</Text>
+                <View style={mo.fieldRow}>
+                  <TextInput style={mo.fieldInput} placeholder="https://maps.google.com/?q=..." placeholderTextColor={C.textDim} value={mapUrl} onChangeText={setMapUrl} autoCapitalize="none" />
+                </View>
+              </View>
+            )}
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Descrição</Text>
+              <TextInput
+                style={[mo.fieldRow, { height: 80, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
+                placeholder="Breve descrição do evento..." placeholderTextColor={C.textDim}
+                value={descricao} onChangeText={setDescricao} multiline
+              />
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Evento especial (aparece em destaque)</Text>
+              <View style={mo.daysRow}>
+                <TouchableOpacity style={[mo.dayPill, especial && mo.dayPillActive]} onPress={() => setEspecial(!especial)}>
+                  <Text style={[mo.dayPillText, especial && mo.dayPillTextActive]}>
+                    {especial ? '⭐ Sim, é especial' : 'Não'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" /> : (
+                <><Ionicons name="calendar-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Evento</Text></>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Novo Short Modal ─────────────────────────────────────────────────────────
+function NovoShortModal({ visible, onClose, onSaved }: {
+  visible: boolean; onClose: () => void; onSaved: () => void;
+}) {
+  const [titulo, setTitulo] = useState('');
+  const [url, setUrl] = useState('');
+  const [plataforma, setPlataforma] = useState<'youtube' | 'instagram'>('youtube');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!visible) { setTitulo(''); setUrl(''); setPlataforma('youtube'); }
+  }, [visible]);
+
+  const handleSave = async () => {
+    if (!titulo.trim() || !url.trim()) { Alert.alert('Atenção', 'Preencha o título e o link do vídeo.'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('shorts_videos').insert({
+      titulo: titulo.trim(), url: url.trim(), plataforma,
+    });
+    setSaving(false);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={mo.overlay}>
+        <View style={[mo.sheet, { maxHeight: '80%' }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={mo.header}>
+              <Text style={mo.title}>Novo Short</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Plataforma</Text>
+              <View style={mo.daysRow}>
+                {(['youtube', 'instagram'] as const).map(p => (
+                  <TouchableOpacity key={p} style={[mo.dayPill, plataforma === p && mo.dayPillActive]} onPress={() => setPlataforma(p)}>
+                    <Text style={[mo.dayPillText, plataforma === p && mo.dayPillTextActive]}>
+                      {p === 'youtube' ? '▶️ YouTube Shorts' : '📸 Instagram Reels'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Título</Text>
+              <View style={mo.fieldRow}>
+                <TextInput style={mo.fieldInput} placeholder="Ex: 1 minuto de fé" placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo} />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Link do vídeo</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput}
+                  placeholder={plataforma === 'youtube' ? 'https://youtube.com/shorts/...' : 'https://instagram.com/reel/...'}
+                  placeholderTextColor={C.textDim} value={url} onChangeText={setUrl} autoCapitalize="none"
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" /> : (
+                <><Ionicons name="film-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Short</Text></>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Nova Mensagem (Blog) Modal ───────────────────────────────────────────────
+function NovaMensagemModal({ visible, onClose, onSaved }: {
+  visible: boolean; onClose: () => void; onSaved: () => void;
+}) {
+  const [titulo, setTitulo] = useState('');
+  const [resumo, setResumo] = useState('');
+  const [conteudo, setConteudo] = useState('');
+  const [autor, setAutor] = useState('Peniel Church');
+  const [imagemLocal, setImagemLocal] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [enviandoImagem, setEnviandoImagem] = useState(false);
+
+  useEffect(() => {
+    if (!visible) {
+      setTitulo(''); setResumo(''); setConteudo(''); setAutor('Peniel Church'); setImagemLocal(null);
+    }
+  }, [visible]);
+
+  const escolherImagem = async () => {
+    const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permissao.granted) {
+      Alert.alert('Permissão necessária', 'Precisamos de acesso às suas fotos para escolher a imagem de capa.');
+      return;
+    }
+    const resultado = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.7,
+    });
+    if (!resultado.canceled && resultado.assets?.[0]) {
+      setImagemLocal(resultado.assets[0].uri);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!titulo.trim() || !resumo.trim() || !conteudo.trim()) {
+      Alert.alert('Atenção', 'Preencha ao menos título, resumo e conteúdo da mensagem.');
+      return;
+    }
+    setSaving(true);
+
+    let imagemUrl: string | null = null;
+    if (imagemLocal) {
+      setEnviandoImagem(true);
+      try {
+        const extensao = imagemLocal.split('.').pop()?.toLowerCase() ?? 'jpg';
+        const contentType = extensao === 'png' ? 'image/png' : 'image/jpeg';
+        const base64 = await FileSystem.readAsStringAsync(imagemLocal, { encoding: FileSystem.EncodingType.Base64 });
+        const caminho = `capas/${Date.now()}.${extensao}`;
+        const { error: uploadError } = await supabase.storage
+          .from('blog')
+          .upload(caminho, decode(base64), { contentType, upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: publicUrlData } = supabase.storage.from('blog').getPublicUrl(caminho);
+        imagemUrl = publicUrlData.publicUrl;
+      } catch (e: any) {
+        setSaving(false);
+        setEnviandoImagem(false);
+        Alert.alert('Erro ao enviar imagem', e?.message ?? 'Tente novamente.');
+        return;
+      }
+      setEnviandoImagem(false);
+    }
+
+    const { error } = await supabase.from('mensagens').insert({
+      titulo: titulo.trim(), resumo: resumo.trim(), conteudo: conteudo.trim(),
+      autor: autor.trim() || 'Peniel Church', imagem_url: imagemUrl,
+      data: new Date().toISOString().slice(0, 10),
+    });
+    setSaving(false);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={mo.overlay}>
+        <View style={[mo.sheet, { maxHeight: '90%' }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={mo.header}>
+              <Text style={mo.title}>Nova Mensagem</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Imagem de capa (opcional)</Text>
+              <TouchableOpacity style={nm.imagemPicker} onPress={escolherImagem} disabled={enviandoImagem}>
+                {imagemLocal ? (
+                  <Image source={{ uri: imagemLocal }} style={nm.imagemPreview} resizeMode="cover" />
+                ) : (
+                  <View style={nm.imagemPlaceholder}>
+                    <Ionicons name="image-outline" size={24} color={C.textDim} />
+                    <Text style={nm.imagemPlaceholderTexto}>Toque para escolher uma foto</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Título</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="Ex: O Cego que Enxergava"
+                  placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo}
+                />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Resumo (aparece na Home e na lista)</Text>
+              <TextInput
+                style={[mo.fieldRow, { height: 70, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
+                placeholder="Um breve resumo da mensagem de domingo..."
+                placeholderTextColor={C.textDim} value={resumo} onChangeText={setResumo} multiline
+              />
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Conteúdo completo</Text>
+              <TextInput
+                style={[mo.fieldRow, { height: 200, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
+                placeholder="Escreva o texto completo. Separe parágrafos com uma linha em branco."
+                placeholderTextColor={C.textDim} value={conteudo} onChangeText={setConteudo} multiline
+              />
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Autor / Pregador</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="Ex: Pr. João Silva"
+                  placeholderTextColor={C.textDim} value={autor} onChangeText={setAutor}
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+              {saving ? <ActivityIndicator color="#fff" /> : (
+                <><Ionicons name="newspaper-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Mensagem</Text></>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const nm = StyleSheet.create({
+  imagemPicker: { borderRadius: 12, overflow: 'hidden', backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
+  imagemPreview: { width: '100%', height: 140 },
+  imagemPlaceholder: { height: 100, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  imagemPlaceholderTexto: { fontSize: 12, color: C.textDim },
+});
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AdminScreen() {
   const { user } = useAuth();
@@ -164,10 +947,22 @@ export default function AdminScreen() {
   const [loadingRole, setLoadingRole] = useState(true);
   const [stats, setStats] = useState<Stats>({ total: 0, membros: 0, lideres: 0, visitantes: 0, admins: 0 });
   const [invites, setInvites] = useState<InviteCode[]>([]);
+  const [offerings, setOfferings] = useState<Offering[]>([]);
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [devocionais, setDevocionais] = useState<DevocionalGeral[]>([]);
+  const [eventosAgenda, setEventosAgenda] = useState<AgendaEvento[]>([]);
+  const [shorts, setShorts] = useState<ShortVideo[]>([]);
+  const [mensagens, setMensagens] = useState<MensagemBlog[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'convites' | 'stats'>('convites');
+  const [ofertaModalVisible, setOfertaModalVisible] = useState(false);
+  const [avisoModalVisible, setAvisoModalVisible] = useState(false);
+  const [devocionalModalVisible, setDevocionalModalVisible] = useState(false);
+  const [eventoModalVisible, setEventoModalVisible] = useState(false);
+  const [shortModalVisible, setShortModalVisible] = useState(false);
+  const [mensagemModalVisible, setMensagemModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens'>('convites');
 
   // Verifica role
   useEffect(() => {
@@ -192,9 +987,96 @@ export default function AdminScreen() {
     const { data: inviteData } = await supabase
       .from('invite_codes').select('*').order('created_at', { ascending: false });
     if (inviteData) setInvites(inviteData as InviteCode[]);
+    // Ofertas
+    const { data: offeringsData } = await supabase
+      .from('offerings')
+      .select('*, profiles!offerings_user_id_fkey(full_name)')
+      .order('data', { ascending: false })
+      .limit(200);
+    if (offeringsData) setOfferings(offeringsData as unknown as Offering[]);
+    // Avisos
+    const { data: avisosData } = await supabase
+      .from('avisos').select('*').order('created_at', { ascending: false }).limit(50);
+    if (avisosData) setAvisos(avisosData as Aviso[]);
+    // Devocionais gerais (grupo = null, aparecem em destaque na Home)
+    const { data: devData } = await supabase
+      .from('devocionais').select('*').is('grupo', null).order('data', { ascending: false }).limit(50);
+    if (devData) setDevocionais(devData as DevocionalGeral[]);
+    // Agenda
+    const { data: agendaData } = await supabase
+      .from('agenda_eventos').select('*').order('created_at', { ascending: false });
+    if (agendaData) setEventosAgenda(agendaData as AgendaEvento[]);
+    // Shorts
+    const { data: shortsData } = await supabase
+      .from('shorts_videos').select('*').order('created_at', { ascending: false });
+    if (shortsData) setShorts(shortsData as ShortVideo[]);
+    // Mensagens (blog)
+    const { data: mensagensData } = await supabase
+      .from('mensagens').select('*').order('data', { ascending: false });
+    if (mensagensData) setMensagens(mensagensData as MensagemBlog[]);
     setLoading(false);
     setRefreshing(false);
   }, []);
+
+  const deleteOffering = (id: string) => {
+    Alert.alert('Remover Registro', 'Deseja remover este registro de oferta?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        await supabase.from('offerings').delete().eq('id', id);
+        fetchData();
+      }},
+    ]);
+  };
+
+  const deleteAviso = (id: string) => {
+    Alert.alert('Remover Aviso', 'Deseja remover este aviso?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        await supabase.from('avisos').delete().eq('id', id);
+        fetchData();
+      }},
+    ]);
+  };
+
+  const deleteDevocional = (id: string) => {
+    Alert.alert('Remover Devocional', 'Deseja remover este devocional?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        await supabase.from('devocionais').delete().eq('id', id);
+        fetchData();
+      }},
+    ]);
+  };
+
+  const deleteEvento = (id: string) => {
+    Alert.alert('Remover Evento', 'Deseja remover este evento da agenda?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        await supabase.from('agenda_eventos').delete().eq('id', id);
+        fetchData();
+      }},
+    ]);
+  };
+
+  const deleteShort = (id: string) => {
+    Alert.alert('Remover Short', 'Deseja remover este vídeo?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        await supabase.from('shorts_videos').delete().eq('id', id);
+        fetchData();
+      }},
+    ]);
+  };
+
+  const deleteMensagem = (id: string) => {
+    Alert.alert('Remover Mensagem', 'Deseja remover esta mensagem do blog?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        await supabase.from('mensagens').delete().eq('id', id);
+        fetchData();
+      }},
+    ]);
+  };
 
   useEffect(() => { if (!loadingRole && role) fetchData(); }, [loadingRole, role, fetchData]);
 
@@ -251,31 +1133,44 @@ export default function AdminScreen() {
           <Text style={s.headerTitle}>Painel Admin</Text>
           <Text style={s.headerSub}>{role === 'admin' ? 'Administrador' : 'Líder'}</Text>
         </View>
-        <TouchableOpacity style={s.newBtn} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity
+          style={s.newBtn}
+          onPress={() => {
+            if (activeTab === 'ofertas') setOfertaModalVisible(true);
+            else if (activeTab === 'avisos') setAvisoModalVisible(true);
+            else if (activeTab === 'devocionais') setDevocionalModalVisible(true);
+            else if (activeTab === 'agenda') setEventoModalVisible(true);
+            else if (activeTab === 'shorts') setShortModalVisible(true);
+            else if (activeTab === 'mensagens') setMensagemModalVisible(true);
+            else setModalVisible(true);
+          }}
+        >
           <Ionicons name="add" size={18} color={C.primary} />
-          <Text style={s.newBtnText}>Novo Convite</Text>
+          <Text style={s.newBtnText}>
+            {activeTab === 'ofertas' ? 'Nova Oferta' : activeTab === 'avisos' ? 'Novo Aviso' : activeTab === 'devocionais' ? 'Novo Devocional' : activeTab === 'agenda' ? 'Novo Evento' : activeTab === 'shorts' ? 'Novo Short' : activeTab === 'mensagens' ? 'Nova Mensagem' : 'Novo Convite'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Tabs */}
-      <View style={s.tabRow}>
-        {(['convites', 'stats'] as const).map(tab => (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabRowScroll} contentContainerStyle={s.tabRow}>
+        {(['convites', 'avisos', 'devocionais', 'mensagens', 'agenda', 'shorts', 'ofertas', 'stats'] as const).map(tab => (
           <TouchableOpacity
             key={tab}
             style={[s.tabBtn, activeTab === tab && s.tabBtnActive]}
             onPress={() => setActiveTab(tab)}
           >
             <Ionicons
-              name={tab === 'convites' ? 'ticket-outline' : 'bar-chart-outline'}
+              name={tab === 'convites' ? 'ticket-outline' : tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : 'bar-chart-outline'}
               size={16}
               color={activeTab === tab ? C.purple : C.textMuted}
             />
             <Text style={[s.tabBtnText, activeTab === tab && { color: C.purple, fontWeight: '700' }]}>
-              {tab === 'convites' ? 'Convites' : 'Estatísticas'}
+              {tab === 'convites' ? 'Convites' : tab === 'avisos' ? 'Avisos' : tab === 'devocionais' ? 'Devocionais' : tab === 'mensagens' ? 'Mensagens' : tab === 'agenda' ? 'Agenda' : tab === 'shorts' ? 'Shorts' : tab === 'ofertas' ? 'Ofertas' : 'Estatísticas'}
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -318,9 +1213,16 @@ export default function AdminScreen() {
                 invites.map(invite => (
                   <View key={invite.id} style={[s.inviteCard, invite.is_used && s.inviteCardUsed]}>
                     <View style={s.inviteLeft}>
-                      <Text style={[s.inviteCode, invite.is_used && { color: C.textMuted }]}>
-                        {invite.code}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={[s.inviteCode, invite.is_used && { color: C.textMuted }]}>
+                          {invite.code}
+                        </Text>
+                        {invite.tipo === 'banda' && (
+                          <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
+                            <Text style={[s.statusBadgeText, { color: C.purple }]}>🎵 Banda</Text>
+                          </View>
+                        )}
+                      </View>
                       {invite.assigned_to_email && (
                         <View style={s.inviteEmailRow}>
                           <Ionicons name="mail-outline" size={12} color={C.textMuted} />
@@ -346,6 +1248,259 @@ export default function AdminScreen() {
                         </TouchableOpacity>
                       )}
                       <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteInvite(invite.id)}>
+                        <Ionicons name="trash-outline" size={16} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </>
+          )}
+
+          {/* ══ AVISOS ════════════════════════════════════════════════════════ */}
+          {activeTab === 'avisos' && (
+            <>
+              {avisos.length === 0 ? (
+                <View style={s.empty}>
+                  <Ionicons name="megaphone-outline" size={40} color={C.textDim} />
+                  <Text style={s.emptyText}>Nenhum aviso publicado ainda</Text>
+                  <TouchableOpacity style={s.emptyBtn} onPress={() => setAvisoModalVisible(true)}>
+                    <Text style={s.emptyBtnText}>Publicar primeiro aviso</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                avisos.map(a => (
+                  <View key={a.id} style={s.inviteCard}>
+                    <View style={s.inviteLeft}>
+                      <Text style={s.inviteCode}>{a.titulo}</Text>
+                      <Text style={[s.inviteEmail, { marginTop: 4 }]} numberOfLines={2}>{a.texto}</Text>
+                      <View style={s.inviteMetaRow}>
+                        <View style={[s.statusBadge, {
+                          backgroundColor: a.tipo === 'urgente' ? C.danger + '18' : a.tipo === 'evento' ? C.purple + '18' : C.success + '18',
+                        }]}>
+                          <Text style={[s.statusBadgeText, {
+                            color: a.tipo === 'urgente' ? C.danger : a.tipo === 'evento' ? C.purple : C.success,
+                          }]}>
+                            {a.tipo === 'urgente' ? '🚨 Urgente' : a.tipo === 'evento' ? '📅 Evento' : '📢 Geral'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={s.inviteActions}>
+                      <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteAviso(a.id)}>
+                        <Ionicons name="trash-outline" size={16} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </>
+          )}
+
+          {/* ══ DEVOCIONAIS ═══════════════════════════════════════════════════ */}
+          {activeTab === 'devocionais' && (
+            <>
+              <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                Devocionais publicados aqui aparecem em destaque na tela inicial (Home) do app para todos.
+              </Text>
+              {devocionais.length === 0 ? (
+                <View style={s.empty}>
+                  <Ionicons name="book-outline" size={40} color={C.textDim} />
+                  <Text style={s.emptyText}>Nenhum devocional publicado ainda</Text>
+                  <TouchableOpacity style={s.emptyBtn} onPress={() => setDevocionalModalVisible(true)}>
+                    <Text style={s.emptyBtnText}>Publicar primeiro devocional</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                devocionais.map(d => (
+                  <View key={d.id} style={s.inviteCard}>
+                    <View style={s.inviteLeft}>
+                      <Text style={s.inviteCode}>{d.titulo}</Text>
+                      <Text style={[s.inviteEmail, { marginTop: 4, fontStyle: 'italic' }]} numberOfLines={2}>
+                        "{d.versiculo}" — {d.referencia}
+                      </Text>
+                      <View style={s.inviteMetaRow}>
+                        <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
+                          <Text style={[s.statusBadgeText, { color: C.purple }]}>{formatDate(d.data)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={s.inviteActions}>
+                      <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteDevocional(d.id)}>
+                        <Ionicons name="trash-outline" size={16} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </>
+          )}
+
+          {/* ══ MENSAGENS (blog) ═════════════════════════════════════════════ */}
+          {activeTab === 'mensagens' && (
+            <>
+              <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                A mensagem mais recente aparece em destaque na Home. Todas ficam listadas na aba Mensagens dentro de Mídia.
+              </Text>
+              {mensagens.length === 0 ? (
+                <View style={s.empty}>
+                  <Ionicons name="newspaper-outline" size={40} color={C.textDim} />
+                  <Text style={s.emptyText}>Nenhuma mensagem publicada ainda</Text>
+                  <TouchableOpacity style={s.emptyBtn} onPress={() => setMensagemModalVisible(true)}>
+                    <Text style={s.emptyBtnText}>Publicar primeira mensagem</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                mensagens.map(m => (
+                  <View key={m.id} style={s.inviteCard}>
+                    {!!m.imagem_url && (
+                      <Image source={{ uri: m.imagem_url }} style={{ width: 48, height: 48, borderRadius: 8, marginRight: 10 }} />
+                    )}
+                    <View style={s.inviteLeft}>
+                      <Text style={s.inviteCode}>{m.titulo}</Text>
+                      <Text style={[s.inviteEmail, { marginTop: 4 }]} numberOfLines={2}>{m.resumo}</Text>
+                      <View style={s.inviteMetaRow}>
+                        <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
+                          <Text style={[s.statusBadgeText, { color: C.purple }]}>{formatDate(m.data)} · {m.autor}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={s.inviteActions}>
+                      <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteMensagem(m.id)}>
+                        <Ionicons name="trash-outline" size={16} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </>
+          )}
+
+          {/* ══ AGENDA ════════════════════════════════════════════════════════ */}
+          {activeTab === 'agenda' && (
+            <>
+              {eventosAgenda.length === 0 ? (
+                <View style={s.empty}>
+                  <Ionicons name="calendar-outline" size={40} color={C.textDim} />
+                  <Text style={s.emptyText}>Nenhum evento cadastrado ainda</Text>
+                  <TouchableOpacity style={s.emptyBtn} onPress={() => setEventoModalVisible(true)}>
+                    <Text style={s.emptyBtnText}>Criar primeiro evento</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                eventosAgenda.map(e => (
+                  <View key={e.id} style={s.inviteCard}>
+                    <View style={s.inviteLeft}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={s.inviteCode}>{e.nome}</Text>
+                        {e.especial && (
+                          <View style={[s.statusBadge, { backgroundColor: '#E84B1A18' }]}>
+                            <Text style={[s.statusBadgeText, { color: '#E84B1A' }]}>⭐ Especial</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[s.inviteEmail, { marginTop: 4 }]}>
+                        {e.recorrente ? `Toda ${DIAS_SEMANA_LABELS[e.dia_semana ?? 0]}` : e.data} · {e.horario} · {e.local}
+                      </Text>
+                      <View style={s.inviteMetaRow}>
+                        <View style={[s.statusBadge, {
+                          backgroundColor: e.tipo === 'online' ? C.success + '18' : e.tipo === 'casa' ? C.accent + '30' : C.purple + '18',
+                        }]}>
+                          <Text style={[s.statusBadgeText, {
+                            color: e.tipo === 'online' ? C.success : e.tipo === 'casa' ? C.accentDim : C.purple,
+                          }]}>
+                            {e.tipo === 'presencial' ? 'Igreja' : e.tipo === 'online' ? 'Online' : 'Nas casas'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={s.inviteActions}>
+                      <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteEvento(e.id)}>
+                        <Ionicons name="trash-outline" size={16} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </>
+          )}
+
+          {/* ══ SHORTS ════════════════════════════════════════════════════════ */}
+          {activeTab === 'shorts' && (
+            <>
+              {shorts.length === 0 ? (
+                <View style={s.empty}>
+                  <Ionicons name="film-outline" size={40} color={C.textDim} />
+                  <Text style={s.emptyText}>Nenhum vídeo curto publicado ainda</Text>
+                  <TouchableOpacity style={s.emptyBtn} onPress={() => setShortModalVisible(true)}>
+                    <Text style={s.emptyBtnText}>Publicar primeiro short</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                shorts.map(sh => (
+                  <View key={sh.id} style={s.inviteCard}>
+                    <View style={s.inviteLeft}>
+                      <Text style={s.inviteCode}>{sh.titulo}</Text>
+                      <Text style={[s.inviteEmail, { marginTop: 4 }]} numberOfLines={1}>{sh.url}</Text>
+                      <View style={s.inviteMetaRow}>
+                        <View style={[s.statusBadge, { backgroundColor: sh.plataforma === 'youtube' ? '#FF000018' : '#E1306C18' }]}>
+                          <Text style={[s.statusBadgeText, { color: sh.plataforma === 'youtube' ? '#FF0000' : '#E1306C' }]}>
+                            {sh.plataforma === 'youtube' ? '▶️ YouTube' : '📸 Instagram'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={s.inviteActions}>
+                      <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteShort(sh.id)}>
+                        <Ionicons name="trash-outline" size={16} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </>
+          )}
+
+          {/* ══ OFERTAS ═══════════════════════════════════════════════════════ */}
+          {activeTab === 'ofertas' && (
+            <>
+              <View style={s.summaryRow}>
+                <View style={s.summaryCard}>
+                  <Text style={[s.summaryNum, { fontSize: 20, color: C.purple }]}>
+                    £{offerings.reduce((sum, o) => sum + Number(o.valor), 0).toFixed(0)}
+                  </Text>
+                  <Text style={s.summaryLabel}>Total registrado</Text>
+                </View>
+                <View style={s.summaryCard}>
+                  <Text style={[s.summaryNum, { color: C.success }]}>{offerings.length}</Text>
+                  <Text style={s.summaryLabel}>Registros</Text>
+                </View>
+              </View>
+
+              {offerings.length === 0 ? (
+                <View style={s.empty}>
+                  <Ionicons name="gift-outline" size={40} color={C.textDim} />
+                  <Text style={s.emptyText}>Nenhuma oferta registrada ainda</Text>
+                  <TouchableOpacity style={s.emptyBtn} onPress={() => setOfertaModalVisible(true)}>
+                    <Text style={s.emptyBtnText}>Registrar primeira oferta</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                offerings.map(o => (
+                  <View key={o.id} style={s.inviteCard}>
+                    <View style={s.inviteLeft}>
+                      <Text style={s.inviteCode}>{o.profiles?.full_name ?? 'Membro removido'}</Text>
+                      <View style={s.inviteMetaRow}>
+                        <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
+                          <Text style={[s.statusBadgeText, { color: C.purple }]}>
+                            £{Number(o.valor).toFixed(2)} · {o.tipo === 'dizimo' ? 'Dízimo' : o.tipo === 'oferta' ? 'Oferta' : o.tipo === 'missoes' ? 'Missões' : 'Outro'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[s.inviteEmail, { marginTop: 6 }]}>{formatDate(o.data)} · {o.metodo ?? '—'}</Text>
+                    </View>
+                    <View style={s.inviteActions}>
+                      <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteOffering(o.id)}>
                         <Ionicons name="trash-outline" size={16} color={C.danger} />
                       </TouchableOpacity>
                     </View>
@@ -445,6 +1600,37 @@ export default function AdminScreen() {
         onClose={() => setModalVisible(false)}
         onSaved={fetchData}
       />
+      <NovaOfertaModal
+        visible={ofertaModalVisible}
+        onClose={() => setOfertaModalVisible(false)}
+        onSaved={fetchData}
+        adminId={user?.id}
+      />
+      <NovoAvisoModal
+        visible={avisoModalVisible}
+        onClose={() => setAvisoModalVisible(false)}
+        onSaved={fetchData}
+      />
+      <NovoDevocionalModal
+        visible={devocionalModalVisible}
+        onClose={() => setDevocionalModalVisible(false)}
+        onSaved={fetchData}
+      />
+      <NovoEventoModal
+        visible={eventoModalVisible}
+        onClose={() => setEventoModalVisible(false)}
+        onSaved={fetchData}
+      />
+      <NovoShortModal
+        visible={shortModalVisible}
+        onClose={() => setShortModalVisible(false)}
+        onSaved={fetchData}
+      />
+      <NovaMensagemModal
+        visible={mensagemModalVisible}
+        onClose={() => setMensagemModalVisible(false)}
+        onSaved={fetchData}
+      />
     </SafeAreaView>
   );
 }
@@ -457,8 +1643,9 @@ const s = StyleSheet.create({
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
   newBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.accent, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20 },
   newBtnText: { fontSize: 13, fontWeight: '700', color: C.primary },
-  tabRow: { flexDirection: 'row', backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
-  tabBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
+  tabRowScroll: { backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
+  tabRow: { flexDirection: 'row' },
+  tabBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 16 },
   tabBtnActive: { borderBottomWidth: 2, borderBottomColor: C.purple },
   tabBtnText: { fontSize: 14, color: C.textMuted, fontWeight: '500' },
   scroll: { padding: 16, paddingBottom: 40 },

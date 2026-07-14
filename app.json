@@ -2,6 +2,7 @@
   "expo": {
     "name": "Peniel Church",
     "slug": "PenielChurchApp",
+    "scheme": "penielchurch",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

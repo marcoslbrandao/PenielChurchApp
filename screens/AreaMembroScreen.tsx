@@ -198,24 +198,6 @@ export default function AreaMembroScreen() {
             ),
           }}
         />
-        <Tab.Screen
-          name="Grupos"
-          component={GruposScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="grid-outline" size={size} color={color} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Mídias"
-          component={MidiasScreen}
-          options={{
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="share-social-outline" size={size} color={color} />
-            ),
-          }}
-        />
       </Tab.Navigator>
     </View>
   );

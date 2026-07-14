@@ -1,0 +1,81 @@
+// Lista de livros da Bíblia (Antigo e Novo Testamento), com nomes em
+// português, inglês, espanhol e francês. Fonte única compartilhada entre
+// BibleScreen.tsx, HomeScreen.tsx e lib/versiculoDoDia.ts — assim o nome do
+// livro exibido é sempre coerente em qualquer tela, em qualquer idioma.
+
+export type Livro = {
+  slug: string; caps: number; pt: string; en: string; es: string; fr: string;
+  apiPt: string; apiEn: string; // abreviações do livro na API abibliadigital.com.br
+};
+
+export const livrosAT: Livro[] = [
+  { slug: 'genesis',         caps: 50,  pt: 'Gênesis',       en: 'Genesis',         es: 'Génesis',       fr: 'Genèse'        , apiPt: 'gn', apiEn: 'gn' },
+  { slug: 'exodus',          caps: 40,  pt: 'Êxodo',         en: 'Exodus',          es: 'Éxodo',         fr: 'Exode'         , apiPt: 'ex', apiEn: 'ex' },
+  { slug: 'leviticus',       caps: 27,  pt: 'Levítico',      en: 'Leviticus',       es: 'Levítico',      fr: 'Lévitique'     , apiPt: 'lv', apiEn: 'lv' },
+  { slug: 'numbers',         caps: 36,  pt: 'Números',       en: 'Numbers',         es: 'Números',       fr: 'Nombres'       , apiPt: 'nm', apiEn: 'nm' },
+  { slug: 'deuteronomy',     caps: 34,  pt: 'Deuteronômio',  en: 'Deuteronomy',     es: 'Deuteronomio',  fr: 'Deutéronome'   , apiPt: 'dt', apiEn: 'dt' },
+  { slug: 'joshua',          caps: 24,  pt: 'Josué',         en: 'Joshua',          es: 'Josué',         fr: 'Josué'         , apiPt: 'js', apiEn: 'js' },
+  { slug: 'judges',          caps: 21,  pt: 'Juízes',        en: 'Judges',          es: 'Jueces',        fr: 'Juges'         , apiPt: 'jz', apiEn: 'jud' },
+  { slug: 'ruth',            caps: 4,   pt: 'Rute',          en: 'Ruth',            es: 'Rut',           fr: 'Ruth'          , apiPt: 'rt', apiEn: 'rt' },
+  { slug: '1+samuel',        caps: 31,  pt: '1 Samuel',      en: '1 Samuel',        es: '1 Samuel',      fr: '1 Samuel'      , apiPt: '1sm', apiEn: '1sm' },
+  { slug: '2+samuel',        caps: 24,  pt: '2 Samuel',      en: '2 Samuel',        es: '2 Samuel',      fr: '2 Samuel'      , apiPt: '2sm', apiEn: '2sm' },
+  { slug: '1+kings',         caps: 22,  pt: '1 Reis',        en: '1 Kings',         es: '1 Reyes',       fr: '1 Rois'        , apiPt: '1rs', apiEn: '1kgs' },
+  { slug: '2+kings',         caps: 25,  pt: '2 Reis',        en: '2 Kings',         es: '2 Reyes',       fr: '2 Rois'        , apiPt: '2rs', apiEn: '2kgs' },
+  { slug: '1+chronicles',    caps: 29,  pt: '1 Crônicas',    en: '1 Chronicles',    es: '1 Crónicas',    fr: '1 Chroniques'  , apiPt: '1cr', apiEn: '1ch' },
+  { slug: '2+chronicles',    caps: 36,  pt: '2 Crônicas',    en: '2 Chronicles',    es: '2 Crónicas',    fr: '2 Chroniques'  , apiPt: '2cr', apiEn: '2ch' },
+  { slug: 'ezra',            caps: 10,  pt: 'Esdras',        en: 'Ezra',            es: 'Esdras',        fr: 'Esdras'        , apiPt: 'ed', apiEn: 'ezr' },
+  { slug: 'nehemiah',        caps: 13,  pt: 'Neemias',       en: 'Nehemiah',        es: 'Nehemías',      fr: 'Néhémie'       , apiPt: 'ne', apiEn: 'ne' },
+  { slug: 'esther',          caps: 10,  pt: 'Ester',         en: 'Esther',          es: 'Ester',         fr: 'Esther'        , apiPt: 'et', apiEn: 'et' },
+  { slug: 'job',             caps: 42,  pt: 'Jó',            en: 'Job',             es: 'Job',           fr: 'Job'           , apiPt: 'job', apiEn: 'job' },
+  { slug: 'psalms',          caps: 150, pt: 'Salmos',        en: 'Psalms',          es: 'Salmos',        fr: 'Psaumes'       , apiPt: 'sl', apiEn: 'ps' },
+  { slug: 'proverbs',        caps: 31,  pt: 'Provérbios',    en: 'Proverbs',        es: 'Proverbios',    fr: 'Proverbes'     , apiPt: 'pv', apiEn: 'prv' },
+  { slug: 'ecclesiastes',    caps: 12,  pt: 'Eclesiastes',   en: 'Ecclesiastes',    es: 'Eclesiastés',   fr: 'Ecclésiaste'   , apiPt: 'ec', apiEn: 'ec' },
+  { slug: 'song+of+solomon', caps: 8,   pt: 'Cantares',      en: 'Song of Solomon', es: 'Cantares',      fr: 'Cantique'      , apiPt: 'ct', apiEn: 'so' },
+  { slug: 'isaiah',          caps: 66,  pt: 'Isaías',        en: 'Isaiah',          es: 'Isaías',        fr: 'Ésaïe'         , apiPt: 'is', apiEn: 'is' },
+  { slug: 'jeremiah',        caps: 52,  pt: 'Jeremias',      en: 'Jeremiah',        es: 'Jeremías',      fr: 'Jérémie'       , apiPt: 'jr', apiEn: 'jr' },
+  { slug: 'lamentations',    caps: 5,   pt: 'Lamentações',   en: 'Lamentations',    es: 'Lamentaciones', fr: 'Lamentations'  , apiPt: 'lm', apiEn: 'lm' },
+  { slug: 'ezekiel',         caps: 48,  pt: 'Ezequiel',      en: 'Ezekiel',         es: 'Ezequiel',      fr: 'Ézéchiel'      , apiPt: 'ez', apiEn: 'ez' },
+  { slug: 'daniel',          caps: 12,  pt: 'Daniel',        en: 'Daniel',          es: 'Daniel',        fr: 'Daniel'        , apiPt: 'dn', apiEn: 'dn' },
+  { slug: 'hosea',           caps: 14,  pt: 'Oséias',        en: 'Hosea',           es: 'Oseas',         fr: 'Osée'          , apiPt: 'os', apiEn: 'ho' },
+  { slug: 'joel',            caps: 3,   pt: 'Joel',          en: 'Joel',            es: 'Joel',          fr: 'Joël'          , apiPt: 'jl', apiEn: 'jl' },
+  { slug: 'amos',            caps: 9,   pt: 'Amós',          en: 'Amos',            es: 'Amós',          fr: 'Amos'          , apiPt: 'am', apiEn: 'am' },
+  { slug: 'obadiah',         caps: 1,   pt: 'Obadias',       en: 'Obadiah',         es: 'Abdías',        fr: 'Abdias'        , apiPt: 'ob', apiEn: 'ob' },
+  { slug: 'jonah',           caps: 4,   pt: 'Jonas',         en: 'Jonah',           es: 'Jonás',         fr: 'Jonas'         , apiPt: 'jn', apiEn: 'jn' },
+  { slug: 'micah',           caps: 7,   pt: 'Miquéias',      en: 'Micah',           es: 'Miqueas',       fr: 'Michée'        , apiPt: 'mq', apiEn: 'mi' },
+  { slug: 'nahum',           caps: 3,   pt: 'Naum',          en: 'Nahum',           es: 'Nahúm',         fr: 'Nahum'         , apiPt: 'na', apiEn: 'na' },
+  { slug: 'habakkuk',        caps: 3,   pt: 'Habacuque',     en: 'Habakkuk',        es: 'Habacuc',       fr: 'Habacuc'       , apiPt: 'hc', apiEn: 'hk' },
+  { slug: 'zephaniah',       caps: 3,   pt: 'Sofonias',      en: 'Zephaniah',       es: 'Sofonías',      fr: 'Sophonie'      , apiPt: 'sf', apiEn: 'zp' },
+  { slug: 'haggai',          caps: 2,   pt: 'Ageu',          en: 'Haggai',          es: 'Hageo',         fr: 'Aggée'         , apiPt: 'ag', apiEn: 'hg' },
+  { slug: 'zechariah',       caps: 14,  pt: 'Zacarias',      en: 'Zechariah',       es: 'Zacarías',      fr: 'Zacharie'      , apiPt: 'zc', apiEn: 'zc' },
+  { slug: 'malachi',         caps: 4,   pt: 'Malaquias',     en: 'Malachi',         es: 'Malaquías',     fr: 'Malachie'      , apiPt: 'ml', apiEn: 'ml' },
+];
+
+export const livrosNT: Livro[] = [
+  { slug: 'matthew',         caps: 28, pt: 'Mateus',            en: 'Matthew',         es: 'Mateo',            fr: 'Matthieu'         , apiPt: 'mt', apiEn: 'mt' },
+  { slug: 'mark',            caps: 16, pt: 'Marcos',            en: 'Mark',            es: 'Marcos',           fr: 'Marc'             , apiPt: 'mc', apiEn: 'mk' },
+  { slug: 'luke',            caps: 24, pt: 'Lucas',             en: 'Luke',            es: 'Lucas',            fr: 'Luc'              , apiPt: 'lc', apiEn: 'lk' },
+  { slug: 'john',            caps: 21, pt: 'João',              en: 'John',            es: 'Juan',             fr: 'Jean'             , apiPt: 'jo', apiEn: 'jo' },
+  { slug: 'acts',            caps: 28, pt: 'Atos',              en: 'Acts',            es: 'Hechos',           fr: 'Actes'            , apiPt: 'at', apiEn: 'act' },
+  { slug: 'romans',          caps: 16, pt: 'Romanos',           en: 'Romans',          es: 'Romanos',          fr: 'Romains'          , apiPt: 'rm', apiEn: 'rm' },
+  { slug: '1+corinthians',   caps: 16, pt: '1 Coríntios',       en: '1 Corinthians',   es: '1 Corintios',      fr: '1 Corinthiens'    , apiPt: '1co', apiEn: '1co' },
+  { slug: '2+corinthians',   caps: 13, pt: '2 Coríntios',       en: '2 Corinthians',   es: '2 Corintios',      fr: '2 Corinthiens'    , apiPt: '2co', apiEn: '2co' },
+  { slug: 'galatians',       caps: 6,  pt: 'Gálatas',           en: 'Galatians',       es: 'Gálatas',          fr: 'Galates'          , apiPt: 'gl', apiEn: 'gl' },
+  { slug: 'ephesians',       caps: 6,  pt: 'Efésios',           en: 'Ephesians',       es: 'Efesios',          fr: 'Éphésiens'        , apiPt: 'ef', apiEn: 'eph' },
+  { slug: 'philippians',     caps: 4,  pt: 'Filipenses',        en: 'Philippians',     es: 'Filipenses',       fr: 'Philippiens'      , apiPt: 'fp', apiEn: 'ph' },
+  { slug: 'colossians',      caps: 4,  pt: 'Colossenses',       en: 'Colossians',      es: 'Colosenses',       fr: 'Colossiens'       , apiPt: 'cl', apiEn: 'cl' },
+  { slug: '1+thessalonians', caps: 5,  pt: '1 Tessalonicenses', en: '1 Thessalonians', es: '1 Tesalonicenses', fr: '1 Thessaloniciens', apiPt: '1ts', apiEn: '1ts' },
+  { slug: '2+thessalonians', caps: 3,  pt: '2 Tessalonicenses', en: '2 Thessalonians', es: '2 Tesalonicenses', fr: '2 Thessaloniciens', apiPt: '2ts', apiEn: '2ts' },
+  { slug: '1+timothy',       caps: 6,  pt: '1 Timóteo',         en: '1 Timothy',       es: '1 Timoteo',        fr: '1 Timothée'       , apiPt: '1tm', apiEn: '1tm' },
+  { slug: '2+timothy',       caps: 4,  pt: '2 Timóteo',         en: '2 Timothy',       es: '2 Timoteo',        fr: '2 Timothée'       , apiPt: '2tm', apiEn: '2tm' },
+  { slug: 'titus',           caps: 3,  pt: 'Tito',              en: 'Titus',           es: 'Tito',             fr: 'Tite'             , apiPt: 'tt', apiEn: 'tt' },
+  { slug: 'philemon',        caps: 1,  pt: 'Filemom',           en: 'Philemon',        es: 'Filemón',          fr: 'Philémon'         , apiPt: 'fm', apiEn: 'phm' },
+  { slug: 'hebrews',         caps: 13, pt: 'Hebreus',           en: 'Hebrews',         es: 'Hebreos',          fr: 'Hébreux'          , apiPt: 'hb', apiEn: 'hb' },
+  { slug: 'james',           caps: 5,  pt: 'Tiago',             en: 'James',           es: 'Santiago',         fr: 'Jacques'          , apiPt: 'tg', apiEn: 'jm' },
+  { slug: '1+peter',         caps: 5,  pt: '1 Pedro',           en: '1 Peter',         es: '1 Pedro',          fr: '1 Pierre'         , apiPt: '1pe', apiEn: '1pe' },
+  { slug: '2+peter',         caps: 3,  pt: '2 Pedro',           en: '2 Peter',         es: '2 Pedro',          fr: '2 Pierre'         , apiPt: '2pe', apiEn: '2pe' },
+  { slug: '1+john',          caps: 5,  pt: '1 João',            en: '1 John',          es: '1 Juan',           fr: '1 Jean'           , apiPt: '1jo', apiEn: '1jo' },
+  { slug: '2+john',          caps: 1,  pt: '2 João',            en: '2 John',          es: '2 Juan',           fr: '2 Jean'           , apiPt: '2jo', apiEn: '2jo' },
+  { slug: '3+john',          caps: 1,  pt: '3 João',            en: '3 John',          es: '3 Juan',           fr: '3 Jean'           , apiPt: '3jo', apiEn: '3jo' },
+  { slug: 'jude',            caps: 1,  pt: 'Judas',             en: 'Jude',            es: 'Judas',            fr: 'Jude'             , apiPt: 'jd', apiEn: 'jd' },
+  { slug: 'revelation',      caps: 22, pt: 'Apocalipse',        en: 'Revelation',      es: 'Apocalipsis',      fr: 'Apocalypse'       , apiPt: 'ap', apiEn: 're' },
+];

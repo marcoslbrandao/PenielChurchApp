@@ -1,31 +1,53 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const SUMUP_URL = 'https://pay.sumup.com/b2c/Q54Q9ILX';
 
 const valores = [10, 25, 50, 100, 200];
 
-const tipos = [
-  { id: 'dizimo', nome: 'Dízimo', sub: '10% da renda', icone: 'star-outline' },
-  { id: 'oferta', nome: 'Oferta', sub: 'Contribuição livre', icone: 'heart-outline' },
-  { id: 'missoes', nome: 'Missões', sub: 'Apoio missionário', icone: 'earth-outline' },
-  { id: 'construcao', nome: 'Construção', sub: 'Obra da igreja', icone: 'home-outline' },
-];
-
-export default function OfertaScreen() {
+export default function OfertaScreen({ navigation }: { navigation?: any }) {
+  const { t } = useTranslation();
+  const tipos = [
+    { id: 'dizimo', nome: t('oferta.dizimoNome'), sub: t('oferta.dizimoSub'), icone: 'star-outline' },
+    { id: 'oferta', nome: t('oferta.ofertaNome'), sub: t('oferta.ofertaSub'), icone: 'heart-outline' },
+    // Missões e Construção voltam quando tivermos essas campanhas ativas.
+  ];
   const [valorSelecionado, setValorSelecionado] = useState(25);
+  const [outroAtivo, setOutroAtivo] = useState(false);
+  const [valorCustom, setValorCustom] = useState('');
   const [tipoSelecionado, setTipoSelecionado] = useState('dizimo');
   const [recorrencia, setRecorrencia] = useState('unica');
 
+  const valorFinal = outroAtivo ? Number(valorCustom.replace(',', '.')) || 0 : valorSelecionado;
+
+  const selecionarPreset = (v: number) => {
+    setOutroAtivo(false);
+    setValorSelecionado(v);
+  };
+
+  const selecionarOutro = () => {
+    setOutroAtivo(true);
+    setValorSelecionado(0);
+  };
+
   const handleContribuir = () => {
+    if (valorFinal <= 0) {
+      Alert.alert(t('common.atencao'), t('oferta.informeValorValido'));
+      return;
+    }
     Alert.alert(
-      'Contribuir com Segurança',
-      `Você será redirecionado para o pagamento seguro via SumUp.\n\nValor: £${valorSelecionado > 0 ? valorSelecionado : '—'}\nTipo: ${tipos.find(t => t.id === tipoSelecionado)?.nome}\nFrequência: ${recorrencia === 'mensal' ? 'Mensal' : 'Única'}`,
+      t('oferta.modalTitulo'),
+      t('oferta.modalTexto', {
+        valor: valorFinal,
+        tipo: tipos.find(tp => tp.id === tipoSelecionado)?.nome,
+        freq: recorrencia === 'mensal' ? t('oferta.mensal') : t('oferta.unica'),
+      }),
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: '💳 Ir para pagamento', onPress: () => Linking.openURL(SUMUP_URL) },
+        { text: t('common.cancelar'), style: 'cancel' },
+        { text: t('oferta.irParaPagamento'), onPress: () => Linking.openURL(SUMUP_URL) },
       ]
     );
   };
@@ -33,43 +55,64 @@ export default function OfertaScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerSub}>contribua com a obra</Text>
-        <Text style={styles.headerTitulo}>Oferta e Dízimo</Text>
+        <View>
+          <Text style={styles.headerSub}>{t('oferta.contribuaComAObra')}</Text>
+          <Text style={styles.headerTitulo}>{t('oferta.titulo')}</Text>
+        </View>
+        {navigation && (
+          <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="close" size={22} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* ── Valor ─────────────────────────────────────────────────────────── */}
         <View style={styles.valorCard}>
-          <Text style={styles.valorLabel}>Valor da oferta</Text>
+          <Text style={styles.valorLabel}>{t('oferta.valorDaOferta')}</Text>
           <Text style={styles.valorDisplay}>
-            {valorSelecionado > 0 ? '£ ' + valorSelecionado : '£ --'}
+            {valorFinal > 0 ? '£ ' + valorFinal : '£ --'}
           </Text>
           <View style={styles.presetsGrid}>
             {valores.map((v) => (
               <TouchableOpacity
                 key={v}
-                style={[styles.presetBtn, valorSelecionado === v && styles.presetBtnAtivo]}
-                onPress={() => setValorSelecionado(v)}
+                style={[styles.presetBtn, !outroAtivo && valorSelecionado === v && styles.presetBtnAtivo]}
+                onPress={() => selecionarPreset(v)}
               >
-                <Text style={[styles.presetTexto, valorSelecionado === v && styles.presetTextoAtivo]}>
+                <Text style={[styles.presetTexto, !outroAtivo && valorSelecionado === v && styles.presetTextoAtivo]}>
                   £{v}
                 </Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              style={[styles.presetBtn, valorSelecionado === 0 && styles.presetBtnAtivo]}
-              onPress={() => setValorSelecionado(0)}
+              style={[styles.presetBtn, outroAtivo && styles.presetBtnAtivo]}
+              onPress={selecionarOutro}
             >
-              <Text style={[styles.presetTexto, valorSelecionado === 0 && styles.presetTextoAtivo]}>
-                Outro
+              <Text style={[styles.presetTexto, outroAtivo && styles.presetTextoAtivo]}>
+                {t('oferta.outro')}
               </Text>
             </TouchableOpacity>
           </View>
+          {outroAtivo && (
+            <View style={styles.outroInputWrap}>
+              <Text style={styles.outroInputPrefixo}>£</Text>
+              <TextInput
+                style={styles.outroInput}
+                value={valorCustom}
+                onChangeText={setValorCustom}
+                placeholder="0.00"
+                placeholderTextColor="rgba(255,255,255,0.35)"
+                keyboardType="decimal-pad"
+                autoFocus
+              />
+            </View>
+          )}
         </View>
 
         {/* ── Tipo ──────────────────────────────────────────────────────────── */}
-        <Text style={styles.secaoTitulo}>Tipo de contribuição</Text>
+        <Text style={styles.secaoTitulo}>{t('oferta.tipoDeContribuicao')}</Text>
         <View style={styles.tiposGrid}>
           {tipos.map((tipo) => (
             <TouchableOpacity
@@ -93,14 +136,14 @@ export default function OfertaScreen() {
         {/* ── Recorrência ───────────────────────────────────────────────────── */}
         <View style={styles.recorrenciaCard}>
           <View style={styles.recorrenciaTop}>
-            <Text style={styles.recorrenciaTitulo}>Frequência</Text>
+            <Text style={styles.recorrenciaTitulo}>{t('oferta.frequencia')}</Text>
             <View style={styles.recorrenciaAbas}>
               <TouchableOpacity
                 style={[styles.recorrenciaAba, recorrencia === 'unica' && styles.recorrenciaAbaAtiva]}
                 onPress={() => setRecorrencia('unica')}
               >
                 <Text style={[styles.recorrenciaAbaTexto, recorrencia === 'unica' && styles.recorrenciaAbaTextoAtivo]}>
-                  Única
+                  {t('oferta.unica')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -108,64 +151,64 @@ export default function OfertaScreen() {
                 onPress={() => setRecorrencia('mensal')}
               >
                 <Text style={[styles.recorrenciaAbaTexto, recorrencia === 'mensal' && styles.recorrenciaAbaTextoAtivo]}>
-                  Mensal
+                  {t('oferta.mensal')}
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
           <Text style={styles.recorrenciaDesc}>
             {recorrencia === 'mensal'
-              ? 'Sua contribuição será debitada mensalmente. Pode cancelar a qualquer momento.'
-              : 'Contribuição única, processada apenas uma vez com segurança.'}
+              ? t('oferta.freqMensalDesc')
+              : t('oferta.freqUnicaDesc')}
           </Text>
         </View>
 
         {/* ── Resumo ────────────────────────────────────────────────────────── */}
         <View style={styles.resumoCard}>
           <View style={styles.resumoLinha}>
-            <Text style={styles.resumoLabel}>Tipo</Text>
-            <Text style={styles.resumoValor}>{tipos.find(t => t.id === tipoSelecionado)?.nome}</Text>
+            <Text style={styles.resumoLabel}>{t('oferta.resumoTipo')}</Text>
+            <Text style={styles.resumoValor}>{tipos.find(tp => tp.id === tipoSelecionado)?.nome}</Text>
           </View>
           <View style={styles.resumoLinha}>
-            <Text style={styles.resumoLabel}>Valor</Text>
+            <Text style={styles.resumoLabel}>{t('oferta.resumoValor')}</Text>
             <Text style={[styles.resumoValor, { color: '#534AB7', fontWeight: '700' }]}>
-              {valorSelecionado > 0 ? '£ ' + valorSelecionado : 'A definir'}
+              {valorFinal > 0 ? '£ ' + valorFinal : t('oferta.aDefinir')}
             </Text>
           </View>
           <View style={[styles.resumoLinha, { borderBottomWidth: 0 }]}>
-            <Text style={styles.resumoLabel}>Frequência</Text>
-            <Text style={styles.resumoValor}>{recorrencia === 'mensal' ? 'Todo mês' : 'Uma vez'}</Text>
+            <Text style={styles.resumoLabel}>{t('oferta.frequencia')}</Text>
+            <Text style={styles.resumoValor}>{recorrencia === 'mensal' ? t('oferta.todoMes') : t('oferta.umaVez')}</Text>
           </View>
         </View>
 
         {/* ── Botão contribuir ──────────────────────────────────────────────── */}
         <TouchableOpacity style={styles.btnContribuir} onPress={handleContribuir} activeOpacity={0.85}>
           <Ionicons name="card-outline" size={20} color="#fff" />
-          <Text style={styles.btnContribuirTexto}>Contribuir com Segurança</Text>
+          <Text style={styles.btnContribuirTexto}>{t('oferta.contribuirComSeguranca')}</Text>
         </TouchableOpacity>
 
         {/* ── Selos de segurança ────────────────────────────────────────────── */}
         <View style={styles.selosRow}>
           <View style={styles.selo}>
             <Ionicons name="lock-closed-outline" size={14} color="#8B83D4" />
-            <Text style={styles.seloTexto}>SSL 256-bit</Text>
+            <Text style={styles.seloTexto}>{t('oferta.ssl')}</Text>
           </View>
           <View style={styles.selo}>
             <Ionicons name="shield-checkmark-outline" size={14} color="#8B83D4" />
-            <Text style={styles.seloTexto}>SumUp Seguro</Text>
+            <Text style={styles.seloTexto}>{t('oferta.sumupSeguro')}</Text>
           </View>
           <View style={styles.selo}>
             <Ionicons name="card-outline" size={14} color="#8B83D4" />
-            <Text style={styles.seloTexto}>Visa / Mastercard</Text>
+            <Text style={styles.seloTexto}>{t('oferta.visaMastercard')}</Text>
           </View>
         </View>
 
         {/* ── Versículo ─────────────────────────────────────────────────────── */}
         <View style={styles.versiculoCard}>
           <Text style={styles.versiculoTexto}>
-            "Cada um deve dar segundo propôs no seu coração, não com tristeza ou por necessidade; porque Deus ama ao que dá com alegria."
+            {t('oferta.versiculoOferta')}
           </Text>
-          <Text style={styles.versiculoRef}>2 Coríntios 9:7</Text>
+          <Text style={styles.versiculoRef}>{t('oferta.versiculoRef')}</Text>
         </View>
 
         <View style={{ height: 30 }} />
@@ -176,7 +219,8 @@ export default function OfertaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9F8FF' },
-  header: { backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18 },
+  header: { backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
   headerTitulo: { fontSize: 18, fontWeight: '500', color: '#fff', marginTop: 2 },
   // Valor
@@ -188,6 +232,9 @@ const styles = StyleSheet.create({
   presetBtnAtivo: { backgroundColor: '#534AB7', borderColor: '#534AB7' },
   presetTexto: { fontSize: 15, fontWeight: '500', color: 'rgba(255,255,255,0.7)' },
   presetTextoAtivo: { color: '#fff', fontWeight: '700' },
+  outroInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: '#534AB7', borderRadius: 10, paddingHorizontal: 14, height: 46, marginTop: 12 },
+  outroInputPrefixo: { fontSize: 16, fontWeight: '700', color: '#F5C842', marginRight: 8 },
+  outroInput: { flex: 1, fontSize: 16, color: '#fff', fontWeight: '600' },
   // Tipos
   secaoTitulo: { fontSize: 14, fontWeight: '500', color: '#1A1740', marginHorizontal: 14, marginBottom: 10 },
   tiposGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginHorizontal: 14, marginBottom: 16 },

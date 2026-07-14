@@ -5,7 +5,34 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import MensagemDetalheModal, { Mensagem } from '../components/MensagemDetalheModal';
+import { useCampoTraduzido } from '../lib/useTraducao';
+
+const LOCALE_POR_IDIOMA: Record<string, string> = { pt: 'pt-BR', en: 'en-GB', es: 'es-ES', fr: 'fr-FR' };
+
+// Card de mensagem (blog) na lista — título e resumo traduzidos pro idioma do app.
+function MensagemCard({ msg, onPress }: { msg: Mensagem; onPress: () => void }) {
+  const { i18n } = useTranslation();
+  const titulo = useCampoTraduzido(msg.titulo, 'mensagens', msg.id, 'titulo');
+  const resumo = useCampoTraduzido(msg.resumo, 'mensagens', msg.id, 'resumo');
+  const locale = LOCALE_POR_IDIOMA[i18n.language] ?? 'pt-BR';
+  return (
+    <TouchableOpacity style={s.mensagemCard} onPress={onPress} activeOpacity={0.85}>
+      {!!msg.imagem_url && (
+        <Image source={{ uri: msg.imagem_url }} style={s.mensagemThumb} resizeMode="cover" />
+      )}
+      <View style={s.mensagemInfo}>
+        <Text style={s.mensagemData}>
+          {new Date(`${msg.data}T00:00:00`).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })}
+        </Text>
+        <Text style={s.mensagemTitulo} numberOfLines={2}>{titulo}</Text>
+        <Text style={s.mensagemResumo} numberOfLines={2}>{resumo}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const YOUTUBE_API_KEY = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
@@ -24,36 +51,48 @@ const C = {
   spotify: '#1DB954', green: '#27AE60',
 };
 
-type Tab = 'videos' | 'avisos' | 'podcast' | 'social';
+type Tab = 'videos' | 'shorts' | 'avisos' | 'mensagens' | 'podcast' | 'social';
 type Aviso = { id: string; titulo: string; texto: string; data: string; tipo: string; };
 type Video = { id: string; title: string; thumbnail: string; publishedAt: string; videoId: string; isLive?: boolean; };
+type Short = { id: string; titulo: string; url: string; plataforma: string; };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, t: (key: string) => string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return 'agora';
-  if (diff < 3600) return `${Math.floor(diff / 60)} min atrás`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d atrás`;
+  if (diff < 60) return t('midia.agora');
+  if (diff < 3600) return `${Math.floor(diff / 60)} ${t('midia.minAtras')}`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}${t('midia.hAtras')}`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}${t('midia.dAtras')}`;
   return new Date(dateStr).toLocaleDateString('pt-BR');
 }
 
-function tipoAvisoCor(tipo: string) {
+function extractYoutubeId(url: string): string | null {
+  const m = url.match(/(?:shorts\/|watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
+  return m ? m[1] : null;
+}
+
+function tipoAvisoCor(tipo: string, t: (key: string) => string) {
   switch (tipo) {
-    case 'urgente': return { bg: '#3D0A0A', border: '#C0392B', text: '#FF6B6B', label: '🚨 Urgente' };
-    case 'evento':  return { bg: '#0A1A3D', border: '#534AB7', text: '#8B83D4', label: '📅 Evento'  };
-    case 'geral':   return { bg: '#0A2A1A', border: '#27AE60', text: '#2ECC71', label: '📢 Geral'   };
-    default:        return { bg: C.surface, border: C.border,  text: C.textMuted, label: '📌 Aviso' };
+    case 'urgente': return { bg: '#3D0A0A', border: '#C0392B', text: '#FF6B6B', label: t('midia.tipoUrgente') };
+    case 'evento':  return { bg: '#0A1A3D', border: '#534AB7', text: '#8B83D4', label: t('midia.tipoEvento')  };
+    case 'geral':   return { bg: '#0A2A1A', border: '#27AE60', text: '#2ECC71', label: t('midia.tipoGeral')   };
+    default:        return { bg: C.surface, border: C.border,  text: C.textMuted, label: t('midia.tipoAviso') };
   }
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function MidiaScreen() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('videos');
   const [videos, setVideos] = useState<Video[]>([]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const [shorts, setShorts] = useState<Short[]>([]);
+  const [mensagens, setMensagens] = useState<Mensagem[]>([]);
+  const [mensagemAberta, setMensagemAberta] = useState<Mensagem | null>(null);
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [loadingAvisos, setLoadingAvisos] = useState(true);
+  const [loadingShorts, setLoadingShorts] = useState(true);
+  const [loadingMensagens, setLoadingMensagens] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // ── Busca vídeos do YouTube ──────────────────────────────────────────────────
@@ -111,19 +150,47 @@ export default function MidiaScreen() {
     setRefreshing(false);
   }, []);
 
-  useEffect(() => { fetchVideos(); fetchAvisos(); }, []);
+  // ── Busca shorts do Supabase ─────────────────────────────────────────────────
+  const fetchShorts = useCallback(async () => {
+    const { data } = await supabase
+      .from('shorts_videos')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (data) setShorts(data as Short[]);
+    setLoadingShorts(false);
+    setRefreshing(false);
+  }, []);
+
+  // ── Busca mensagens (blog) do Supabase ───────────────────────────────────────
+  const fetchMensagens = useCallback(async () => {
+    const { data } = await supabase
+      .from('mensagens')
+      .select('id, titulo, resumo, conteudo, imagem_url, autor, data')
+      .order('data', { ascending: false })
+      .limit(30);
+    if (data) setMensagens(data as Mensagem[]);
+    setLoadingMensagens(false);
+    setRefreshing(false);
+  }, []);
+
+  useEffect(() => { fetchVideos(); fetchAvisos(); fetchShorts(); fetchMensagens(); }, []);
 
   const handleRefresh = () => {
     setRefreshing(true);
     if (activeTab === 'videos') fetchVideos();
     if (activeTab === 'avisos') fetchAvisos();
+    if (activeTab === 'shorts') fetchShorts();
+    if (activeTab === 'mensagens') fetchMensagens();
   };
 
   const TABS: { id: Tab; icon: string; label: string }[] = [
-    { id: 'videos',  icon: 'logo-youtube',         label: 'Vídeos'   },
-    { id: 'avisos',  icon: 'megaphone-outline',     label: 'Avisos'   },
-    { id: 'podcast', icon: 'mic-outline',           label: 'Podcast'  },
-    { id: 'social',  icon: 'share-social-outline',  label: 'Social'   },
+    { id: 'videos',    icon: 'logo-youtube',         label: t('midia.tabVideos')     },
+    { id: 'shorts',    icon: 'film-outline',          label: t('midia.tabShorts')     },
+    { id: 'mensagens', icon: 'newspaper-outline',     label: t('midia.tabMensagens')  },
+    { id: 'avisos',    icon: 'megaphone-outline',     label: t('midia.tabAvisos')     },
+    { id: 'podcast',   icon: 'mic-outline',           label: t('midia.tabPodcast')    },
+    { id: 'social',    icon: 'share-social-outline',  label: t('midia.tabSocial')     },
   ];
 
   return (
@@ -133,12 +200,12 @@ export default function MidiaScreen() {
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.headerTitle}>Mídia</Text>
+          <Text style={s.headerTitle}>{t('midia.titulo')}</Text>
           <Text style={s.headerSub}>Peniel Church</Text>
         </View>
         <TouchableOpacity style={s.ytBtn} onPress={() => Linking.openURL(YOUTUBE_CHANNEL_URL)}>
           <Ionicons name="logo-youtube" size={16} color="#FF0000" />
-          <Text style={s.ytBtnText}>Canal</Text>
+          <Text style={s.ytBtnText}>{t('midia.canal')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -162,19 +229,19 @@ export default function MidiaScreen() {
           contentContainerStyle={s.tabContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}
         >
-          <Text style={s.sectionLabel}>Últimos vídeos</Text>
+          <Text style={s.sectionLabel}>{t('midia.ultimosVideos')}</Text>
           {loadingVideos ? (
             <View style={s.loadingWrap}>
               <ActivityIndicator color={C.primary} size="large" />
-              <Text style={s.loadingText}>Carregando vídeos...</Text>
+              <Text style={s.loadingText}>{t('midia.carregandoVideos')}</Text>
             </View>
           ) : videos.length === 0 ? (
             <View style={s.emptyWrap}>
               <Ionicons name="logo-youtube" size={48} color={C.textDim} />
-              <Text style={s.emptyTitle}>Nenhum vídeo encontrado</Text>
-              <Text style={s.emptySub}>Verifique sua conexão ou acesse o canal</Text>
+              <Text style={s.emptyTitle}>{t('midia.nenhumVideoEncontrado')}</Text>
+              <Text style={s.emptySub}>{t('midia.verifiqueConexao')}</Text>
               <TouchableOpacity style={s.emptyBtn} onPress={() => Linking.openURL(YOUTUBE_CHANNEL_URL)}>
-                <Text style={s.emptyBtnText}>Abrir Canal YouTube</Text>
+                <Text style={s.emptyBtnText}>{t('midia.abrirCanalYoutube')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -193,7 +260,7 @@ export default function MidiaScreen() {
                   {video.isLive && (
                     <View style={s.liveBadge}>
                       <View style={s.liveDot} />
-                      <Text style={s.liveBadgeText}>AO VIVO</Text>
+                      <Text style={s.liveBadgeText}>{t('midia.aoVivo')}</Text>
                     </View>
                   )}
                 </View>
@@ -201,10 +268,91 @@ export default function MidiaScreen() {
                   <Text style={s.videoTitle} numberOfLines={2}>{video.title}</Text>
                   <View style={s.videoMeta}>
                     <Ionicons name="time-outline" size={12} color={C.textMuted} />
-                    <Text style={s.videoMetaText}>{timeAgo(video.publishedAt)}</Text>
+                    <Text style={s.videoMetaText}>{timeAgo(video.publishedAt, t)}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
+      )}
+
+      {/* ══ SHORTS ════════════════════════════════════════════════════════════ */}
+      {activeTab === 'shorts' && (
+        <ScrollView
+          contentContainerStyle={s.tabContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}
+        >
+          <Text style={s.sectionLabel}>{t('midia.videosCurtos')}</Text>
+          {loadingShorts ? (
+            <View style={s.loadingWrap}>
+              <ActivityIndicator color={C.primary} size="large" />
+              <Text style={s.loadingText}>{t('midia.carregando')}</Text>
+            </View>
+          ) : shorts.length === 0 ? (
+            <View style={s.emptyWrap}>
+              <Ionicons name="film-outline" size={48} color={C.textDim} />
+              <Text style={s.emptyTitle}>{t('midia.nenhumVideoCurtoAinda')}</Text>
+              <Text style={s.emptySub}>{t('midia.devocionaisRapidosEmBreve')}</Text>
+            </View>
+          ) : (
+            <View style={s.shortsGrid}>
+              {shorts.map(short => {
+                const ytId = short.plataforma === 'youtube' ? extractYoutubeId(short.url) : null;
+                return (
+                  <TouchableOpacity
+                    key={short.id}
+                    style={s.shortCard}
+                    onPress={() => Linking.openURL(short.url)}
+                    activeOpacity={0.85}
+                  >
+                    {ytId ? (
+                      <Image source={{ uri: `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` }} style={s.shortThumb} resizeMode="cover" />
+                    ) : (
+                      <View style={[s.shortThumb, s.shortThumbPlaceholder, {
+                        backgroundColor: short.plataforma === 'instagram' ? '#E1306C22' : '#FF000022',
+                      }]}>
+                        <Ionicons
+                          name={short.plataforma === 'instagram' ? 'logo-instagram' : 'logo-youtube'}
+                          size={30}
+                          color={short.plataforma === 'instagram' ? '#E1306C' : '#FF0000'}
+                        />
+                      </View>
+                    )}
+                    <View style={s.shortPlayOverlay}>
+                      <Ionicons name="play-circle" size={30} color="rgba(255,255,255,0.9)" />
+                    </View>
+                    <View style={s.shortInfo}>
+                      <Text style={s.shortTitle} numberOfLines={2}>{short.titulo}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      {/* ══ MENSAGENS (blog) ═════════════════════════════════════════════════ */}
+      {activeTab === 'mensagens' && (
+        <ScrollView
+          contentContainerStyle={s.tabContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}
+        >
+          <Text style={s.sectionLabel}>{t('midia.mensagensTitulo')}</Text>
+          {loadingMensagens ? (
+            <View style={s.loadingWrap}>
+              <ActivityIndicator color={C.primary} size="large" />
+              <Text style={s.loadingText}>{t('midia.carregando')}</Text>
+            </View>
+          ) : mensagens.length === 0 ? (
+            <View style={s.emptyWrap}>
+              <Ionicons name="newspaper-outline" size={48} color={C.textDim} />
+              <Text style={s.emptyTitle}>{t('midia.nenhumaMensagemAinda')}</Text>
+            </View>
+          ) : (
+            mensagens.map(msg => (
+              <MensagemCard key={msg.id} msg={msg} onPress={() => setMensagemAberta(msg)} />
             ))
           )}
         </ScrollView>
@@ -216,7 +364,7 @@ export default function MidiaScreen() {
           contentContainerStyle={s.tabContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}
         >
-          <Text style={s.sectionLabel}>Notícias e Avisos</Text>
+          <Text style={s.sectionLabel}>{t('midia.noticiasEAvisos')}</Text>
           {loadingAvisos ? (
             <View style={s.loadingWrap}>
               <ActivityIndicator color={C.primary} />
@@ -224,17 +372,17 @@ export default function MidiaScreen() {
           ) : avisos.length === 0 ? (
             <View style={s.emptyWrap}>
               <Ionicons name="megaphone-outline" size={48} color={C.textDim} />
-              <Text style={s.emptyTitle}>Nenhum aviso publicado ainda</Text>
-              <Text style={s.emptySub}>Os avisos da igreja aparecerão aqui</Text>
+              <Text style={s.emptyTitle}>{t('midia.nenhumAvisoPublicadoAinda')}</Text>
+              <Text style={s.emptySub}>{t('midia.avisosApareceraoAqui')}</Text>
             </View>
           ) : (
             avisos.map(aviso => {
-              const cor = tipoAvisoCor(aviso.tipo);
+              const cor = tipoAvisoCor(aviso.tipo, t);
               return (
                 <View key={aviso.id} style={[s.avisoCard, { backgroundColor: cor.bg, borderColor: cor.border }]}>
                   <View style={s.avisoHeader}>
                     <Text style={[s.avisoTipo, { color: cor.text }]}>{cor.label}</Text>
-                    <Text style={s.avisoData}>{timeAgo(aviso.data)}</Text>
+                    <Text style={s.avisoData}>{timeAgo(aviso.data, t)}</Text>
                   </View>
                   <Text style={s.avisoTitulo}>{aviso.titulo}</Text>
                   <Text style={s.avisoTexto}>{aviso.texto}</Text>
@@ -252,11 +400,11 @@ export default function MidiaScreen() {
             <View style={s.podcastIcon}>
               <Ionicons name="mic" size={36} color={C.accent} />
             </View>
-            <Text style={s.podcastTitle}>Peniel Church Podcast</Text>
-            <Text style={s.podcastSub}>Mensagens, devocionais e muito mais</Text>
+            <Text style={s.podcastTitle}>{t('midia.podcastTitulo')}</Text>
+            <Text style={s.podcastSub}>{t('midia.podcastSub')}</Text>
           </View>
 
-          <Text style={s.sectionLabel}>Ouça em</Text>
+          <Text style={s.sectionLabel}>{t('midia.oucaEm')}</Text>
           <View style={s.platformsGrid}>
             {[
               { nome: 'Spotify',       icon: 'musical-note',   cor: '#1DB954', url: 'https://spotify.com' },
@@ -278,7 +426,7 @@ export default function MidiaScreen() {
           <View style={s.podcastEmBreve}>
             <Ionicons name="time-outline" size={20} color={C.textMuted} />
             <Text style={s.podcastEmBreveText}>
-              Em breve! O podcast da Peniel Church estará disponível nestas plataformas.
+              {t('midia.emBrevePodcast')}
             </Text>
           </View>
         </ScrollView>
@@ -287,12 +435,12 @@ export default function MidiaScreen() {
       {/* ══ SOCIAL ════════════════════════════════════════════════════════════ */}
       {activeTab === 'social' && (
         <ScrollView contentContainerStyle={s.tabContent}>
-          <Text style={s.sectionLabel}>Nossas redes sociais</Text>
+          <Text style={s.sectionLabel}>{t('midia.nossasRedesSociais')}</Text>
 
           {[
-            { nome: 'YouTube',   handle: '@PenielChurchOfficial',      icon: 'logo-youtube',   cor: '#FF0000', url: YOUTUBE_CHANNEL_URL,  desc: 'Cultos, pregações e devocionais' },
-            { nome: 'Instagram', handle: '@penielchurchofficial',       icon: 'logo-instagram', cor: '#E1306C', url: INSTAGRAM_URL,        desc: 'Fotos e stories da igreja'       },
-            { nome: 'Facebook',  handle: 'penielchurchofficial',        icon: 'logo-facebook',  cor: '#1877F2', url: FACEBOOK_URL,         desc: 'Comunidade e eventos'            },
+            { nome: 'YouTube',   handle: '@PenielChurchOfficial',      icon: 'logo-youtube',   cor: '#FF0000', url: YOUTUBE_CHANNEL_URL,  desc: t('midia.descYoutube') },
+            { nome: 'Instagram', handle: '@penielchurchofficial',       icon: 'logo-instagram', cor: '#E1306C', url: INSTAGRAM_URL,        desc: t('midia.descInstagram') },
+            { nome: 'Facebook',  handle: 'penielchurchofficial',        icon: 'logo-facebook',  cor: '#1877F2', url: FACEBOOK_URL,         desc: t('midia.descFacebook') },
           ].map(rede => (
             <TouchableOpacity
               key={rede.nome}
@@ -311,18 +459,10 @@ export default function MidiaScreen() {
               <Ionicons name="open-outline" size={18} color={C.textMuted} />
             </TouchableOpacity>
           ))}
-
-          <TouchableOpacity
-            style={[s.socialDica, { justifyContent: 'center' }]}
-            onPress={() => Linking.openURL('https://www.instagram.com/penielchurchofficial/')}
-          >
-            <Ionicons name="logo-instagram" size={16} color="#E1306C" />
-            <Text style={[s.socialDicaText, { color: '#E1306C', fontWeight: '700' }]}>
-              Seguir no Instagram @penielchurchofficial
-            </Text>
-          </TouchableOpacity>
         </ScrollView>
       )}
+
+      <MensagemDetalheModal mensagem={mensagemAberta} onClose={() => setMensagemAberta(null)} />
     </SafeAreaView>
   );
 }
@@ -353,6 +493,13 @@ const s = StyleSheet.create({
   thumbWrap: { position: 'relative' },
   thumb: { width: '100%', height: 190 },
   playOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.2)' },
+  shortsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
+  shortCard: { width: '48%', aspectRatio: 9 / 14, borderRadius: 14, overflow: 'hidden', backgroundColor: C.surface, marginBottom: 14, position: 'relative' },
+  shortThumb: { width: '100%', height: '100%' },
+  shortThumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  shortPlayOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.15)' },
+  shortInfo: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10, backgroundColor: 'rgba(0,0,0,0.55)' },
+  shortTitle: { fontSize: 12, fontWeight: '700', color: '#fff' },
   liveBadge: { position: 'absolute', top: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E84B1A', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
   liveBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff', letterSpacing: 1 },
@@ -361,6 +508,13 @@ const s = StyleSheet.create({
   videoMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   videoMetaText: { fontSize: 11, color: C.textMuted },
   // Avisos
+  // Mensagens (blog)
+  mensagemCard: { flexDirection: 'row', backgroundColor: C.surface, borderRadius: 14, marginBottom: 12, overflow: 'hidden', borderWidth: 1, borderColor: C.border },
+  mensagemThumb: { width: 96, height: '100%', minHeight: 96 },
+  mensagemInfo: { flex: 1, padding: 12, gap: 3 },
+  mensagemData: { fontSize: 10, color: C.textDim, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  mensagemTitulo: { fontSize: 14, fontWeight: '700', color: C.text, marginTop: 2 },
+  mensagemResumo: { fontSize: 12, color: C.textMuted, lineHeight: 17, marginTop: 2 },
   avisoCard: { borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1 },
   avisoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   avisoTipo: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },

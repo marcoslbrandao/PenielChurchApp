@@ -231,7 +231,7 @@ export default function AuthScreen() {
           {/* Logo */}
           <View style={s.logoWrap}>
             <Image
-              source={require('../assets/Peniel Logo.png')}
+              source={require('../assets/peniel-logo.png')}
               style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 16 }}
               resizeMode="cover"
             />
@@ -370,7 +370,7 @@ const s = StyleSheet.create({
   switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   switchText: { fontSize: 14, color: C.textMuted },
   switchLink: { fontSize: 14, color: C.accent, fontWeight: '700' },
-  footer: { textAlign: 'center', fontSize: 11, color: C.textDim, marginTop: 40 },
+  footer: { textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 40 },
   // Invite
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   errorText: { fontSize: 12, color: C.danger },

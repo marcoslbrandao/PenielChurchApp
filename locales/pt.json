@@ -176,7 +176,18 @@
     "statEventos": "Eventos",
     "statOracoes": "Orações",
     "areaDoMembro": "Área do Membro",
-    "acesseAbaMembros": "Acesse na aba Membros para fazer login"
+    "acesseAbaMembros": "Acesse na aba Membros para fazer login",
+    "excluirConta": "Excluir Conta",
+    "faceLoginExcluirConta": "Faça login para excluir sua conta.",
+    "excluirContaAviso": "Isso vai apagar permanentemente sua conta, perfil, versículos salvos, pedidos de oração e histórico de ofertas. Essa ação não pode ser desfeita.",
+    "excluirDigitePalavra": "Digite \"{{palavra}}\" para confirmar",
+    "excluirPalavraConfirmacao": "EXCLUIR",
+    "excluirContaPermanentemente": "Excluir minha conta permanentemente",
+    "excluirContaTitulo": "Excluir conta",
+    "excluirContaConfirmacaoFinal": "Tem certeza? Essa ação é permanente e não pode ser desfeita.",
+    "excluirBtn": "Excluir",
+    "contaExcluidaTitulo": "Conta excluída",
+    "contaExcluidaMsg": "Sua conta e seus dados foram removidos permanentemente."
   },
   "grupos": {
     "titulo": "Grupos",

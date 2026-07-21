@@ -4,6 +4,12 @@
     "slug": "PenielChurchApp",
     "scheme": "penielchurch",
     "version": "1.1.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f53e9e07-9556-4ea8-80e0-da4487b38e56"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

@@ -176,7 +176,18 @@
     "statEventos": "Eventos",
     "statOracoes": "Oraciones",
     "areaDoMembro": "Área de Miembros",
-    "acesseAbaMembros": "Accede en la pestaña Miembros para iniciar sesión"
+    "acesseAbaMembros": "Accede en la pestaña Miembros para iniciar sesión",
+    "excluirConta": "Eliminar Cuenta",
+    "faceLoginExcluirConta": "Inicia sesión para eliminar tu cuenta.",
+    "excluirContaAviso": "Esto eliminará permanentemente tu cuenta, perfil, versículos guardados, pedidos de oración e historial de ofrendas. Esta acción no se puede deshacer.",
+    "excluirDigitePalavra": "Escribe \"{{palavra}}\" para confirmar",
+    "excluirPalavraConfirmacao": "ELIMINAR",
+    "excluirContaPermanentemente": "Eliminar mi cuenta permanentemente",
+    "excluirContaTitulo": "Eliminar cuenta",
+    "excluirContaConfirmacaoFinal": "¿Estás seguro? Esta acción es permanente y no se puede deshacer.",
+    "excluirBtn": "Eliminar",
+    "contaExcluidaTitulo": "Cuenta eliminada",
+    "contaExcluidaMsg": "Tu cuenta y tus datos han sido eliminados permanentemente."
   },
   "grupos": {
     "titulo": "Grupos",

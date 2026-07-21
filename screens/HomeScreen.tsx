@@ -422,7 +422,7 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <View style={styles.headerEsquerda}>
-          <Image source={require('../assets/Peniel Logo.png')} style={styles.logo} />
+          <Image source={require('../assets/peniel-logo.png')} style={styles.logo} />
           <View>
             <Text style={styles.headerSub}>{t('home.bemVindo')}</Text>
             <Text style={styles.headerTitulo}>{t('home.nomeIgreja')}</Text>
@@ -676,8 +676,8 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9F8FF' },
   header: { backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headerEsquerda: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: { width: 38, height: 38, borderRadius: 19 },
+  headerEsquerda: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  logo: { width: 48, height: 48, borderRadius: 24 },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
   headerTitulo: { fontSize: 18, fontWeight: '500', color: '#fff', marginTop: 2 },
   headerIcones: { flexDirection: 'row', gap: 10 },

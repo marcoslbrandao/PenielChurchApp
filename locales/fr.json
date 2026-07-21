@@ -176,7 +176,18 @@
     "statEventos": "Événements",
     "statOracoes": "Prières",
     "areaDoMembro": "Espace Membres",
-    "acesseAbaMembros": "Accédez à l'onglet Membres pour vous connecter"
+    "acesseAbaMembros": "Accédez à l'onglet Membres pour vous connecter",
+    "excluirConta": "Supprimer le compte",
+    "faceLoginExcluirConta": "Connectez-vous pour supprimer votre compte.",
+    "excluirContaAviso": "Cela supprimera définitivement votre compte, profil, versets enregistrés, demandes de prière et historique des offrandes. Cette action est irréversible.",
+    "excluirDigitePalavra": "Tapez \"{{palavra}}\" pour confirmer",
+    "excluirPalavraConfirmacao": "SUPPRIMER",
+    "excluirContaPermanentemente": "Supprimer définitivement mon compte",
+    "excluirContaTitulo": "Supprimer le compte",
+    "excluirContaConfirmacaoFinal": "Êtes-vous sûr ? Cette action est définitive et irréversible.",
+    "excluirBtn": "Supprimer",
+    "contaExcluidaTitulo": "Compte supprimé",
+    "contaExcluidaMsg": "Votre compte et vos données ont été définitivement supprimés."
   },
   "grupos": {
     "titulo": "Groupes",

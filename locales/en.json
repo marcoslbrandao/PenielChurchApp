@@ -176,7 +176,18 @@
     "statEventos": "Events",
     "statOracoes": "Prayers",
     "areaDoMembro": "Members Area",
-    "acesseAbaMembros": "Go to the Members tab to sign in"
+    "acesseAbaMembros": "Go to the Members tab to sign in",
+    "excluirConta": "Delete Account",
+    "faceLoginExcluirConta": "Sign in to delete your account.",
+    "excluirContaAviso": "This will permanently delete your account, profile, saved verses, prayer requests and offering history. This action cannot be undone.",
+    "excluirDigitePalavra": "Type \"{{palavra}}\" to confirm",
+    "excluirPalavraConfirmacao": "DELETE",
+    "excluirContaPermanentemente": "Permanently delete my account",
+    "excluirContaTitulo": "Delete account",
+    "excluirContaConfirmacaoFinal": "Are you sure? This action is permanent and cannot be undone.",
+    "excluirBtn": "Delete",
+    "contaExcluidaTitulo": "Account deleted",
+    "contaExcluidaMsg": "Your account and data have been permanently removed."
   },
   "grupos": {
     "titulo": "Groups",

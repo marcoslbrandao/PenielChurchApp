@@ -391,6 +391,109 @@ const lang = StyleSheet.create({
   opcaoTextoAtiva: { fontWeight: '700' },
 });
 
+// ─── Excluir Conta ────────────────────────────────────────────────────────────
+// Exigido pela App Store (Guideline 5.1.1(v)): apps com criação de conta
+// precisam oferecer exclusão de conta dentro do próprio app. Dupla
+// confirmação (digitar a palavra + Alert final) evita exclusão acidental,
+// mas o fluxo inteiro acontece dentro do app, sem depender de suporte.
+function DeleteAccountModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const palavraConfirmacao = t('perfil.excluirPalavraConfirmacao');
+
+  useEffect(() => { if (visible) setConfirmText(''); }, [visible]);
+
+  const podeExcluir = confirmText.trim().toUpperCase() === palavraConfirmacao.toUpperCase();
+
+  const handleDelete = () => {
+    Alert.alert(
+      t('perfil.excluirContaTitulo'),
+      t('perfil.excluirContaConfirmacaoFinal'),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        {
+          text: t('perfil.excluirBtn'),
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              const { data, error } = await supabase.functions.invoke('delete-account');
+              if (error) throw error;
+              if (data?.error) throw new Error(data.error);
+              await supabase.auth.signOut();
+              onClose();
+              // Espera o modal terminar de fechar antes de abrir o Alert nativo —
+              // apresentar os dois ao mesmo tempo (Modal ainda animando + Alert
+              // novo) crasha no iOS ("present view controller while a
+              // presentation is in progress").
+              setTimeout(() => {
+                Alert.alert(t('perfil.contaExcluidaTitulo'), t('perfil.contaExcluidaMsg'));
+              }, 400);
+            } catch (err: any) {
+              Alert.alert(t('common.erro'), err.message ?? t('common.tenteNovamente'));
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={em.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+          <View style={em.sheet}>
+            <View style={em.header}>
+              <Text style={em.title}>{t('perfil.excluirConta')}</Text>
+              <TouchableOpacity onPress={onClose} disabled={deleting}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={dam.warningBox}>
+              <Ionicons name="warning-outline" size={20} color="#922B21" />
+              <Text style={dam.warningText}>{t('perfil.excluirContaAviso')}</Text>
+            </View>
+
+            <View style={em.field}>
+              <Text style={em.label}>{t('perfil.excluirDigitePalavra', { palavra: palavraConfirmacao })}</Text>
+              <TextInput
+                style={em.input}
+                value={confirmText}
+                onChangeText={setConfirmText}
+                placeholder={palavraConfirmacao}
+                placeholderTextColor={C.textDim}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                editable={!deleting}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[dam.dangerBtn, (!podeExcluir || deleting) && dam.dangerBtnDisabled]}
+              onPress={handleDelete}
+              disabled={!podeExcluir || deleting}
+            >
+              {deleting ? <ActivityIndicator color="#fff" /> : <Text style={dam.dangerBtnText}>{t('perfil.excluirContaPermanentemente')}</Text>}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+const dam = StyleSheet.create({
+  warningBox: { backgroundColor: '#FDEDEC', borderRadius: 12, padding: 14, marginBottom: 18, flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  warningText: { flex: 1, fontSize: 13, color: '#922B21', lineHeight: 19 },
+  dangerBtn: { backgroundColor: '#C0392B', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
+  dangerBtnDisabled: { opacity: 0.4 },
+  dangerBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+});
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
@@ -403,6 +506,7 @@ export default function ProfileScreen() {
   const [prayerVisible, setPrayerVisible] = useState(false);
   const [offeringsVisible, setOfferingsVisible] = useState(false);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
+  const [deleteAccountVisible, setDeleteAccountVisible] = useState(false);
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -548,6 +652,7 @@ export default function ProfileScreen() {
         { icon: 'person-outline', label: t('perfil.editarPerfil'), onPress: () => isLoggedIn ? setEditModalVisible(true) : Alert.alert(t('common.atencao'), t('perfil.faceLoginEditarPerfil')) },
         { icon: 'lock-closed-outline', label: t('perfil.alterarSenha'), onPress: () => isLoggedIn ? handleChangePassword() : Alert.alert(t('common.atencao'), t('perfil.faceLoginAlterarSenha')) },
         { icon: 'help-circle-outline', label: t('perfil.suporte'), onPress: handleSupport },
+        { icon: 'trash-outline', label: t('perfil.excluirConta'), color: C.danger, onPress: () => isLoggedIn ? setDeleteAccountVisible(true) : Alert.alert(t('common.atencao'), t('perfil.faceLoginExcluirConta')) },
       ],
     },
     {
@@ -693,6 +798,10 @@ export default function ProfileScreen() {
       <LanguagePickerModal
         visible={languageModalVisible}
         onClose={() => setLanguageModalVisible(false)}
+      />
+      <DeleteAccountModal
+        visible={deleteAccountVisible}
+        onClose={() => setDeleteAccountVisible(false)}
       />
     </SafeAreaView>
   );

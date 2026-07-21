@@ -34,6 +34,7 @@ async function handleAuthDeepLink(url: string | null): Promise<boolean> {
   const access_token = params.get('access_token');
   const refresh_token = params.get('refresh_token');
   const token_hash = params.get('token_hash');
+  const code = params.get('code');
 
   if (access_token && refresh_token) {
     const { error } = await supabase.auth.setSession({ access_token, refresh_token });
@@ -41,6 +42,14 @@ async function handleAuthDeepLink(url: string | null): Promise<boolean> {
   }
   if (token_hash) {
     const { error } = await supabase.auth.verifyOtp({ token_hash, type: 'recovery' });
+    return !error;
+  }
+  if (code) {
+    // Fluxo PKCE (padrão em projetos Supabase mais novos): o link do email
+    // não traz o token pronto, traz um "code" de uma tentativa que precisa
+    // ser trocado por uma sessão de verdade. Sem isso, o link abre o app
+    // mas nunca navega pra tela de nova senha.
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
     return !error;
   }
   return false;

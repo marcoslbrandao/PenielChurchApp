@@ -10,9 +10,25 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { useTranslation } from 'react-i18next';
+import Constants from 'expo-constants';
+import * as Updates from 'expo-updates';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/useAuth';
 import { IDIOMAS, trocarIdioma } from '../lib/i18n';
+
+// Versão real do app.json (não mais um texto fixo desatualizado), + info de
+// qual atualização OTA (EAS Update) está rodando agora — útil pra confirmar
+// se uma atualização remota já chegou nesse aparelho ou não.
+const APP_VERSION = Constants.expoConfig?.version ?? '—';
+function infoAtualizacaoOTA(): string {
+  if (Updates.isEmbeddedLaunch || !Updates.createdAt) {
+    return 'Sem atualização remota aplicada (versão instalada da loja)';
+  }
+  const data = new Date(Updates.createdAt);
+  const dataFormatada = data.toLocaleDateString('pt-BR');
+  const horaFormatada = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `Atualizado remotamente em ${dataFormatada} às ${horaFormatada}`;
+}
 
 interface MenuItem {
   icon: keyof typeof Ionicons.glyphMap;
@@ -770,7 +786,8 @@ export default function ProfileScreen() {
           </View>
         ))}
 
-        <Text style={styles.version}>Peniel Church App v1.0.0</Text>
+        <Text style={styles.version}>Peniel Church App v{APP_VERSION}</Text>
+        <Text style={styles.versionSub}>{infoAtualizacaoOTA()}</Text>
       </ScrollView>
 
       <EditProfileModal
@@ -841,4 +858,5 @@ const styles = StyleSheet.create({
   menuLabel: { flex: 1, fontSize: 15, color: C.text, fontWeight: '400' },
   menuRight: { marginLeft: 8 },
   version: { textAlign: 'center', fontSize: 12, color: C.textMuted, marginTop: 32 },
+  versionSub: { textAlign: 'center', fontSize: 10, color: C.textDim, marginTop: 4 },
 });

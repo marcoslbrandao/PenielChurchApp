@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/useAuth';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -914,6 +915,26 @@ const s = StyleSheet.create({
 
 // ─── Root Export ──────────────────────────────────────────────────────────────
 export default function BandaScreen() {
+  const { user } = useAuth();
   const [unlocked, setUnlocked] = useState(false);
+  const [checandoAcesso, setChecandoAcesso] = useState(true);
+
+  useEffect(() => {
+    if (!user) { setChecandoAcesso(false); return; }
+    supabase.from('profiles').select('banda_acesso').eq('id', user.id).single()
+      .then(({ data }) => {
+        setUnlocked(!!data?.banda_acesso);
+        setChecandoAcesso(false);
+      });
+  }, [user]);
+
+  if (checandoAcesso) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={C.primary} />
+      </SafeAreaView>
+    );
+  }
+
   return unlocked ? <BandaMain /> : <InviteGate onUnlock={() => setUnlocked(true)} />;
 }

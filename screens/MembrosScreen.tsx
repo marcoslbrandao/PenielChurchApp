@@ -840,7 +840,7 @@ export default function MembrosScreen() {
       </View>
 
       {/* Filters */}
-      <View style={s.filterRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRowScroll} contentContainerStyle={s.filterRow}>
         {(['todos', 'membro', 'lider', 'visitante'] as const).map(f => (
           <TouchableOpacity key={f} style={[s.filterPill, filterStatus === f && s.filterPillActive]} onPress={() => setFilterStatus(f)}>
             <Text style={[s.filterPillText, filterStatus === f && s.filterPillTextActive]}>{f === 'todos' ? 'Todos' : statusLabel(f)}</Text>
@@ -849,7 +849,7 @@ export default function MembrosScreen() {
         <TouchableOpacity style={[s.filterPill, filterBirthday && { backgroundColor: C.accent + '18', borderColor: C.accent }]} onPress={() => setFilterBirthday(f => !f)}>
           <Text style={[s.filterPillText, filterBirthday && { color: C.accent, fontWeight: '700' }]}>🎂 Mês</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       {/* List */}
       {loading ? (
@@ -925,7 +925,8 @@ const s = StyleSheet.create({
   searchRow: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
   searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surfaceAlt, borderRadius: 10, paddingHorizontal: 12, height: 40, gap: 8, borderWidth: 1, borderColor: C.border },
   searchInput: { flex: 1, fontSize: 14, color: C.text },
-  filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterRowScroll: { backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
+  filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
   filterPill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 16, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   filterPillActive: { backgroundColor: C.primary + '15', borderColor: C.primary },
   filterPillText: { fontSize: 12, color: C.textMuted, fontWeight: '500' },

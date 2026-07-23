@@ -10,6 +10,7 @@ import JovensScreen from './JovensScreen';
 import AdminScreen from './AdminScreen';
 import AuthScreen from './AuthScreen';
 import GruposScreen from './GruposScreen';
+import EscalasScreen from './EscalasScreen';
 import { useAuth } from '../lib/useAuth';
 
 // ─── Componente de código de convite para visitantes ─────────────────────────
@@ -159,6 +160,15 @@ export default function AreaMembroScreen() {
           options={{
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="people-circle-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Escalas"
+          component={EscalasScreen}
+          options={{
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="calendar-outline" size={size} color={color} />
             ),
           }}
         />

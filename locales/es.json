@@ -214,6 +214,17 @@
     "jovensSubtitulo": "Ministerio Juvenil",
     "jovensDescricao": "¡El ministerio juvenil de Peniel Church — lleno de vida, propósito y fe!"
   },
+  "escalas": {
+    "titulo": "Turnos",
+    "minhaEscala": "Mi Turno",
+    "escalaGeral": "Turnos Generales",
+    "semVinculoTitulo": "Cuenta no vinculada",
+    "semVinculoMsg": "Pide a un administrador que vincule tu cuenta a tu registro en el directorio de miembros para ver tu turno.",
+    "semDesignacoesMinha": "No estás asignado(a) para los próximos domingos.",
+    "semDesignacoesGeral": "Aún no hay turnos publicados.",
+    "voceBadge": "Tú",
+    "proximoDomingo": "Próximo domingo"
+  },
   "agenda": {
     "semanaAtual": "esta semana",
     "titulo": "Agenda",

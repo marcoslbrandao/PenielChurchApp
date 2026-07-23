@@ -214,6 +214,17 @@
     "jovensSubtitulo": "Ministério de Jovens",
     "jovensDescricao": "O ministério de jovens da Peniel Church — cheio de vida, propósito e fé!"
   },
+  "escalas": {
+    "titulo": "Escalas",
+    "minhaEscala": "Minha Escala",
+    "escalaGeral": "Escala Geral",
+    "semVinculoTitulo": "Conta não vinculada",
+    "semVinculoMsg": "Peça a um administrador para vincular sua conta ao seu cadastro no diretório de membros para ver sua escala.",
+    "semDesignacoesMinha": "Você não está escalado(a) nos próximos domingos.",
+    "semDesignacoesGeral": "Nenhuma escala publicada ainda.",
+    "voceBadge": "Você",
+    "proximoDomingo": "Próximo domingo"
+  },
   "agenda": {
     "semanaAtual": "semana atual",
     "titulo": "Agenda",

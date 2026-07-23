@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
   StatusBar, ActivityIndicator, RefreshControl, Linking, Alert,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useCampoTraduzido } from '../lib/useTraducao';
+import { useAuth } from '../lib/useAuth';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -164,9 +166,155 @@ function GrupoDevocionalCard({ dev, cor, isOpen, onToggle }: {
   );
 }
 
+// ─── Gestão de Participantes (só líder do grupo ou admin) ────────────────────
+type Participante = { id: string; membro_id: string; nome: string; sobrenome: string };
+type MembroBusca = { id: string; nome: string; sobrenome: string; telefone: string };
+
+function GerenciarParticipantesModal({ visible, grupo, grupoNome, cor, onClose }: {
+  visible: boolean; grupo: Tab; grupoNome: string; cor: string; onClose: () => void;
+}) {
+  const [participantes, setParticipantes] = useState<Participante[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [resultados, setResultados] = useState<MembroBusca[]>([]);
+  const [buscando, setBuscando] = useState(false);
+
+  const fetchParticipantes = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('grupo_membros')
+      .select('id, membro_id, members(nome, sobrenome)')
+      .eq('grupo', grupo);
+    setParticipantes(((data ?? []) as any[]).map(row => ({
+      id: row.id,
+      membro_id: row.membro_id,
+      nome: row.members?.nome ?? '',
+      sobrenome: row.members?.sobrenome ?? '',
+    })).sort((a, b) => a.nome.localeCompare(b.nome)));
+    setLoading(false);
+  }, [grupo]);
+
+  useEffect(() => {
+    if (visible) { fetchParticipantes(); setQuery(''); setResultados([]); }
+  }, [visible, fetchParticipantes]);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResultados([]); return; }
+    setBuscando(true);
+    const t = setTimeout(() => {
+      supabase.from('members').select('id, nome, sobrenome, telefone')
+        .or(`nome.ilike.%${query.trim()}%,sobrenome.ilike.%${query.trim()}%`)
+        .limit(10)
+        .then(({ data }) => {
+          const jaAdicionados = new Set(participantes.map(p => p.membro_id));
+          setResultados(((data ?? []) as MembroBusca[]).filter(m => !jaAdicionados.has(m.id)));
+          setBuscando(false);
+        });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, participantes]);
+
+  const adicionar = async (membro: MembroBusca) => {
+    const { error } = await supabase.from('grupo_membros').insert({ membro_id: membro.id, grupo });
+    if (error) { Alert.alert('Erro', error.message); return; }
+    setQuery(''); setResultados([]);
+    fetchParticipantes();
+  };
+
+  const remover = (participante: Participante) => {
+    Alert.alert('Remover do grupo', `Remover ${participante.nome} ${participante.sobrenome} do grupo ${grupoNome}?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        await supabase.from('grupo_membros').delete().eq('id', participante.id);
+        fetchParticipantes();
+      }},
+    ]);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={gm.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '85%' }}>
+          <View style={gm.sheet}>
+            <View style={gm.header}>
+              <Text style={gm.title}>Participantes — {grupoNome}</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={gm.searchRow}>
+              <Ionicons name="search-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={gm.searchInput}
+                placeholder="Buscar no diretório pra adicionar..."
+                placeholderTextColor={C.textDim}
+                value={query}
+                onChangeText={setQuery}
+              />
+              {buscando && <ActivityIndicator size="small" color={cor} />}
+            </View>
+
+            {resultados.length > 0 && (
+              <View style={gm.resultsBox}>
+                {resultados.map(m => (
+                  <TouchableOpacity key={m.id} style={gm.resultRow} onPress={() => adicionar(m)}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={gm.resultNome}>{m.nome} {m.sobrenome}</Text>
+                      {!!m.telefone && <Text style={gm.resultMeta}>{m.telefone}</Text>}
+                    </View>
+                    <Ionicons name="add-circle" size={22} color={cor} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <Text style={gm.listLabel}>No grupo ({participantes.length})</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
+              {loading ? (
+                <ActivityIndicator color={cor} style={{ marginVertical: 20 }} />
+              ) : participantes.length === 0 ? (
+                <Text style={gm.emptyText}>Ninguém adicionado ainda.</Text>
+              ) : (
+                participantes.map(p => (
+                  <View key={p.id} style={gm.participanteRow}>
+                    <Text style={gm.participanteNome}>{p.nome} {p.sobrenome}</Text>
+                    <TouchableOpacity onPress={() => remover(p)}>
+                      <Ionicons name="trash-outline" size={18} color={C.danger} />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+              <View style={{ height: 10 }} />
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+const gm = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  title: { fontSize: 17, fontWeight: '800', color: C.text, flex: 1, marginRight: 10 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surfaceAlt, borderRadius: 10, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12, height: 46, marginBottom: 4 },
+  searchInput: { flex: 1, fontSize: 15, color: C.text },
+  resultsBox: { marginTop: 8, marginBottom: 8, borderWidth: 1, borderColor: C.border, borderRadius: 10, overflow: 'hidden' },
+  resultRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.surfaceAlt },
+  resultNome: { fontSize: 14, fontWeight: '600', color: C.text },
+  resultMeta: { fontSize: 12, color: C.textMuted, marginTop: 2 },
+  listLabel: { fontSize: 11, color: C.textMuted, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginTop: 16, marginBottom: 8 },
+  emptyText: { fontSize: 13, color: C.textMuted, textAlign: 'center', paddingVertical: 20 },
+  participanteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border },
+  participanteNome: { fontSize: 14, color: C.text },
+});
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function GruposScreen() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const GRUPOS = buildGrupos(t);
   const [activeTab, setActiveTab] = useState<Tab>('homens');
   const [expandedDev, setExpandedDev] = useState<string | null>(null);
@@ -174,8 +322,22 @@ export default function GruposScreen() {
   const [devocionais, setDevocionais] = useState<GrupoDevocional[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [gruposLiderados, setGruposLiderados] = useState<Tab[]>([]);
+  const [participantesModalVisible, setParticipantesModalVisible] = useState(false);
 
   const grupo = GRUPOS[activeTab];
+  const souLiderDesteGrupo = isAdmin || gruposLiderados.includes(activeTab);
+
+  // Verifica se o usuário é admin ou líder de algum grupo, pra mostrar o
+  // botão de gerenciar participantes só pra quem tem permissão.
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); setGruposLiderados([]); return; }
+    supabase.from('profiles').select('role').eq('id', user.id).single()
+      .then(({ data }) => setIsAdmin(data?.role === 'admin'));
+    supabase.from('group_leaders').select('grupo').eq('profile_id', user.id)
+      .then(({ data }) => setGruposLiderados(((data ?? []) as { grupo: Tab }[]).map(r => r.grupo)));
+  }, [user]);
 
   const fetchGrupoData = useCallback(async (tab: Tab, isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -231,10 +393,21 @@ export default function GruposScreen() {
           <Text style={s.headerTitle}>{t('grupos.titulo')}</Text>
           <Text style={s.headerSub}>Peniel Church</Text>
         </View>
-        <TouchableOpacity style={[s.waBtn, { backgroundColor: grupo.cor + '20', borderColor: grupo.cor + '40' }]} onPress={openWhatsApp}>
-          <Ionicons name="logo-whatsapp" size={16} color={grupo.cor} />
-          <Text style={[s.waBtnText, { color: grupo.cor }]}>{t('grupos.contato')}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {souLiderDesteGrupo && (
+            <TouchableOpacity
+              style={[s.waBtn, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)' }]}
+              onPress={() => setParticipantesModalVisible(true)}
+            >
+              <Ionicons name="people-outline" size={16} color="#fff" />
+              <Text style={[s.waBtnText, { color: '#fff' }]}>Participantes</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={[s.waBtn, { backgroundColor: grupo.cor + '20', borderColor: grupo.cor + '40' }]} onPress={openWhatsApp}>
+            <Ionicons name="logo-whatsapp" size={16} color={grupo.cor} />
+            <Text style={[s.waBtnText, { color: grupo.cor }]}>{t('grupos.contato')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Tabs */}
@@ -319,6 +492,14 @@ export default function GruposScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      <GerenciarParticipantesModal
+        visible={participantesModalVisible}
+        grupo={activeTab}
+        grupoNome={grupo.nome}
+        cor={grupo.cor}
+        onClose={() => setParticipantesModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }

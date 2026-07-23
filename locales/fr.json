@@ -214,6 +214,17 @@
     "jovensSubtitulo": "Ministère de la Jeunesse",
     "jovensDescricao": "Le ministère de la jeunesse de Peniel Church — plein de vie, de dessein et de foi !"
   },
+  "escalas": {
+    "titulo": "Plannings",
+    "minhaEscala": "Mon Planning",
+    "escalaGeral": "Planning Général",
+    "semVinculoTitulo": "Compte non lié",
+    "semVinculoMsg": "Demandez à un administrateur de lier votre compte à votre fiche dans l'annuaire des membres pour voir votre planning.",
+    "semDesignacoesMinha": "Vous n'êtes pas programmé(e) pour les prochains dimanches.",
+    "semDesignacoesGeral": "Aucun planning publié pour le moment.",
+    "voceBadge": "Vous",
+    "proximoDomingo": "Dimanche prochain"
+  },
   "agenda": {
     "semanaAtual": "cette semaine",
     "titulo": "Agenda",

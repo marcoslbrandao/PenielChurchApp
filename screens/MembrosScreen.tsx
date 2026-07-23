@@ -29,7 +29,10 @@ type Membro = {
   status: 'membro' | 'visitante' | 'lider';
   observacoes: string;
   conjuge_id: string | null; pai_id: string | null; mae_id: string | null;
+  profile_id: string | null;
 };
+
+type ProfileLite = { id: string; full_name: string | null };
 
 const EMPTY: Omit<Membro, 'id'> = {
   nome: '', sobrenome: '', data_nascimento: '', sexo: '', nacionalidade: 'Brasileira',
@@ -38,7 +41,7 @@ const EMPTY: Omit<Membro, 'id'> = {
   talentos_hobbies: '',
   batizado: false, data_batismo: '', membro_desde: '', ministerio: '',
   funcao: '', status: 'membro', observacoes: '',
-  conjuge_id: null, pai_id: null, mae_id: null,
+  conjuge_id: null, pai_id: null, mae_id: null, profile_id: null,
 };
 
 const ESTADO_CIVIL = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União estável'];
@@ -81,8 +84,8 @@ function parseDateISO(br: string): string {
 }
 
 // ─── Form Modal ───────────────────────────────────────────────────────────────
-function MembroFormModal({ visible, membro, membros, onClose, onSaved }: {
-  visible: boolean; membro: Membro | null; membros: Membro[];
+function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }: {
+  visible: boolean; membro: Membro | null; membros: Membro[]; isAdmin: boolean;
   onClose: () => void; onSaved: () => void;
 }) {
   const [form, setForm] = useState<Omit<Membro, 'id'>>({ ...EMPTY });
@@ -166,7 +169,9 @@ function MembroFormModal({ visible, membro, membros, onClose, onSaved }: {
     }
   };
 
-  const SECTIONS = ['Pessoal', 'Contato', 'Endereço', 'Igreja', 'Família'];
+  const SECTIONS = isAdmin
+    ? ['Pessoal', 'Contato', 'Endereço', 'Igreja', 'Família', 'Conta']
+    : ['Pessoal', 'Contato', 'Endereço', 'Igreja', 'Família'];
 
   const Field = ({ label, value, onChangeText, placeholder = '', keyboardType = 'default', maxLength }: {
     label: string; value: string; onChangeText: (v: string) => void;
@@ -245,6 +250,173 @@ function MembroFormModal({ visible, membro, membros, onClose, onSaved }: {
     );
   };
 
+  const ContaSection = () => {
+    const [busca, setBusca] = useState('');
+    const [resultados, setResultados] = useState<ProfileLite[]>([]);
+    const [perfilVinculado, setPerfilVinculado] = useState<ProfileLite | null>(null);
+    const [carregando, setCarregando] = useState(false);
+    const [grupos, setGrupos] = useState<string[]>([]);
+    const [areas, setAreas] = useState<{ id: string; nome: string }[]>([]);
+    const [areasLideradas, setAreasLideradas] = useState<string[]>([]);
+    const [salvandoPapel, setSalvandoPapel] = useState(false);
+    const profileId = form.profile_id;
+
+    useEffect(() => {
+      if (!profileId) { setPerfilVinculado(null); setGrupos([]); setAreasLideradas([]); return; }
+      setCarregando(true);
+      (async () => {
+        const [{ data: perfil }, { data: gl }, { data: areasData }, { data: eal }] = await Promise.all([
+          supabase.from('profiles').select('id, full_name').eq('id', profileId).single(),
+          supabase.from('group_leaders').select('grupo').eq('profile_id', profileId),
+          supabase.from('escala_areas').select('id, nome').order('nome'),
+          supabase.from('escala_area_lideres').select('area_id').eq('profile_id', profileId),
+        ]);
+        setPerfilVinculado((perfil as ProfileLite) ?? null);
+        setGrupos((gl ?? []).map((g: any) => g.grupo));
+        setAreas(areasData ?? []);
+        setAreasLideradas((eal ?? []).map((a: any) => a.area_id));
+        setCarregando(false);
+      })();
+    }, [profileId]);
+
+    useEffect(() => {
+      if (busca.trim().length < 2) { setResultados([]); return; }
+      const t = setTimeout(() => {
+        supabase.from('profiles').select('id, full_name').ilike('full_name', `%${busca.trim()}%`).limit(8)
+          .then(({ data }) => setResultados((data as ProfileLite[]) ?? []));
+      }, 300);
+      return () => clearTimeout(t);
+    }, [busca]);
+
+    const vincular = async (perfil: ProfileLite) => {
+      if (!membro) return;
+      const { error } = await supabase.from('members').update({ profile_id: perfil.id }).eq('id', membro.id);
+      if (error) { Alert.alert('Erro', error.message); return; }
+      set('profile_id')(perfil.id);
+      setBusca(''); setResultados([]);
+    };
+
+    const desvincular = () => {
+      if (!membro) return;
+      Alert.alert('Desvincular conta', 'Remover o vínculo com essa conta de login? A pessoa deixará de aparecer como líder de grupos/áreas se estiver designada.', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Desvincular', style: 'destructive', onPress: async () => {
+            const { error } = await supabase.from('members').update({ profile_id: null }).eq('id', membro.id);
+            if (error) { Alert.alert('Erro', error.message); return; }
+            set('profile_id')(null);
+          },
+        },
+      ]);
+    };
+
+    const alternarGrupo = async (grupo: string) => {
+      if (!profileId) return;
+      setSalvandoPapel(true);
+      if (grupos.includes(grupo)) {
+        const { error } = await supabase.from('group_leaders').delete().eq('profile_id', profileId).eq('grupo', grupo);
+        if (error) { Alert.alert('Erro', error.message); setSalvandoPapel(false); return; }
+        setGrupos(prev => prev.filter(g => g !== grupo));
+      } else {
+        const { error } = await supabase.from('group_leaders').insert({ profile_id: profileId, grupo });
+        if (error) { Alert.alert('Erro', error.message); setSalvandoPapel(false); return; }
+        setGrupos(prev => [...prev, grupo]);
+      }
+      setSalvandoPapel(false);
+    };
+
+    const alternarArea = async (areaId: string) => {
+      if (!profileId) return;
+      setSalvandoPapel(true);
+      if (areasLideradas.includes(areaId)) {
+        const { error } = await supabase.from('escala_area_lideres').delete().eq('profile_id', profileId).eq('area_id', areaId);
+        if (error) { Alert.alert('Erro', error.message); setSalvandoPapel(false); return; }
+        setAreasLideradas(prev => prev.filter(a => a !== areaId));
+      } else {
+        const { error } = await supabase.from('escala_area_lideres').insert({ profile_id: profileId, area_id: areaId });
+        if (error) { Alert.alert('Erro', error.message); setSalvandoPapel(false); return; }
+        setAreasLideradas(prev => [...prev, areaId]);
+      }
+      setSalvandoPapel(false);
+    };
+
+    if (!membro) {
+      return (
+        <View style={fm.sectionContent}>
+          <Text style={{ fontSize: 13, color: C.textMuted, lineHeight: 20 }}>
+            Salve o membro primeiro para poder vincular uma conta de login.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={fm.sectionContent}>
+        <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, lineHeight: 18 }}>
+          Vincule este membro a uma conta de login do app para poder designá-lo líder de um grupo ou de uma área de escala.
+        </Text>
+
+        <View style={fm.fieldWrap}>
+          <Text style={fm.fieldLabel}>Conta do App</Text>
+          {perfilVinculado ? (
+            <View style={fm.familiaChip}>
+              <Text style={fm.familiaChipText}>{perfilVinculado.full_name ?? 'Sem nome'}</Text>
+              <TouchableOpacity onPress={desvincular}>
+                <Ionicons name="close-circle" size={18} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+          ) : carregando ? (
+            <ActivityIndicator size="small" color={C.primary} />
+          ) : (
+            <View style={fm.familiaBusca}>
+              <TextInput
+                style={fm.fieldInput} placeholder="Buscar conta pelo nome..." placeholderTextColor={C.textDim}
+                value={busca} onChangeText={setBusca}
+              />
+              {resultados.map(r => (
+                <TouchableOpacity key={r.id} style={fm.familiaOpcao} onPress={() => vincular(r)}>
+                  <Text style={fm.familiaOpcaoText}>{r.full_name ?? 'Sem nome'}</Text>
+                </TouchableOpacity>
+              ))}
+              {busca.trim().length >= 2 && resultados.length === 0 && (
+                <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>Nenhuma conta encontrada.</Text>
+              )}
+            </View>
+          )}
+        </View>
+
+        {!!profileId && !carregando && (
+          <>
+            <View style={fm.fieldWrap}>
+              <Text style={fm.fieldLabel}>Líder de Grupo</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                {(['mulheres', 'homens', 'jovens'] as const).map(g => (
+                  <TouchableOpacity key={g} disabled={salvandoPapel} style={[fm.pill, grupos.includes(g) && fm.pillActive]} onPress={() => alternarGrupo(g)}>
+                    <Text style={[fm.pillText, grupos.includes(g) && fm.pillTextActive]}>
+                      {g === 'mulheres' ? 'Mulheres' : g === 'homens' ? 'Homens' : 'Jovens'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={fm.fieldWrap}>
+              <Text style={fm.fieldLabel}>Líder de Área de Escala</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                {areas.map(a => (
+                  <TouchableOpacity key={a.id} disabled={salvandoPapel} style={[fm.pill, areasLideradas.includes(a.id) && fm.pillActive]} onPress={() => alternarArea(a.id)}>
+                    <Text style={[fm.pillText, areasLideradas.includes(a.id) && fm.pillTextActive]}>{a.nome}</Text>
+                  </TouchableOpacity>
+                ))}
+                {areas.length === 0 && <Text style={{ fontSize: 12, color: C.textDim }}>Nenhuma área cadastrada.</Text>}
+              </View>
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={fm.overlay}>
@@ -311,6 +483,7 @@ function MembroFormModal({ visible, membro, membros, onClose, onSaved }: {
                   <FamiliaPicker label="Mãe" value={form.mae_id} onChange={set('mae_id')} />
                 </View>
               )}
+              {section === 5 && isAdmin && <ContaSection />}
               {section === 3 && (
                 <View style={fm.sectionContent}>
                   <View style={fm.toggleRow}>
@@ -723,6 +896,7 @@ export default function MembrosScreen() {
         visible={formVisible}
         membro={editingMembro}
         membros={membros}
+        isAdmin={role === 'admin'}
         onClose={() => { setFormVisible(false); setEditingMembro(null); }}
         onSaved={fetchMembros}
       />

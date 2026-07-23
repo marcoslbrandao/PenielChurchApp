@@ -214,6 +214,17 @@
     "jovensSubtitulo": "Youth Ministry",
     "jovensDescricao": "Peniel Church's youth ministry — full of life, purpose and faith!"
   },
+  "escalas": {
+    "titulo": "Rosters",
+    "minhaEscala": "My Roster",
+    "escalaGeral": "Full Roster",
+    "semVinculoTitulo": "Account not linked",
+    "semVinculoMsg": "Ask an administrator to link your account to your entry in the members directory to see your roster.",
+    "semDesignacoesMinha": "You're not scheduled for the upcoming Sundays.",
+    "semDesignacoesGeral": "No roster published yet.",
+    "voceBadge": "You",
+    "proximoDomingo": "Next Sunday"
+  },
   "agenda": {
     "semanaAtual": "this week",
     "titulo": "Calendar",

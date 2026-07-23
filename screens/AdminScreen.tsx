@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, StatusBar, ActivityIndicator,
   Share, RefreshControl, Modal, Image,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +61,10 @@ type MensagemBlog = {
   id: string; titulo: string; resumo: string; conteudo: string;
   imagem_url: string | null; autor: string; data: string;
 };
+
+type EscalaArea = { id: string; nome: string; vagas_padrao: number };
+type AreaVoluntario = { id: string; area_id: string; membro_id: string; nome: string; sobrenome: string };
+type MembroDiretorio = { id: string; nome: string; sobrenome: string; telefone: string };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function generateCode(): string {
@@ -939,6 +944,372 @@ const nm = StyleSheet.create({
   imagemPlaceholderTexto: { fontSize: 12, color: C.textDim },
 });
 
+// ─── Nova Área de Escala Modal (admin) ─────────────────────────────────────────
+function NovaAreaModal({ visible, onClose, onSaved }: {
+  visible: boolean; onClose: () => void; onSaved: () => void;
+}) {
+  const [nome, setNome] = useState('');
+  const [vagas, setVagas] = useState('2');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (!visible) { setNome(''); setVagas('2'); } }, [visible]);
+
+  const handleSave = async () => {
+    if (!nome.trim()) { Alert.alert('Atenção', 'Informe o nome da área.'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('escala_areas').insert({
+      nome: nome.trim(), vagas_padrao: Number(vagas) || 1,
+    });
+    setSaving(false);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={mo.overlay}>
+        <View style={mo.sheet}>
+          <View style={mo.header}>
+            <Text style={mo.title}>Nova Área de Escala</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={22} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={mo.fieldWrap}>
+            <Text style={mo.fieldLabel}>Nome da área</Text>
+            <View style={mo.fieldRow}>
+              <TextInput
+                style={mo.fieldInput} placeholder="Ex: Som, Estacionamento..."
+                placeholderTextColor={C.textDim} value={nome} onChangeText={setNome}
+              />
+            </View>
+          </View>
+
+          <View style={mo.fieldWrap}>
+            <Text style={mo.fieldLabel}>Vagas por domingo</Text>
+            <View style={mo.fieldRow}>
+              <TextInput
+                style={mo.fieldInput} placeholder="2" placeholderTextColor={C.textDim}
+                value={vagas} onChangeText={setVagas} keyboardType="number-pad"
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={mo.saveBtnText}>Criar Área</Text>}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Time de Voluntários por Área Modal (líder da área / admin) ────────────────
+function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
+  visible: boolean; area: EscalaArea | null; onClose: () => void; onChanged: () => void;
+}) {
+  const [voluntarios, setVoluntarios] = useState<AreaVoluntario[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [resultados, setResultados] = useState<MembroDiretorio[]>([]);
+  const [buscando, setBuscando] = useState(false);
+
+  const fetchVoluntarios = useCallback(async () => {
+    if (!area) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('escala_area_voluntarios')
+      .select('id, area_id, membro_id, members(nome, sobrenome)')
+      .eq('area_id', area.id);
+    setVoluntarios(((data ?? []) as any[]).map(row => ({
+      id: row.id, area_id: row.area_id, membro_id: row.membro_id,
+      nome: row.members?.nome ?? '', sobrenome: row.members?.sobrenome ?? '',
+    })).sort((a, b) => a.nome.localeCompare(b.nome)));
+    setLoading(false);
+  }, [area]);
+
+  useEffect(() => {
+    if (visible) { fetchVoluntarios(); setQuery(''); setResultados([]); }
+  }, [visible, fetchVoluntarios]);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResultados([]); return; }
+    setBuscando(true);
+    const t = setTimeout(() => {
+      supabase.from('members').select('id, nome, sobrenome, telefone')
+        .or(`nome.ilike.%${query.trim()}%,sobrenome.ilike.%${query.trim()}%`)
+        .limit(10)
+        .then(({ data }) => {
+          const jaAdicionados = new Set(voluntarios.map(v => v.membro_id));
+          setResultados(((data ?? []) as MembroDiretorio[]).filter(m => !jaAdicionados.has(m.id)));
+          setBuscando(false);
+        });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, voluntarios]);
+
+  const adicionar = async (membro: MembroDiretorio) => {
+    if (!area) return;
+    const { error } = await supabase.from('escala_area_voluntarios').insert({ area_id: area.id, membro_id: membro.id });
+    if (error) { Alert.alert('Erro', error.message); return; }
+    setQuery(''); setResultados([]);
+    fetchVoluntarios();
+    onChanged();
+  };
+
+  const remover = (v: AreaVoluntario) => {
+    Alert.alert('Remover do time', `Remover ${v.nome} ${v.sobrenome} do time de ${area?.nome}?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        await supabase.from('escala_area_voluntarios').delete().eq('id', v.id);
+        fetchVoluntarios();
+        onChanged();
+      }},
+    ]);
+  };
+
+  if (!area) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={mo.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '85%' }}>
+          <View style={[mo.sheet, { maxHeight: '100%' }]}>
+            <View style={mo.header}>
+              <Text style={mo.title}>Time — {area.nome}</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldRow}>
+              <Ionicons name="search-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
+              <TextInput
+                style={mo.fieldInput}
+                placeholder="Buscar no diretório pra adicionar..."
+                placeholderTextColor={C.textDim}
+                value={query}
+                onChangeText={setQuery}
+              />
+              {buscando && <ActivityIndicator size="small" color={C.purple} />}
+            </View>
+
+            {resultados.map(m => (
+              <TouchableOpacity
+                key={m.id}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border }}
+                onPress={() => adicionar(m)}
+              >
+                <Text style={{ flex: 1, fontSize: 14, color: C.text }}>{m.nome} {m.sobrenome}</Text>
+                <Ionicons name="add-circle" size={22} color={C.purple} />
+              </TouchableOpacity>
+            ))}
+
+            <Text style={[s.sectionLabel, { marginTop: 16 }]}>
+              Time atual ({voluntarios.length}) · vagas por domingo: {area.vagas_padrao}
+            </Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
+              {loading ? (
+                <ActivityIndicator color={C.purple} style={{ marginVertical: 20 }} />
+              ) : voluntarios.length === 0 ? (
+                <Text style={s.emptyText}>Ninguém adicionado ainda.</Text>
+              ) : (
+                voluntarios.map(v => (
+                  <View key={v.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border }}>
+                    <Text style={{ fontSize: 14, color: C.text }}>{v.nome} {v.sobrenome}</Text>
+                    <TouchableOpacity onPress={() => remover(v)}>
+                      <Ionicons name="trash-outline" size={18} color={C.danger} />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+              <View style={{ height: 10 }} />
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Gerador de Escala Automático (admin) ──────────────────────────────────────
+// Distribui o pool de voluntários de cada área pelos domingos do período
+// escolhido, por rotação (cada pessoa vai avançando na fila da própria área),
+// respeitando `vagas_padrao` e nunca escalando a mesma pessoa em duas áreas
+// no mesmo domingo — é a trava anti-"crash de escalas" que foi pedida.
+function proximoDomingo(): Date {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const diasAte = (7 - hoje.getDay()) % 7;
+  hoje.setDate(hoje.getDate() + diasAte);
+  return hoje;
+}
+function toISODate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+function formatarDataBR(iso: string): string {
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGerado }: {
+  visible: boolean; areas: EscalaArea[]; voluntarios: AreaVoluntario[]; userId: string | undefined;
+  onClose: () => void; onGerado: () => void;
+}) {
+  const [dataInicio, setDataInicio] = useState('');
+  const [semanas, setSemanas] = useState('26');
+  const [gerando, setGerando] = useState(false);
+
+  useEffect(() => {
+    if (visible) { setDataInicio(formatarDataBR(toISODate(proximoDomingo()))); setSemanas('26'); }
+  }, [visible]);
+
+  const handleGerar = async () => {
+    const [d, m, y] = dataInicio.split('/');
+    if (!d || !m || !y || y.length !== 4) { Alert.alert('Atenção', 'Informe a data de início no formato DD/MM/AAAA.'); return; }
+    const inicio = new Date(Number(y), Number(m) - 1, Number(d));
+    if (inicio.getDay() !== 0) { Alert.alert('Atenção', 'A data de início precisa ser um domingo.'); return; }
+    const numSemanas = Number(semanas);
+    if (!numSemanas || numSemanas < 1 || numSemanas > 52) { Alert.alert('Atenção', 'Informe uma quantidade de domingos entre 1 e 52.'); return; }
+    if (areas.length === 0) { Alert.alert('Atenção', 'Cadastre ao menos uma área de escala antes de gerar.'); return; }
+
+    setGerando(true);
+
+    const datas: string[] = [];
+    const cursor = new Date(inicio);
+    for (let i = 0; i < numSemanas; i++) {
+      datas.push(toISODate(cursor));
+      cursor.setDate(cursor.getDate() + 7);
+    }
+
+    const dataFim = datas[datas.length - 1];
+
+    // Designações já existentes no período — contam como "ocupado" pra não
+    // dar crash nem duplicar, e são descontadas das vagas de cada área.
+    const { data: existentesData, error: existentesError } = await supabase
+      .from('escala_designacoes')
+      .select('area_id, membro_id, data')
+      .gte('data', datas[0])
+      .lte('data', dataFim);
+
+    if (existentesError) {
+      setGerando(false);
+      Alert.alert('Erro', existentesError.message);
+      return;
+    }
+
+    const usadoNoDia: Record<string, Set<string>> = {};
+    const existentesPorAreaData: Record<string, number> = {};
+    (existentesData ?? []).forEach((e: any) => {
+      (usadoNoDia[e.data] ??= new Set()).add(e.membro_id);
+      const chave = `${e.area_id}|${e.data}`;
+      existentesPorAreaData[chave] = (existentesPorAreaData[chave] ?? 0) + 1;
+    });
+
+    const areasOrdenadas = [...areas].sort((a, b) => a.nome.localeCompare(b.nome));
+    const poolPorArea: Record<string, string[]> = {};
+    areasOrdenadas.forEach(a => {
+      poolPorArea[a.id] = voluntarios.filter(v => v.area_id === a.id).map(v => v.membro_id);
+    });
+    const ponteiro: Record<string, number> = {};
+    areasOrdenadas.forEach(a => { ponteiro[a.id] = 0; });
+
+    const novas: { area_id: string; membro_id: string; data: string; gerado_automaticamente: boolean; criado_por: string | undefined }[] = [];
+
+    datas.forEach(data => {
+      const usadosHoje = (usadoNoDia[data] ??= new Set());
+      areasOrdenadas.forEach(area => {
+        const jaTem = existentesPorAreaData[`${area.id}|${data}`] ?? 0;
+        const precisa = area.vagas_padrao - jaTem;
+        if (precisa <= 0) return;
+        const pool = poolPorArea[area.id];
+        if (!pool || pool.length === 0) return;
+
+        const escolhidos: string[] = [];
+        let i = ponteiro[area.id];
+        let tentativas = 0;
+        while (escolhidos.length < precisa && tentativas < pool.length) {
+          const candidato = pool[i % pool.length];
+          if (!usadosHoje.has(candidato)) {
+            escolhidos.push(candidato);
+            usadosHoje.add(candidato);
+          }
+          i++;
+          tentativas++;
+        }
+        ponteiro[area.id] = i % pool.length;
+
+        escolhidos.forEach(membroId => {
+          novas.push({ area_id: area.id, membro_id: membroId, data, gerado_automaticamente: true, criado_por: userId });
+        });
+      });
+    });
+
+    if (novas.length === 0) {
+      setGerando(false);
+      Alert.alert('Nada a gerar', 'Não há voluntários disponíveis nas áreas cadastradas, ou o período já está totalmente preenchido.');
+      return;
+    }
+
+    const { error: insertError } = await supabase.from('escala_designacoes').insert(novas);
+    setGerando(false);
+    if (insertError) { Alert.alert('Erro ao gerar', insertError.message); return; }
+
+    onGerado();
+    onClose();
+    Alert.alert('Escala gerada', `${novas.length} designações criadas ao longo de ${numSemanas} domingos.`);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={mo.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+          <View style={mo.sheet}>
+            <View style={mo.header}>
+              <Text style={mo.title}>Gerar Escala do Semestre</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 16, lineHeight: 18 }}>
+              Preenche automaticamente as vagas de todas as áreas, revezando o time de voluntários de cada uma. Ninguém é escalado em duas áreas no mesmo domingo, e domingos/áreas já preenchidos manualmente não são sobrescritos.
+            </Text>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Domingo de início</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="DD/MM/AAAA" placeholderTextColor={C.textDim}
+                  value={dataInicio} onChangeText={setDataInicio} keyboardType="numeric" maxLength={10}
+                />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Quantidade de domingos</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="26" placeholderTextColor={C.textDim}
+                  value={semanas} onChangeText={setSemanas} keyboardType="number-pad"
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity style={[mo.saveBtn, gerando && { opacity: 0.7 }]} onPress={handleGerar} disabled={gerando}>
+              {gerando ? <ActivityIndicator color="#fff" /> : (
+                <><Ionicons name="shuffle-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Gerar Escala</Text></>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AdminScreen() {
   const { user } = useAuth();
@@ -962,7 +1333,13 @@ export default function AdminScreen() {
   const [eventoModalVisible, setEventoModalVisible] = useState(false);
   const [shortModalVisible, setShortModalVisible] = useState(false);
   const [mensagemModalVisible, setMensagemModalVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens'>('convites');
+  const [escalaAreas, setEscalaAreas] = useState<EscalaArea[]>([]);
+  const [areaVoluntarios, setAreaVoluntarios] = useState<AreaVoluntario[]>([]);
+  const [areasLideradas, setAreasLideradas] = useState<string[]>([]);
+  const [areaModalVisible, setAreaModalVisible] = useState(false);
+  const [areaGerenciarVisible, setAreaGerenciarVisible] = useState<EscalaArea | null>(null);
+  const [gerarEscalaModalVisible, setGerarEscalaModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas'>('convites');
 
   // Verifica role
   useEffect(() => {
@@ -1014,9 +1391,26 @@ export default function AdminScreen() {
     const { data: mensagensData } = await supabase
       .from('mensagens').select('*').order('data', { ascending: false });
     if (mensagensData) setMensagens(mensagensData as MensagemBlog[]);
+    // Escalas — áreas, time de cada uma, e quais áreas o usuário logado lidera
+    const { data: areasData } = await supabase.from('escala_areas').select('*').order('nome');
+    if (areasData) setEscalaAreas(areasData as EscalaArea[]);
+    const { data: volData } = await supabase
+      .from('escala_area_voluntarios')
+      .select('id, area_id, membro_id, members(nome, sobrenome)');
+    if (volData) {
+      setAreaVoluntarios((volData as any[]).map(v => ({
+        id: v.id, area_id: v.area_id, membro_id: v.membro_id,
+        nome: v.members?.nome ?? '', sobrenome: v.members?.sobrenome ?? '',
+      })));
+    }
+    if (user) {
+      const { data: liderData } = await supabase
+        .from('escala_area_lideres').select('area_id').eq('profile_id', user.id);
+      setAreasLideradas((liderData ?? []).map((r: any) => r.area_id));
+    }
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [user]);
 
   const deleteOffering = (id: string) => {
     Alert.alert('Remover Registro', 'Deseja remover este registro de oferta?', [
@@ -1133,40 +1527,43 @@ export default function AdminScreen() {
           <Text style={s.headerTitle}>Painel Admin</Text>
           <Text style={s.headerSub}>{role === 'admin' ? 'Administrador' : 'Líder'}</Text>
         </View>
-        <TouchableOpacity
-          style={s.newBtn}
-          onPress={() => {
-            if (activeTab === 'ofertas') setOfertaModalVisible(true);
-            else if (activeTab === 'avisos') setAvisoModalVisible(true);
-            else if (activeTab === 'devocionais') setDevocionalModalVisible(true);
-            else if (activeTab === 'agenda') setEventoModalVisible(true);
-            else if (activeTab === 'shorts') setShortModalVisible(true);
-            else if (activeTab === 'mensagens') setMensagemModalVisible(true);
-            else setModalVisible(true);
-          }}
-        >
-          <Ionicons name="add" size={18} color={C.primary} />
-          <Text style={s.newBtnText}>
-            {activeTab === 'ofertas' ? 'Nova Oferta' : activeTab === 'avisos' ? 'Novo Aviso' : activeTab === 'devocionais' ? 'Novo Devocional' : activeTab === 'agenda' ? 'Novo Evento' : activeTab === 'shorts' ? 'Novo Short' : activeTab === 'mensagens' ? 'Nova Mensagem' : 'Novo Convite'}
-          </Text>
-        </TouchableOpacity>
+        {!(activeTab === 'escalas' && role !== 'admin') && (
+          <TouchableOpacity
+            style={s.newBtn}
+            onPress={() => {
+              if (activeTab === 'ofertas') setOfertaModalVisible(true);
+              else if (activeTab === 'avisos') setAvisoModalVisible(true);
+              else if (activeTab === 'devocionais') setDevocionalModalVisible(true);
+              else if (activeTab === 'agenda') setEventoModalVisible(true);
+              else if (activeTab === 'shorts') setShortModalVisible(true);
+              else if (activeTab === 'mensagens') setMensagemModalVisible(true);
+              else if (activeTab === 'escalas') setAreaModalVisible(true);
+              else setModalVisible(true);
+            }}
+          >
+            <Ionicons name="add" size={18} color={C.primary} />
+            <Text style={s.newBtnText}>
+              {activeTab === 'ofertas' ? 'Nova Oferta' : activeTab === 'avisos' ? 'Novo Aviso' : activeTab === 'devocionais' ? 'Novo Devocional' : activeTab === 'agenda' ? 'Novo Evento' : activeTab === 'shorts' ? 'Novo Short' : activeTab === 'mensagens' ? 'Nova Mensagem' : activeTab === 'escalas' ? 'Nova Área' : 'Novo Convite'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabRowScroll} contentContainerStyle={s.tabRow}>
-        {(['convites', 'avisos', 'devocionais', 'mensagens', 'agenda', 'shorts', 'ofertas', 'stats'] as const).map(tab => (
+        {(['convites', 'avisos', 'devocionais', 'mensagens', 'agenda', 'shorts', 'ofertas', 'escalas', 'stats'] as const).map(tab => (
           <TouchableOpacity
             key={tab}
             style={[s.tabBtn, activeTab === tab && s.tabBtnActive]}
             onPress={() => setActiveTab(tab)}
           >
             <Ionicons
-              name={tab === 'convites' ? 'ticket-outline' : tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : 'bar-chart-outline'}
+              name={tab === 'convites' ? 'ticket-outline' : tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : 'bar-chart-outline'}
               size={16}
               color={activeTab === tab ? C.purple : C.textMuted}
             />
             <Text style={[s.tabBtnText, activeTab === tab && { color: C.purple, fontWeight: '700' }]}>
-              {tab === 'convites' ? 'Convites' : tab === 'avisos' ? 'Avisos' : tab === 'devocionais' ? 'Devocionais' : tab === 'mensagens' ? 'Mensagens' : tab === 'agenda' ? 'Agenda' : tab === 'shorts' ? 'Shorts' : tab === 'ofertas' ? 'Ofertas' : 'Estatísticas'}
+              {tab === 'convites' ? 'Convites' : tab === 'avisos' ? 'Avisos' : tab === 'devocionais' ? 'Devocionais' : tab === 'mensagens' ? 'Mensagens' : tab === 'agenda' ? 'Agenda' : tab === 'shorts' ? 'Shorts' : tab === 'ofertas' ? 'Ofertas' : tab === 'escalas' ? 'Escalas' : 'Estatísticas'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -1510,6 +1907,57 @@ export default function AdminScreen() {
             </>
           )}
 
+          {/* ══ ESCALAS ═══════════════════════════════════════════════════════ */}
+          {activeTab === 'escalas' && (() => {
+            const areasVisiveis = role === 'admin'
+              ? escalaAreas
+              : escalaAreas.filter(a => areasLideradas.includes(a.id));
+            return (
+              <>
+                {role === 'admin' && (
+                  <TouchableOpacity
+                    style={[s.inviteCard, { backgroundColor: C.purple + '10', borderColor: C.purple + '30', marginBottom: 16 }]}
+                    onPress={() => setGerarEscalaModalVisible(true)}
+                  >
+                    <View style={s.inviteLeft}>
+                      <Text style={[s.inviteCode, { color: C.purple }]}>Gerar Escala do Semestre</Text>
+                      <Text style={s.emptyText}>Distribui os voluntários pelos domingos automaticamente</Text>
+                    </View>
+                    <Ionicons name="shuffle-outline" size={22} color={C.purple} />
+                  </TouchableOpacity>
+                )}
+                <Text style={s.sectionLabel}>Áreas de Serviço</Text>
+                {areasVisiveis.length === 0 ? (
+                  <View style={s.empty}>
+                    <Ionicons name="people-circle-outline" size={40} color={C.textDim} />
+                    <Text style={s.emptyText}>
+                      {role === 'admin' ? 'Nenhuma área cadastrada ainda' : 'Você ainda não lidera nenhuma área de escala'}
+                    </Text>
+                  </View>
+                ) : (
+                  areasVisiveis.map(area => {
+                    const time = areaVoluntarios.filter(v => v.area_id === area.id);
+                    return (
+                      <TouchableOpacity key={area.id} style={s.inviteCard} onPress={() => setAreaGerenciarVisible(area)}>
+                        <View style={s.inviteLeft}>
+                          <Text style={s.inviteCode}>{area.nome}</Text>
+                          <View style={s.inviteMetaRow}>
+                            <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
+                              <Text style={[s.statusBadgeText, { color: C.purple }]}>
+                                {time.length} no time · {area.vagas_padrao} vagas/domingo
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={C.textMuted} />
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </>
+            );
+          })()}
+
           {/* ══ ESTATÍSTICAS ══════════════════════════════════════════════════ */}
           {activeTab === 'stats' && (
             <>
@@ -1630,6 +2078,25 @@ export default function AdminScreen() {
         visible={mensagemModalVisible}
         onClose={() => setMensagemModalVisible(false)}
         onSaved={fetchData}
+      />
+      <NovaAreaModal
+        visible={areaModalVisible}
+        onClose={() => setAreaModalVisible(false)}
+        onSaved={fetchData}
+      />
+      <AreaVoluntariosModal
+        visible={!!areaGerenciarVisible}
+        area={areaGerenciarVisible}
+        onClose={() => setAreaGerenciarVisible(null)}
+        onChanged={fetchData}
+      />
+      <GerarEscalaModal
+        visible={gerarEscalaModalVisible}
+        areas={escalaAreas}
+        voluntarios={areaVoluntarios}
+        userId={user?.id}
+        onClose={() => setGerarEscalaModalVisible(false)}
+        onGerado={fetchData}
       />
     </SafeAreaView>
   );

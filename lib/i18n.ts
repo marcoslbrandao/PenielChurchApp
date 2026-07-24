@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import pt from '../locales/pt.json';
@@ -17,11 +16,11 @@ export const IDIOMAS = [
 
 const STORAGE_KEY = 'peniel_idioma';
 
-// Detecta o idioma do aparelho como padrão na primeira abertura; depois disso,
-// respeita o que o usuário escolher manualmente em Perfil > Idioma.
+// Sempre abre em Português na primeira instalação, independente do idioma
+// configurado no aparelho — depois disso, respeita o que o usuário escolher
+// manualmente em Perfil > Idioma (ver carregarIdiomaSalvo).
 function idiomaPadrao(): string {
-  const codigo = Localization.getLocales()[0]?.languageCode ?? 'pt';
-  return IDIOMAS.some(i => i.codigo === codigo) ? codigo : 'pt';
+  return 'pt';
 }
 
 i18n.use(initReactI18next).init({

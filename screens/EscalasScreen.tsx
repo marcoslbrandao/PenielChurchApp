@@ -43,17 +43,26 @@ export default function EscalasScreen() {
     if (!user) { setLoading(false); return; }
     const hoje = new Date().toISOString().slice(0, 10);
 
+    // A consulta antiga trazia os nomes por embed (`members(nome, sobrenome)`),
+    // e esse embed passa pela RLS de `members` — que desde 8/9 Set só abre
+    // para o admin e para o próprio registro da pessoa. Resultado: a "Escala
+    // Geral" carregava as datas e as áreas com a coluna da pessoa EM BRANCO,
+    // sem erro nenhum. A RPC devolve só o nome, com a permissão checada
+    // dentro dela (mesmo padrão de `participantes_do_grupo`).
     const [{ data: meuMembro }, { data: desigs }] = await Promise.all([
       supabase.from('members').select('id').eq('profile_id', user.id).maybeSingle(),
-      supabase
-        .from('escala_designacoes')
-        .select('id, data, area_id, membro_id, escala_areas(nome), members(nome, sobrenome)')
-        .gte('data', hoje)
-        .order('data', { ascending: true }),
+      supabase.rpc('escala_proximas_designacoes'),
     ]);
 
     setMeuMembroId(meuMembro?.id ?? null);
-    setDesignacoes((desigs as any) ?? []);
+    setDesignacoes(((desigs ?? []) as any[]).map(d => ({
+      id: d.id,
+      data: d.data,
+      area_id: d.area_id,
+      membro_id: d.membro_id,
+      escala_areas: { nome: d.area_nome },
+      members: { nome: d.nome, sobrenome: d.sobrenome },
+    })) as any);
     setLoading(false);
     setRefreshing(false);
   }, [user]);

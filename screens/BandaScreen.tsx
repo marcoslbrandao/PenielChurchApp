@@ -3853,9 +3853,16 @@ function BandaMain() {
                             />
                           </TouchableOpacity>
                         )}
-                        <TouchableOpacity onPress={() => deleteCulto(culto.id)} style={s.deleteBtn}>
-                          <Ionicons name="trash-outline" size={15} color={C.danger} />
-                        </TouchableOpacity>
+                        {/* Só admin apaga. Antes a lixeira ficava visível pra
+                            qualquer pessoa com o código da banda, enquanto os
+                            botões vizinhos (publicar, editar setlist) já eram
+                            restritos — e apagar um culto leva junto setlist,
+                            escala, roadmap e comentários, em cascata. */}
+                        {podeVerRascunho && (
+                          <TouchableOpacity onPress={() => deleteCulto(culto.id)} style={s.deleteBtn}>
+                            <Ionicons name="trash-outline" size={15} color={C.danger} />
+                          </TouchableOpacity>
+                        )}
                         <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={C.textMuted} />
                       </View>
                     </TouchableOpacity>
@@ -4095,9 +4102,11 @@ function BandaMain() {
                             />
                           </TouchableOpacity>
                         )}
-                        <TouchableOpacity onPress={() => deleteEnsaio(ensaio.id)} style={s.deleteBtn}>
-                          <Ionicons name="trash-outline" size={15} color={C.danger} />
-                        </TouchableOpacity>
+                        {podeVerRascunho && (
+                          <TouchableOpacity onPress={() => deleteEnsaio(ensaio.id)} style={s.deleteBtn}>
+                            <Ionicons name="trash-outline" size={15} color={C.danger} />
+                          </TouchableOpacity>
+                        )}
                         <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={C.textMuted} />
                       </View>
                     </TouchableOpacity>
@@ -4688,9 +4697,13 @@ export default function BandaScreen() {
 
   useEffect(() => {
     if (!user) { setChecandoAcesso(false); return; }
-    supabase.from('profiles').select('banda_acesso').eq('id', user.id).single()
+    // `or role === 'admin'` porque a função do banco (is_banda_membro, em
+    // 20260728090000) já libera o admin sem código. Sem isso, um admin com
+    // `banda_acesso = false` levava a tela de convite e precisava queimar um
+    // código para ver uma área que o banco já abria para ele.
+    supabase.from('profiles').select('banda_acesso, role').eq('id', user.id).single()
       .then(({ data }) => {
-        setUnlocked(!!data?.banda_acesso);
+        setUnlocked(!!data?.banda_acesso || data?.role === 'admin');
         setChecandoAcesso(false);
       });
   }, [user]);

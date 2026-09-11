@@ -505,7 +505,7 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
 export default function HomeScreen({ navigation }: { navigation?: any }) {
   const { t, i18n } = useTranslation();
   const { user, isLoggedIn } = useAuth();
-  const { ehMembro } = useAcesso();
+  const { ehMembro, carregando: carregandoPapel } = useAcesso();
   const { isDark } = useTheme();
   const C = useMemo(() => paletaHome(isDark), [isDark]);
   const styles = useMemo(() => buildStyles(C), [C]);
@@ -515,6 +515,10 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
   // levam ao caminho certo: login pra quem não tem conta, ativação de membro
   // pra quem tem conta mas ainda não é membro.
   const abrirAreaMembro = (params?: any) => {
+    // Enquanto o papel não chega do servidor, `ehMembro` é false — e sem esta
+    // guarda um membro que tocasse em "Grupos" nos primeiros segundos depois
+    // de abrir o app era mandado para a tela de "digite seu código de convite".
+    if (carregandoPapel) return;
     if (ehMembro) { navigation?.navigate('Membros', params); return; }
     navigation?.navigate(isLoggedIn ? 'AtivarMembro' : 'Auth');
   };

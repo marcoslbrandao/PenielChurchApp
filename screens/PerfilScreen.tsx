@@ -577,7 +577,7 @@ export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation();
   const { user, isLoggedIn } = useAuth();
-  const { papel, ehMembro } = useAcesso();
+  const { papel, ehMembro, carregando: carregandoPapel } = useAcesso();
   const { isDark, mode, setMode } = useTheme();
   const C = useMemo(() => paleta(isDark), [isDark]);
   const styles = useMemo(() => buildStyles(C), [C]);
@@ -838,7 +838,7 @@ export default function ProfileScreen() {
             pessoa não for membro — é o lugar onde ela volta quando o líder
             finalmente mandar o código, dias depois. Antes isto era um <View>
             com uma seta que não navegava para lugar nenhum. */}
-        {!ehMembro && (
+        {!ehMembro && !carregandoPapel && (
           <TouchableOpacity
             style={styles.loginCta}
             activeOpacity={0.8}

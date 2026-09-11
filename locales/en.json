@@ -357,7 +357,9 @@
       "November",
       "December"
     ],
-    "dataDe": "of"
+    "dataDe": "of",
+    "idDaReuniao": "Meeting ID",
+    "senhaDaReuniao": "Meeting passcode"
   },
   "midia": {
     "titulo": "Media",
@@ -465,7 +467,8 @@
     "modalTexto": "You'll be redirected to secure payment via SumUp.\n\nAmount: £{{valor}}\nType: {{tipo}}\nFrequency: {{freq}}",
     "irParaPagamento": "💳 Go to payment",
     "limpar": "Clear",
-    "toqueParaSomar": "Tap the amounts to add them up. E.g. 3× £10 = £30."
+    "toqueParaSomar": "Tap the amounts to add them up. E.g. 3× £10 = £30.",
+    "pagamentoConfirmado": "Contribution received. God bless your generosity!"
   },
   "banda": {
     "titulo": "Peniel Band",

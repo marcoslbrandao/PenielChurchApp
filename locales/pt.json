@@ -357,7 +357,9 @@
       "novembro",
       "dezembro"
     ],
-    "dataDe": "de"
+    "dataDe": "de",
+    "idDaReuniao": "ID da reunião",
+    "senhaDaReuniao": "Senha da reunião"
   },
   "midia": {
     "titulo": "Mídia",
@@ -465,7 +467,8 @@
     "modalTexto": "Você será redirecionado para o pagamento seguro via SumUp.\n\nValor: £{{valor}}\nTipo: {{tipo}}\nFrequência: {{freq}}",
     "irParaPagamento": "💳 Ir para pagamento",
     "limpar": "Limpar",
-    "toqueParaSomar": "Toque nos valores para somar. Ex.: 3× £10 = £30."
+    "toqueParaSomar": "Toque nos valores para somar. Ex.: 3× £10 = £30.",
+    "pagamentoConfirmado": "Contribuição recebida. Que Deus abençoe a sua generosidade!"
   },
   "banda": {
     "titulo": "Banda Peniel",

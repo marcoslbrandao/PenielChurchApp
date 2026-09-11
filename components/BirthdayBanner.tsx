@@ -14,9 +14,19 @@ export default function BirthdayBanner({ birthdays }: BirthdayBannerProps) {
 
   if (dismissed || birthdays.length === 0) return null;
 
+  // O código antigo prefixava 55 (Brasil) em todo telefone: um número
+  // britânico como 07540880456 virava 5507540880456 e o link do WhatsApp
+  // simplesmente não abria — e o .catch vazio abaixo engolia o erro, então
+  // o botão "Felicitar" parecia quebrado para quase toda a congregação.
+  // Agora: número já em formato internacional é respeitado; número local
+  // britânico (começa com 0) recebe o 44 no lugar do 0.
   const openWhatsApp = (phone: string, name: string) => {
     const digits = phone.replace(/\D/g, '');
-    const number = digits.startsWith('55') ? digits : `55${digits}`;
+    const number = phone.trim().startsWith('+')
+      ? digits
+      : digits.startsWith('44') ? digits
+      : digits.startsWith('0') ? `44${digits.slice(1)}`
+      : digits;
     const msg = encodeURIComponent(
       `🎂 Feliz aniversário, ${name}! Que Deus abençoe mais um ano da sua vida! 🙏✨`
     );

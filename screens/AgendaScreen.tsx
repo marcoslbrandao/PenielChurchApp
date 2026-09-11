@@ -151,15 +151,15 @@ function EventoCard({ evento, hoje, aberto, onToggleDetalhes, onAbrirZoom, onAbr
             <View style={styles.zoomRow}>
               <Ionicons name="grid-outline" size={13} color="#085041" />
               <Text style={styles.zoomLabel}>{t('agenda.idLabel')}: {evento.meetingId}</Text>
-              <TouchableOpacity onPress={() => Alert.alert(t('agenda.idCopiado'), evento.meetingId!)}>
-                <Ionicons name="copy-outline" size={13} color="#1D9E75" />
+              <TouchableOpacity onPress={() => Alert.alert(t('agenda.idDaReuniao'), evento.meetingId!)}>
+                <Ionicons name="expand-outline" size={13} color="#1D9E75" />
               </TouchableOpacity>
             </View>
             <View style={styles.zoomRow}>
               <Ionicons name="key-outline" size={13} color="#085041" />
               <Text style={styles.zoomLabel}>{t('agenda.senhaLabel')}: {evento.passcode}</Text>
-              <TouchableOpacity onPress={() => Alert.alert(t('agenda.senhaCopiada'), evento.passcode!)}>
-                <Ionicons name="copy-outline" size={13} color="#1D9E75" />
+              <TouchableOpacity onPress={() => Alert.alert(t('agenda.senhaDaReuniao'), evento.passcode!)}>
+                <Ionicons name="expand-outline" size={13} color="#1D9E75" />
               </TouchableOpacity>
             </View>
           </View>
@@ -283,8 +283,11 @@ export default function AgendaScreen() {
     );
   };
 
+  // 447123456789 era um número de exemplo que ficou no código: o botão
+  // "Entrar em contato" de todo evento em casa abria conversa com um número
+  // que não existe. Este é o número real da igreja (o mesmo da Home).
   const abrirWhatsApp = () => {
-    Linking.openURL('https://wa.me/447123456789').catch(() =>
+    Linking.openURL('https://wa.me/447540880456').catch(() =>
       Alert.alert(t('common.erro'), t('agenda.erroWhatsapp'))
     );
   };
@@ -305,8 +308,11 @@ export default function AgendaScreen() {
           <Text style={styles.headerSub}>{t('agenda.semanaAtual')}</Text>
           <Text style={styles.headerTitulo}>{t('agenda.titulo')}</Text>
         </View>
-        <TouchableOpacity style={styles.iconeBtn}>
-          <Ionicons name="calendar-outline" size={22} color="rgba(255,255,255,0.7)" />
+        {/* Antes era um botão sem `onPress`: dava o feedback de toque e não
+            fazia nada. Agora recarrega a agenda, que é o que a pessoa espera
+            de um ícone de calendário no cabeçalho de uma lista de eventos. */}
+        <TouchableOpacity style={styles.iconeBtn} onPress={() => fetchEventos(true)}>
+          <Ionicons name="refresh-outline" size={22} color="rgba(255,255,255,0.7)" />
         </TouchableOpacity>
       </View>
 

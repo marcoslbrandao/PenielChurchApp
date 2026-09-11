@@ -85,13 +85,28 @@ export default function AuthScreen() {
     if (!fullName || !email || !password) { Alert.alert(t('common.atencao'), t('auth.preencherTodosCampos')); return; }
     if (password.length < 6) { Alert.alert(t('common.atencao'), t('auth.senhaMinima')); return; }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
       options: { data: { full_name: fullName } },
     });
     setLoading(false);
     if (error) {
       Alert.alert(t('auth.erroAoCadastrar'), error.message);
+      return;
+    }
+    // E-mail que JÁ tem conta confirmada: o Supabase responde "ok" de fachada
+    // (para não revelar quem está cadastrado), devolve um usuário falso com
+    // `identities` vazio e NÃO envia e-mail nenhum. Sem esta checagem a pessoa
+    // ia para a tela do código e ficava esperando um e-mail que nunca chega.
+    if (data?.user && (data.user.identities?.length ?? 0) === 0) {
+      Alert.alert(
+        t('auth.emailJaCadastradoTitulo'),
+        t('auth.emailJaCadastradoMsg', { email }),
+        [
+          { text: t('auth.esqueciSenha'), onPress: () => setMode('reset') },
+          { text: t('auth.entrar'), style: 'default', onPress: () => setMode('login') },
+        ]
+      );
       return;
     }
     setCodigoEmail('');

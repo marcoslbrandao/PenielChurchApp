@@ -119,7 +119,9 @@
     "codigoEmailInvalido": "Código inválido ou expirado. Peça um novo abaixo.",
     "naoRecebeuReenviar": "Não recebeu? Enviar outro código",
     "codigoReenviado": "Enviamos um novo código para {{email}}.",
-    "dicaSpam": "Se não encontrar o e-mail, verifique a pasta de spam."
+    "dicaSpam": "Se não encontrar o e-mail, verifique a pasta de spam.",
+    "emailJaCadastradoTitulo": "Este e-mail já tem conta",
+    "emailJaCadastradoMsg": "{{email}} já está cadastrado no app. Entre com a sua senha ou, se não lembrar, recupere a senha."
   },
   "perfil": {
     "titulo": "Perfil",

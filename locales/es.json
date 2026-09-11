@@ -119,7 +119,9 @@
     "codigoEmailInvalido": "Código inválido o caducado. Pide uno nuevo abajo.",
     "naoRecebeuReenviar": "¿No lo recibiste? Enviar otro código",
     "codigoReenviado": "Enviamos un nuevo código a {{email}}.",
-    "dicaSpam": "Si no encuentras el correo, revisa la carpeta de spam."
+    "dicaSpam": "Si no encuentras el correo, revisa la carpeta de spam.",
+    "emailJaCadastradoTitulo": "Este correo ya tiene cuenta",
+    "emailJaCadastradoMsg": "{{email}} ya está registrado. Inicia sesión con tu contraseña o recupérala si no la recuerdas."
   },
   "perfil": {
     "titulo": "Perfil",

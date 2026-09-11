@@ -119,7 +119,9 @@
     "codigoEmailInvalido": "Code invalide ou expiré. Demandez-en un nouveau ci-dessous.",
     "naoRecebeuReenviar": "Rien reçu ? Envoyer un autre code",
     "codigoReenviado": "Nous avons envoyé un nouveau code à {{email}}.",
-    "dicaSpam": "Si vous ne trouvez pas l’e-mail, vérifiez le dossier spam."
+    "dicaSpam": "Si vous ne trouvez pas l’e-mail, vérifiez le dossier spam.",
+    "emailJaCadastradoTitulo": "Cet e-mail a déjà un compte",
+    "emailJaCadastradoMsg": "{{email}} est déjà inscrit. Connectez-vous avec votre mot de passe ou réinitialisez-le si vous l'avez oublié."
   },
   "perfil": {
     "titulo": "Profil",

@@ -119,7 +119,9 @@
     "codigoEmailInvalido": "Invalid or expired code. Request a new one below.",
     "naoRecebeuReenviar": "Didn't get it? Send another code",
     "codigoReenviado": "We sent a new code to {{email}}.",
-    "dicaSpam": "If you can't find the email, check your spam folder."
+    "dicaSpam": "If you can't find the email, check your spam folder.",
+    "emailJaCadastradoTitulo": "This email already has an account",
+    "emailJaCadastradoMsg": "{{email}} is already registered. Sign in with your password or reset it if you don't remember."
   },
   "perfil": {
     "titulo": "Profile",

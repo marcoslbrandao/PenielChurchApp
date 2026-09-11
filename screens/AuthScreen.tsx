@@ -101,6 +101,10 @@ export default function AuthScreen() {
 
   // ── Confirmar e-mail com o código de 6 dígitos ─────────────────────────────
   const handleConfirmarEmail = async () => {
+    // O comprimento do código vem do painel do Supabase (Auth → Email → "Email
+    // OTP length", hoje 6). Aceitamos 6–10 dígitos para que o app nunca volte a
+    // travar o cadastro se esse ajuste mudar: antes o campo cortava em 6 e um
+    // código de 8 dígitos virava "código inválido" para todo mundo.
     const token = codigoEmail.replace(/\D/g, '');
     if (token.length < 6) { setErroCodigo(t('auth.codigoEmailIncompleto')); return; }
     setLoading(true); setErroCodigo('');
@@ -311,9 +315,11 @@ export default function AuthScreen() {
                     placeholder="000000"
                     placeholderTextColor={C.textDim}
                     value={codigoEmail}
-                    onChangeText={v => { setCodigoEmail(v.replace(/[^0-9]/g, '').slice(0, 6)); setErroCodigo(''); }}
+                    onChangeText={v => { setCodigoEmail(v.replace(/[^0-9]/g, '').slice(0, 10)); setErroCodigo(''); }}
                     keyboardType="number-pad"
-                    maxLength={6}
+                    textContentType="oneTimeCode"
+                    autoComplete="one-time-code"
+                    maxLength={10}
                     autoFocus
                     returnKeyType="done"
                     onSubmitEditing={handleConfirmarEmail}

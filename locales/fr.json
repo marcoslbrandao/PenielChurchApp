@@ -121,7 +121,12 @@
     "codigoReenviado": "Nous avons envoyé un nouveau code à {{email}}.",
     "dicaSpam": "Si vous ne trouvez pas l’e-mail, vérifiez le dossier spam.",
     "emailJaCadastradoTitulo": "Cet e-mail a déjà un compte",
-    "emailJaCadastradoMsg": "{{email}} est déjà inscrit. Connectez-vous avec votre mot de passe ou réinitialisez-le si vous l'avez oublié."
+    "emailJaCadastradoMsg": "{{email}} est déjà inscrit. Connectez-vous avec votre mot de passe ou réinitialisez-le si vous l'avez oublié.",
+    "redefinirSenha": "Réinitialiser le mot de passe",
+    "redefinirSenhaMsg": "Nous avons envoyé un code à 6 chiffres à {{email}}. Saisissez-le ci-dessous pour créer un nouveau mot de passe.",
+    "continuarBtn": "Continuer",
+    "linkExpiradoTitulo": "Lien expiré",
+    "linkExpiradoMsg": "Ce lien a déjà été utilisé ou a expiré. Demandez-en un nouveau depuis « Mot de passe oublié »."
   },
   "perfil": {
     "titulo": "Profil",

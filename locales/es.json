@@ -121,7 +121,12 @@
     "codigoReenviado": "Enviamos un nuevo código a {{email}}.",
     "dicaSpam": "Si no encuentras el correo, revisa la carpeta de spam.",
     "emailJaCadastradoTitulo": "Este correo ya tiene cuenta",
-    "emailJaCadastradoMsg": "{{email}} ya está registrado. Inicia sesión con tu contraseña o recupérala si no la recuerdas."
+    "emailJaCadastradoMsg": "{{email}} ya está registrado. Inicia sesión con tu contraseña o recupérala si no la recuerdas.",
+    "redefinirSenha": "Restablecer contraseña",
+    "redefinirSenhaMsg": "Enviamos un código de 6 dígitos a {{email}}. Introdúcelo abajo para crear una contraseña nueva.",
+    "continuarBtn": "Continuar",
+    "linkExpiradoTitulo": "Enlace caducado",
+    "linkExpiradoMsg": "Este enlace ya fue usado o caducó. Pide uno nuevo en \"Olvidé mi contraseña\"."
   },
   "perfil": {
     "titulo": "Perfil",

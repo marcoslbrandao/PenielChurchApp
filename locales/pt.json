@@ -121,7 +121,12 @@
     "codigoReenviado": "Enviamos um novo código para {{email}}.",
     "dicaSpam": "Se não encontrar o e-mail, verifique a pasta de spam.",
     "emailJaCadastradoTitulo": "Este e-mail já tem conta",
-    "emailJaCadastradoMsg": "{{email}} já está cadastrado no app. Entre com a sua senha ou, se não lembrar, recupere a senha."
+    "emailJaCadastradoMsg": "{{email}} já está cadastrado no app. Entre com a sua senha ou, se não lembrar, recupere a senha.",
+    "redefinirSenha": "Redefinir senha",
+    "redefinirSenhaMsg": "Enviamos um código de 6 dígitos para {{email}}. Digite-o abaixo para criar uma senha nova.",
+    "continuarBtn": "Continuar",
+    "linkExpiradoTitulo": "Link expirado",
+    "linkExpiradoMsg": "Este link de redefinição já foi usado ou expirou. Peça um novo em \"Esqueci minha senha\"."
   },
   "perfil": {
     "titulo": "Perfil",

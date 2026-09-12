@@ -1,6 +1,6 @@
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { useEffect } from 'react';
-import { Linking } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -22,6 +22,7 @@ import AuthScreen from './screens/AuthScreen';
 import AtivarMembroScreen from './screens/AtivarMembroScreen';
 import BemVindoScreen from './screens/BemVindoScreen';
 import { supabase } from './lib/supabase';
+import i18n from 'i18next';
 import { carregarIdiomaSalvo } from './lib/i18n';
 import { ThemeProvider, useTheme } from './lib/theme';
 import { AcessoProvider, useAcesso } from './lib/acesso';
@@ -33,14 +34,33 @@ const navigationRef = createNavigationContainerRef();
 // ─── Deep link de recuperação de senha ────────────────────────────────────────
 // O e-mail de "esqueci minha senha" abre penielchurch://reset-password com o
 // token no fragmento (#) ou na query (?), dependendo do fluxo do Supabase.
-// Aqui a gente estabelece a sessão de recuperação e manda o usuário pra tela
-// de definir uma nova senha.
-async function handleAuthDeepLink(url: string | null): Promise<boolean> {
-  if (!url || !url.includes('reset-password')) return false;
+//
+// Este caminho continua aqui por causa dos e-mails já enviados, mas deixou de
+// ser o principal: o app agora redefine a senha por CÓDIGO de 6 dígitos, na
+// própria AuthScreen. Dois motivos, os dois vistos em produção:
+//
+//  1. ARRANQUE A FRIO. `Linking.getInitialURL()` resolve antes de a navegação
+//     terminar de montar, e o código antigo checava `isReady()` uma única vez:
+//     se desse falso — que é o caso quando o app é aberto PELO link — a sessão
+//     era criada e a navegação simplesmente nunca acontecia. O app abria na
+//     Home, sem erro nenhum, e a tela de nova senha não aparecia.
+//  2. TOKEN JÁ CONSUMIDO. O token do link é de uso único, e vários provedores
+//     de e-mail abrem os links antes do usuário, para escanear. Quando a
+//     pessoa clica, o Supabase devolve `#error=access_denied&
+//     error_code=otp_expired` — e o código antigo devolvia `false` em silêncio.
+type ResultadoDeepLink = { ok: boolean; erro?: string };
+
+async function handleAuthDeepLink(url: string | null): Promise<ResultadoDeepLink> {
+  if (!url || !url.includes('reset-password')) return { ok: false };
   const [base, fragment] = url.split('#');
   const queryStr = fragment || (base.includes('?') ? base.split('?')[1] : '');
-  if (!queryStr) return false;
+  if (!queryStr) return { ok: false };
   const params = new URLSearchParams(queryStr);
+
+  // O Supabase manda o erro no próprio fragmento quando o token não vale mais.
+  const erro = params.get('error_code') ?? params.get('error');
+  if (erro) return { ok: false, erro };
+
   const access_token = params.get('access_token');
   const refresh_token = params.get('refresh_token');
   const token_hash = params.get('token_hash');
@@ -48,21 +68,20 @@ async function handleAuthDeepLink(url: string | null): Promise<boolean> {
 
   if (access_token && refresh_token) {
     const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-    return !error;
+    return { ok: !error, erro: error?.message };
   }
   if (token_hash) {
     const { error } = await supabase.auth.verifyOtp({ token_hash, type: 'recovery' });
-    return !error;
+    return { ok: !error, erro: error?.message };
   }
   if (code) {
     // Fluxo PKCE (padrão em projetos Supabase mais novos): o link do email
     // não traz o token pronto, traz um "code" de uma tentativa que precisa
-    // ser trocado por uma sessão de verdade. Sem isso, o link abre o app
-    // mas nunca navega pra tela de nova senha.
+    // ser trocado por uma sessão de verdade.
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    return !error;
+    return { ok: !error, erro: error?.message };
   }
-  return false;
+  return { ok: false };
 }
 
 function MainTabs() {
@@ -140,18 +159,35 @@ function MainTabs() {
 export default function App() {
   useEffect(() => { carregarIdiomaSalvo(); }, []);
 
+  // O pedido de "abrir a tela de nova senha" fica GUARDADO até a navegação
+  // existir. Era exatamente isso que faltava: no arranque a frio o link chegava
+  // antes da navegação estar pronta e o pedido se perdia sem deixar rastro.
+  const [novaSenhaPendente, setNovaSenhaPendente] = useState(false);
+  const [navPronta, setNavPronta] = useState(false);
+
   useEffect(() => {
-    const irParaNovaSenha = async (url: string | null) => {
-      const ok = await handleAuthDeepLink(url);
-      if (ok && navigationRef.isReady()) {
-        navigationRef.navigate('NovaSenha' as never);
+    const tratarLink = async (url: string | null) => {
+      const { ok, erro } = await handleAuthDeepLink(url);
+      if (ok) { setNovaSenhaPendente(true); return; }
+      if (erro) {
+        Alert.alert(
+          i18n.t('auth.linkExpiradoTitulo'),
+          i18n.t('auth.linkExpiradoMsg'),
+        );
       }
     };
 
-    Linking.getInitialURL().then(irParaNovaSenha);
-    const subscription = Linking.addEventListener('url', ({ url }) => irParaNovaSenha(url));
+    Linking.getInitialURL().then(tratarLink);
+    const subscription = Linking.addEventListener('url', ({ url }) => tratarLink(url));
     return () => subscription.remove();
   }, []);
+
+  useEffect(() => {
+    if (novaSenhaPendente && navPronta && navigationRef.isReady()) {
+      navigationRef.navigate('NovaSenha' as never);
+      setNovaSenhaPendente(false);
+    }
+  }, [novaSenhaPendente, navPronta]);
 
   return (
     <StripeProvider
@@ -162,7 +198,7 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AcessoProvider>
-          <NavigationContainer ref={navigationRef}>
+          <NavigationContainer ref={navigationRef} onReady={() => setNavPronta(true)}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="MainTabs" component={MainTabs} />
               <Stack.Screen

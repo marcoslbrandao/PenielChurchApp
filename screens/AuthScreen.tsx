@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -30,17 +30,28 @@ const C = {
 // penielchurch:// não é aberto a partir do Mail, e o redirect nem estava na
 // allow-list do Supabase). Com código, a pessoa nunca sai do app — e funciona
 // mesmo quando ela abre o e-mail no computador e o app está no celular.
-type Mode = 'login' | 'signup' | 'reset' | 'invite' | 'confirmar';
+// 'resetCodigo' = redefinir a senha por CÓDIGO, sem o link do e-mail. O link
+// existia e abria o app, mas quase nunca chegava na tela de nova senha: ou a
+// navegação ainda não estava pronta no arranque a frio (o app abria e ficava
+// na Home, sem erro nenhum), ou o token de uso único já tinha sido consumido
+// por um scanner de link do provedor de e-mail antes de a pessoa clicar.
+// Mesmo caminho que o cadastro já usa desde 8 Set.
+type Mode = 'login' | 'signup' | 'reset' | 'invite' | 'confirmar' | 'resetCodigo';
 
 export default function AuthScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
-  const [mode, setMode] = useState<Mode>('login');
+  // O Perfil abre esta tela já no modo de código, com o e-mail preenchido,
+  // logo depois de mandar o e-mail de redefinição.
+  const route = useRoute<any>();
+  const [mode, setMode] = useState<Mode>(route.params?.modoInicial ?? 'login');
+  const [codigoReset, setCodigoReset] = useState('');
+  const [erroCodigoReset, setErroCodigoReset] = useState('');
   const [codigoEmail, setCodigoEmail] = useState('');
   const [erroCodigo, setErroCodigo] = useState('');
   const [reenviando, setReenviando] = useState(false);
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState<string>(route.params?.email ?? '');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -203,11 +214,36 @@ export default function AuthScreen() {
     setLoading(false);
     if (error) {
       Alert.alert(t('common.erro'), error.message);
-    } else {
-      Alert.alert(t('perfil.emailEnviadoTitulo'), t('auth.emailEnviadoResetMsg'),
-        [{ text: t('common.ok'), onPress: () => setMode('login') }]
-      );
+      return;
     }
+    setCodigoReset('');
+    setErroCodigoReset('');
+    setMode('resetCodigo');
+  };
+
+  // ── Redefinir a senha com o código do e-mail ───────────────────────────────
+  const handleResetCodigo = async () => {
+    const token = codigoReset.replace(/\D/g, '');
+    if (token.length < 6) { setErroCodigoReset(t('auth.codigoEmailIncompleto')); return; }
+    setLoading(true); setErroCodigoReset('');
+    // `type: 'recovery'` devolve uma sessão de recuperação — é ela que autoriza
+    // o updateUser({ password }) da tela seguinte.
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'recovery' });
+    setLoading(false);
+    if (error) { setErroCodigoReset(t('auth.codigoEmailInvalido')); return; }
+    if (navigation.canGoBack()) navigation.replace('NovaSenha');
+    else navigation.navigate('NovaSenha');
+  };
+
+  const handleReenviarCodigoReset = async () => {
+    if (!email) { Alert.alert(t('common.atencao'), t('auth.informeSeuEmail')); return; }
+    setReenviando(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'penielchurch://reset-password',
+    });
+    setReenviando(false);
+    if (error) Alert.alert(t('common.erro'), error.message);
+    else Alert.alert(t('perfil.emailEnviadoTitulo'), t('auth.codigoReenviado', { email }));
   };
 
   const handleSubmit = () => {
@@ -216,6 +252,7 @@ export default function AuthScreen() {
     else if (mode === 'reset') handleReset();
     else if (mode === 'invite') handleInviteCode();
     else if (mode === 'confirmar') handleConfirmarEmail();
+    else if (mode === 'resetCodigo') handleResetCodigo();
   };
 
   // ── Tela de código de convite ──────────────────────────────────────────────
@@ -296,6 +333,84 @@ export default function AuthScreen() {
                 </Text>
               </View>
             )}
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Tela de redefinição de senha (código de 6 dígitos) ─────────────────────
+  if (mode === 'resetCodigo') {
+    return (
+      <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
+        <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+        <TouchableOpacity style={s.fecharBtn} onPress={fecharSeModal} hitSlop={10}>
+          <Ionicons name="close" size={24} color={C.textMuted} />
+        </TouchableOpacity>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.kav}>
+          <View style={s.inner}>
+            <View style={s.logoWrap}>
+              <View style={s.logoCircle}>
+                <Ionicons name="lock-open-outline" size={36} color={C.accent} />
+              </View>
+              <Text style={s.appName}>{t('auth.redefinirSenha')}</Text>
+              <Text style={s.appSub}>{t('auth.redefinirSenhaMsg', { email })}</Text>
+            </View>
+
+            <View style={s.form}>
+              <View style={s.fieldWrap}>
+                <Text style={s.fieldLabel}>{t('auth.codigoDoEmail')}</Text>
+                <View style={[s.fieldRow, !!erroCodigoReset && { borderColor: C.danger }]}>
+                  <Ionicons name="keypad-outline" size={18} color={C.textMuted} style={s.fieldIcon} />
+                  <TextInput
+                    style={[s.fieldInput, { letterSpacing: 8, fontWeight: '700', fontSize: 20 }]}
+                    placeholder="000000"
+                    placeholderTextColor={C.textDim}
+                    value={codigoReset}
+                    onChangeText={v => { setCodigoReset(v.replace(/[^0-9]/g, '').slice(0, 10)); setErroCodigoReset(''); }}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    autoFocus
+                    textContentType="oneTimeCode"
+                    autoComplete="one-time-code"
+                    returnKeyType="done"
+                    onSubmitEditing={handleResetCodigo}
+                  />
+                </View>
+                {!!erroCodigoReset && (
+                  <View style={s.errorRow}>
+                    <Ionicons name="alert-circle-outline" size={14} color={C.danger} />
+                    <Text style={s.errorText}>{erroCodigoReset}</Text>
+                  </View>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[s.submitBtn, loading && { opacity: 0.7 }]}
+                onPress={handleResetCodigo} disabled={loading} activeOpacity={0.85}
+              >
+                {loading ? <ActivityIndicator color="#fff" /> : (
+                  <>
+                    <Text style={s.submitBtnText}>{t('auth.continuarBtn')}</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.skipBtn} onPress={handleReenviarCodigoReset} disabled={reenviando}>
+                <Text style={s.skipText}>
+                  {reenviando ? t('common.enviando') : t('auth.naoRecebeuReenviar')}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={s.switchRow}>
+                <TouchableOpacity onPress={() => setMode('login')}>
+                  <Text style={s.switchLink}>{t('auth.voltarParaLogin')}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={s.inviteHint}>{t('auth.dicaSpam')}</Text>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

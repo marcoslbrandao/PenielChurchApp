@@ -121,7 +121,12 @@
     "codigoReenviado": "We sent a new code to {{email}}.",
     "dicaSpam": "If you can't find the email, check your spam folder.",
     "emailJaCadastradoTitulo": "This email already has an account",
-    "emailJaCadastradoMsg": "{{email}} is already registered. Sign in with your password or reset it if you don't remember."
+    "emailJaCadastradoMsg": "{{email}} is already registered. Sign in with your password or reset it if you don't remember.",
+    "redefinirSenha": "Reset password",
+    "redefinirSenhaMsg": "We sent a 6-digit code to {{email}}. Enter it below to create a new password.",
+    "continuarBtn": "Continue",
+    "linkExpiradoTitulo": "Link expired",
+    "linkExpiradoMsg": "This reset link has already been used or has expired. Request a new one from \"Forgot my password\"."
   },
   "perfil": {
     "titulo": "Profile",

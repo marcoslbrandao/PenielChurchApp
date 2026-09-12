@@ -692,8 +692,11 @@ export default function ProfileScreen() {
           const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
             redirectTo: 'penielchurch://reset-password',
           });
-          if (error) Alert.alert(t('common.erro'), error.message);
-          else Alert.alert(t('perfil.emailEnviadoTitulo'), t('perfil.verifiqueCaixaEntrada'));
+          if (error) { Alert.alert(t('common.erro'), error.message); return; }
+          // Leva direto pra tela do código, com o e-mail já preenchido. Antes
+          // parava num "verifique sua caixa de entrada" e a pessoa tinha que
+          // voltar pelo link do e-mail — que é justamente o que não funcionava.
+          (navigation as any).navigate('Auth', { modoInicial: 'resetCodigo', email: user.email });
         }},
       ]
     );

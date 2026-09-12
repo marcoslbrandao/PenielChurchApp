@@ -778,12 +778,26 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
   // "Não lida" é contado localmente (AsyncStorage) comparando com a última
   // vez que o sininho foi aberto — não existe coluna "lida" no banco porque
   // avisos são um mural compartilhado, não uma caixa de entrada por usuário.
+  //
+  // O sininho começa NA DATA DO CADASTRO: quem cria conta hoje não recebe o
+  // histórico de avisos dos meses anteriores caindo de uma vez na primeira
+  // vez que abre o app. `user.created_at` é o instante em que a conta nasceu
+  // (o mesmo que cria a linha em `profiles`). Sem conta não há data de
+  // cadastro — aí a lista é a de sempre.
+  const desdeCadastro = (user as any)?.created_at as string | undefined;
+
+  const buscarAvisosDoSininho = useCallback(() => {
+    let q = supabase.from('avisos').select('*').order('created_at', { ascending: false }).limit(10);
+    if (desdeCadastro) q = q.gte('created_at', desdeCadastro);
+    return q;
+  }, [desdeCadastro]);
+
   useEffect(() => {
     (async () => {
       const [dismissed, ultimaVisita, { data }] = await Promise.all([
         getIdsDispensados(user?.id),
         getUltimaVisita(),
-        supabase.from('avisos').select('*').order('created_at', { ascending: false }).limit(10),
+        buscarAvisosDoSininho(),
       ]);
       setNotifDismissedIds(dismissed);
       const lista = ((data as AvisoResult[]) ?? []).filter(a => !dismissed.includes(a.id));
@@ -793,12 +807,12 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
         : lista.length;
       setNotifNaoLidas(naoLidas);
     })();
-  }, [user?.id]);
+  }, [user?.id, buscarAvisosDoSininho]);
 
   const abrirNotificacoes = () => {
     setNotifModalVisible(true);
     setNotifLoading(true);
-    supabase.from('avisos').select('*').order('created_at', { ascending: false }).limit(10)
+    buscarAvisosDoSininho()
       .then(({ data }) => {
         const lista = ((data as AvisoResult[]) ?? []).filter(a => !notifDismissedIds.includes(a.id));
         setNotifAvisos(lista);

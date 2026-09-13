@@ -227,21 +227,15 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
             <Text style={styles.resumoLabel}>{t('oferta.resumoTipo')}</Text>
             <Text style={styles.resumoValor}>{tipos.find(tp => tp.id === tipoSelecionado)?.nome}</Text>
           </View>
-          <View style={styles.resumoLinha}>
+          {/* A linha "Frequência" saiu junto com a opção "Mensal" (13 Set):
+              sem escolha nenhuma, dizer "uma vez" era só ocupar espaço. A
+              opção Mensal prometia débito mensal mas criava um PaymentIntent
+              avulso — volta quando houver Stripe Subscriptions de verdade. */}
+          <View style={[styles.resumoLinha, { borderBottomWidth: 0 }]}>
             <Text style={styles.resumoLabel}>{t('oferta.resumoValor')}</Text>
             <Text style={[styles.resumoValor, { color: '#534AB7', fontWeight: '700' }]}>
               {valorFinal > 0 ? '£ ' + valorFinal : t('oferta.aDefinir')}
             </Text>
-          </View>
-          <View style={[styles.resumoLinha, { borderBottomWidth: 0 }]}>
-            <Text style={styles.resumoLabel}>{t('oferta.frequencia')}</Text>
-            {/* Fixo em "uma vez": a opção "Mensal" foi removida em 13 Set. Ela
-                mostrava "Sua contribuição será debitada mensalmente" e "Todo
-                mês" no resumo, mas `recorrencia` nunca entrava no corpo da
-                requisição — a Edge Function criava um PaymentIntent avulso.
-                Quem escolhia Mensal era cobrado UMA vez achando que tinha
-                assinado. Volta quando houver Stripe Subscriptions de verdade. */}
-            <Text style={styles.resumoValor}>{t('oferta.umaVez')}</Text>
           </View>
         </View>
 

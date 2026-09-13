@@ -13,6 +13,12 @@ export type ThemeColors = {
   primary: string;
   primaryDeep: string;
   primaryLight: string;
+  // Cor de ÍCONE e de texto de destaque sobre `surface`. Existe porque
+  // `primary` é uma cor de FUNDO (cabeçalho, botão cheio): no tema escuro ela
+  // é #100D28 e, usada como cor de ícone sobre `surface` (#1C1940), dá
+  // contraste de 1,14:1 — o ícone some. Quem desenha um ícone ou um número
+  // sobre o fundo da tela usa `icone`; quem pinta um bloco usa `primary`.
+  icone: string;
   accent: string;
   accentDim: string;
   text: string;
@@ -34,6 +40,7 @@ const paletaClara: ThemeColors = {
   primary: '#1A1740',
   primaryDeep: '#1A1542',
   primaryLight: '#7B61FF',
+  icone: '#1A1740', // no claro é o próprio primary: 13,9:1 sobre o branco
   accent: '#F5C842',
   accentDim: '#7A6010',
   text: '#1A1A2E',
@@ -55,6 +62,7 @@ const paletaEscura: ThemeColors = {
   primary: '#100D28',
   primaryDeep: '#0A0818',
   primaryLight: '#8F79FF',
+  icone: '#B9A9FF', // 7,4:1 sobre surface (#1C1940) — passa em AA e AAA
   accent: '#F5C842',
   accentDim: '#C9A227',
   text: '#F1EFFA',

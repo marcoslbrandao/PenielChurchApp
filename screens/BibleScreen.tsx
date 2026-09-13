@@ -10,6 +10,7 @@ import { useVersiculoDoDia, parseReferencia, getTextoVersiculo, getReferenciaVer
 import { linhaCompartilharApp } from '../lib/appLinks';
 import { livrosAT, livrosNT, Livro } from '../lib/bibliaLivros';
 import { useTheme } from '../lib/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // LeitorModal (tela de leitura) já é sempre escuro — funciona nos dois
 // temas sem mudar. Só a tela de escolha de livro/versão precisa de paleta.
@@ -250,13 +251,18 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
     buscarCapitulo(cap);
   };
 
+  // Antes de qualquer `return` condicional: hook que roda às vezes quebra a
+  // ordem dos hooks. `paddingTop` fixo em 55 sobrava em aparelho sem entalhe
+  // e faltava nos iPhone mais novos.
+  const insets = useSafeAreaInsets();
+
   if (!livro) return null;
 
   return (
     <Modal visible={!!livro} animationType="slide" onRequestClose={onClose}>
       <View style={lr.container}>
         {/* Header */}
-        <View style={lr.header}>
+        <View style={[lr.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity onPress={onClose} style={lr.closeBtn}>
             <Ionicons name="chevron-down" size={22} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
@@ -361,7 +367,7 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
 
 const lr = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1A1740' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 55, paddingBottom: 12, paddingHorizontal: 16, backgroundColor: '#1A1740', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingBottom: 12, paddingHorizontal: 16, backgroundColor: '#1A1740', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)' },
   closeBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: '#fff' },
   headerSub: { fontSize: 11, color: '#F5C842', marginTop: 2 },
@@ -527,10 +533,12 @@ export default function BibleScreen() {
     Alert.alert(t('biblia.salvoTitulo'), t('biblia.salvoMsg'));
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
       {/* Cabeçalho */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.headerSub}>{t('biblia.leituraEEstudo')}</Text>
@@ -741,7 +749,7 @@ export default function BibleScreen() {
 
 function buildStyles(C: PaletaBiblia) { return StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: { backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18 },
+  header: { backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18 },
   headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
   headerTitulo: { fontSize: 18, fontWeight: '500', color: '#fff', marginTop: 2 },

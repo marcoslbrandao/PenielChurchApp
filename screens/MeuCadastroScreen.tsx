@@ -79,6 +79,17 @@ const EMPTY: FormState = {
   compartilhar_mais: '',
 };
 
+// Só as colunas que ESTE formulário edita. Antes era `select('*')`, que
+// trazia junto `observacoes` e `status` — as notas internas da liderança
+// sobre a pessoa (aconselhamento, disciplina, situação familiar) e a
+// situação dela na igreja. O gatilho `members_protege_campos_da_lideranca`
+// (migração 20260909010000) já impedia o membro de SOBRESCREVER esses
+// campos, mas nada impedia de LÊ-LOS: vinham na resposta e ficavam no
+// aparelho. Montar a lista a partir do próprio formulário evita a armadilha
+// de manter duas listas: campo novo no formulário entra sozinho, e coluna
+// que não é do formulário não entra nunca.
+const COLUNAS_DO_FORMULARIO = ['id', ...Object.keys(EMPTY)].join(', ');
+
 function formatDateBR(iso: string): string {
   if (!iso) return '';
   const [y, m, d] = iso.split('-');
@@ -255,17 +266,21 @@ export default function MeuCadastroScreen() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from('members').select('*').eq('profile_id', user.id).maybeSingle();
+      const { data } = await supabase.from('members').select(COLUNAS_DO_FORMULARIO).eq('profile_id', user.id).maybeSingle();
       if (data) {
-        setExistingId(data.id);
+        // `id` fica de fora do formulário: ele identifica a linha, não é um
+        // campo editável, e mandá-lo de volta no insert criaria uma linha com
+        // id escolhido pelo cliente.
+        const { id: linhaId, ...campos } = data as unknown as Record<string, unknown>;
+        setExistingId(linhaId as string);
         setForm({
           ...EMPTY,
-          ...data,
-          data_nascimento: formatDateBR(data.data_nascimento ?? ''),
-          data_batismo: formatDateBR(data.data_batismo ?? ''),
-          membro_desde: formatMesAnoFromISO(data.membro_desde ?? ''),
+          ...(campos as Partial<FormState>),
+          data_nascimento: formatDateBR((campos.data_nascimento as string) ?? ''),
+          data_batismo: formatDateBR((campos.data_batismo as string) ?? ''),
+          membro_desde: formatMesAnoFromISO((campos.membro_desde as string) ?? ''),
         });
-        if (data.endereco) setEnderecoConfirmado(true);
+        if (campos.endereco) setEnderecoConfirmado(true);
       } else {
         const nomeCompleto = (user.user_metadata?.full_name ?? '').trim();
         const [primeiro, ...resto] = nomeCompleto.split(' ');

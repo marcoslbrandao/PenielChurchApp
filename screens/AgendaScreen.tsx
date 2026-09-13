@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import { useTheme } from '../lib/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Só os cards "claros" (header já é escuro nos dois temas) precisam de
 // paleta alternativa.
@@ -301,9 +302,14 @@ export default function AgendaScreen() {
       data.getFullYear() === hoje.getFullYear();
   };
 
+  // `paddingTop` fixo em 55 dava um respiro engraçado em aparelho sem
+  // entalhe e apertava o título contra o relógio nos iPhone mais novos. A
+  // área segura é a medida real do aparelho.
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={styles.headerSub}>{t('agenda.semanaAtual')}</Text>
           <Text style={styles.headerTitulo}>{t('agenda.titulo')}</Text>
@@ -381,7 +387,7 @@ export default function AgendaScreen() {
 
 function buildStyles(C: PaletaAgenda) { return StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: { backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
   headerTitulo: { fontSize: 18, fontWeight: '500', color: '#fff', marginTop: 2 },
   iconeBtn: { padding: 4 },

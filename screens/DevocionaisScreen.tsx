@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useCampoTraduzido } from '../lib/useTraducao';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Tela "Devocionais" — mostra só UM destino por vez, não tudo junto:
 // - aberta pela Home (sem parâmetro) → só os devocionais Geral (grupo NULL).
@@ -90,9 +91,14 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
 
   const subtitulo = grupoFiltro ? t(GRUPO_LABEL_KEY[grupoFiltro] ?? grupoFiltro) : t('devocionais.geral');
 
+  // `paddingTop` fixo em 55 dava um respiro engraçado em aparelho sem
+  // entalhe e apertava o título contra o relógio nos iPhone mais novos. A
+  // área segura é a medida real do aparelho.
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={styles.headerTitulo}>{t('devocionais.titulo')}</Text>
           <Text style={styles.headerSubtitulo}>{subtitulo}</Text>
@@ -134,7 +140,7 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0E0B22' },
   header: {
-    backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18,
+    backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   headerTitulo: { fontSize: 18, fontWeight: '700', color: '#fff' },

@@ -5,13 +5,59 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from 'i18next';
+
+// Preferência de push deste APARELHO. Fica no aparelho, e não no perfil, de
+// propósito: quem tem o app no celular e no tablet pode querer receber só num
+// deles. O padrão é ligado — é o que a pessoa já autorizou no sistema quando
+// instalou.
+const CHAVE_PUSH = '@peniel:push_ativo';
+
+export async function pushEstaAtivo(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(CHAVE_PUSH)) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+// Apaga o token DESTE aparelho da tabela. É o que realmente interrompe o
+// push: o servidor manda para tokens, não para contas. Chamado ao desligar o
+// interruptor no Perfil e ao sair da conta.
+export async function removerTokenDesteAparelho(): Promise<void> {
+  try {
+    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
+    if (!token) return;
+    await supabase.from('push_tokens').delete().eq('token', token);
+  } catch (err) {
+    console.log('Não foi possível remover o token de push:', err);
+  }
+}
+
+// Liga ou desliga o push neste aparelho. Desligar apaga o token; ligar
+// registra de novo.
+export async function definirPush(ativo: boolean, userId?: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(CHAVE_PUSH, ativo ? 'true' : 'false');
+  } catch {
+    // Sem armazenamento local a preferência não sobrevive ao fechar o app,
+    // mas o efeito imediato abaixo vale do mesmo jeito.
+  }
+  if (ativo) {
+    if (userId) await registerForPushNotifications(userId);
+  } else {
+    await removerTokenDesteAparelho();
+  }
+}
 
 // Configura como as notificações aparecem quando o app está aberto.
 // No SDK 54 o `shouldShowAlert` foi depreciado e substituído por dois campos
 // obrigatórios: `shouldShowBanner` (o balão que desce no topo) e
 // `shouldShowList` (a entrada na central de notificações). Sem eles a
 // notificação chegava mas não aparecia com o app em primeiro plano.
+const PROJECT_ID = 'f53e9e07-9556-4ea8-80e0-da4487b38e56';
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -54,6 +100,10 @@ export function useNotifications(userId: string | undefined) {
 }
 
 async function registerForPushNotifications(userId: string) {
+  // Quem desligou o interruptor no Perfil não é reinscrito na próxima
+  // abertura do app — era isso que fazia o interruptor "voltar sozinho".
+  if (!(await pushEstaAtivo())) return;
+
   if (!Device.isDevice) {
     console.log('Push notifications só funcionam em dispositivo físico.');
     return;
@@ -82,16 +132,8 @@ async function registerForPushNotifications(userId: string) {
     });
   }
 
-  // Pega o token Expo Push
-  const projectId = 'f53e9e07-9556-4ea8-80e0-da4487b38e56';
-
-  if (!projectId) {
-    console.log('projectId não encontrado — configure em app.json');
-    return;
-  }
-
   try {
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
     if (!token) return;
 
     // Salva o token no Supabase. onConflict é o token (o aparelho), não o

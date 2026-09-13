@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useCampoTraduzido } from '../lib/useTraducao';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type Mensagem = {
   id: string;
@@ -25,6 +26,11 @@ export default function MensagemDetalheModal({ mensagem, onClose }: {
   const titulo = useCampoTraduzido(mensagem?.titulo, 'mensagens', mensagem?.id, 'titulo');
   const resumo = useCampoTraduzido(mensagem?.resumo, 'mensagens', mensagem?.id, 'resumo');
   const conteudo = useCampoTraduzido(mensagem?.conteudo, 'mensagens', mensagem?.id, 'conteudo');
+  // Antes de qualquer `return` condicional: hook que roda às vezes quebra a
+  // ordem dos hooks. `paddingTop` fixo em 55 sobrava em aparelho sem entalhe
+  // e faltava nos iPhone mais novos.
+  const insets = useSafeAreaInsets();
+
   if (!mensagem) return null;
 
   const locale = LOCALE_POR_IDIOMA[i18n.language] ?? 'pt-BR';
@@ -37,7 +43,7 @@ export default function MensagemDetalheModal({ mensagem, onClose }: {
   return (
     <Modal visible={!!mensagem} animationType="slide" onRequestClose={onClose}>
       <View style={s.container}>
-        <View style={s.header}>
+        <View style={[s.header, { paddingTop: insets.top + 12 }]}>
           <TouchableOpacity onPress={onClose} style={s.closeBtn}>
             <Ionicons name="chevron-down" size={22} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
@@ -70,7 +76,7 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1A1740' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 55, paddingBottom: 12, paddingHorizontal: 16,
+    paddingBottom: 12, paddingHorizontal: 16,
     backgroundColor: '#1A1740', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   closeBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },

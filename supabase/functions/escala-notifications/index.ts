@@ -5,12 +5,18 @@
 // birthday-notifications/content-notifications).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { chamadaAutorizada, respostaNaoAutorizado } from '../_shared/hook-auth.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
-Deno.serve(async (_req) => {
+Deno.serve(async (req) => {
+  // Só o próprio Supabase (Database Webhook ou cron) chama esta função. Sem
+  // este portão, qualquer um com a chave anônima do app disparava push para a
+  // congregação inteira — ver supabase/functions/_shared/hook-auth.ts.
+  if (!chamadaAutorizada(req)) return respostaNaoAutorizado();
+
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 

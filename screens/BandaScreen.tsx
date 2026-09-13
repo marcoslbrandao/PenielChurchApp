@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { useTheme } from '../lib/theme';
 import { paletaBanda, type BandaColors } from '../lib/temaBanda';
@@ -1652,7 +1653,7 @@ function EscalaModal({ visible, onClose, onSaved, membros, tipo, eventoId, times
     if (erroMembros) {
       // Sem isto, o time ficaria salvo e vazio pra sempre — e ao ser aplicado
       // diria "todos já estão na escala", que é exatamente a mensagem errada.
-      await supabase.from('banda_times').delete().eq('id', data.id);
+      await apagarLinha('banda_times', data.id);
       Alert.alert(t('common.erro'), erroMembros.message);
       return;
     }
@@ -1665,7 +1666,7 @@ function EscalaModal({ visible, onClose, onSaved, membros, tipo, eventoId, times
     Alert.alert(time.nome, t('banda.apagarTimeMsg'), [
       { text: t('common.cancelar'), style: 'cancel' },
       { text: t('common.remover'), style: 'destructive', onPress: async () => {
-        await supabase.from('banda_times').delete().eq('id', time.id);
+        await apagarLinha('banda_times', time.id);
         onTimesMudaram();
       }},
     ]);
@@ -1896,7 +1897,7 @@ function MembroFuncoesModal({ membro, funcoes, membroFuncoes, onClose, onSaved }
     setSaving(true);
     // Apaga e reescreve em vez de calcular o diff: são poucas linhas por pessoa
     // e o diff seria três consultas pra economizar uma.
-    await supabase.from('banda_membro_funcoes').delete().eq('membro_id', membro.id);
+    await apagarLinha('banda_membro_funcoes', membro.id, 'membro_id');
     if (sel.length) {
       const { error } = await supabase.from('banda_membro_funcoes').insert(
         sel.map(funcao_id => ({ membro_id: membro.id, funcao_id, principal: funcao_id === principal })));
@@ -3363,7 +3364,7 @@ function BandaMain() {
     Alert.alert(t('banda.removerCulto'), t('banda.desejaRemoverCulto'), [
       { text: t('common.cancelar'), style: 'cancel' },
       { text: t('common.remover'), style: 'destructive', onPress: async () => {
-        await supabase.from('cultos').delete().eq('id', id);
+        await apagarLinha('cultos', id);
         fetchCultos();
       }},
     ]);
@@ -3373,7 +3374,7 @@ function BandaMain() {
     Alert.alert(t('banda.removerEnsaio'), t('banda.desejaRemoverEnsaio'), [
       { text: t('common.cancelar'), style: 'cancel' },
       { text: t('common.remover'), style: 'destructive', onPress: async () => {
-        await supabase.from('ensaios').delete().eq('id', id);
+        await apagarLinha('ensaios', id);
         fetchEnsaios();
       }},
     ]);
@@ -3422,7 +3423,7 @@ function BandaMain() {
     Alert.alert(item.titulo, t('banda.removerItemMsg'), [
       { text: t('common.cancelar'), style: 'cancel' },
       { text: t('common.remover'), style: 'destructive', onPress: async () => {
-        await supabase.from('culto_roadmap').delete().eq('id', item.id);
+        await apagarLinha('culto_roadmap', item.id);
         fetchCultos();
       }},
     ]);
@@ -3488,7 +3489,7 @@ function BandaMain() {
       { text: t('common.cancelar'), style: 'cancel' },
       { text: t('common.remover'), style: 'destructive', onPress: async () => {
         setMessages(prev => prev.filter(m => m.id !== msg.id));
-        await supabase.from('banda_chat_mensagens').delete().eq('id', msg.id);
+        await apagarLinha('banda_chat_mensagens', msg.id);
       }},
     ]);
   };

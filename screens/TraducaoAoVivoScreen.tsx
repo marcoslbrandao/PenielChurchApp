@@ -32,6 +32,7 @@ import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TouchableOpacity
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { traducaoAudioService } from '../lib/traducaoAoVivoAudio';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ── Waveform decorativa (tipo equalizer de estúdio, espelhada no centro) ──
 // Puramente visual — não reage ao áudio de verdade (não temos acesso fácil
@@ -173,9 +174,14 @@ export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any 
   // fecha esse modal e vai olhar outra aba — ver comentário do topo do
   // arquivo e de lib/traducaoAoVivoAudio.ts.
 
+  // `paddingTop` fixo em 55 dava um respiro engraçado em aparelho sem
+  // entalhe e apertava o título contra o relógio nos iPhone mais novos. A
+  // área segura é a medida real do aparelho.
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={styles.headerTitulo}>Live Translation</Text>
         </View>
@@ -223,7 +229,7 @@ export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0E0B22' },
   header: {
-    backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18,
+    backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   headerTitulo: { fontSize: 18, fontWeight: '700', color: '#fff' },

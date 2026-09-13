@@ -9,6 +9,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { apagarLinha } from '../lib/db';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import { useAuth } from '../lib/useAuth';
 import GrupoAdminModal from '../components/GrupoAdminModal';
@@ -141,8 +142,9 @@ function formatDataDevocional(iso: string, lang: string = 'pt'): string {
 
 // Card de evento do grupo — título e descrição (digitados pelo admin em
 // português) traduzidos automaticamente pro idioma do app.
-function GrupoEventoCard({ evento, tag }: {
+function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar }: {
   evento: GrupoEvento; tag: { bg: string; text: string; label: string };
+  podeEditar?: boolean; onEditar?: () => void; onApagar?: () => void;
 }) {
   const { i18n } = useTranslation();
   const { isDark } = useTheme();
@@ -155,8 +157,23 @@ function GrupoEventoCard({ evento, tag }: {
     <View style={s.eventoCard}>
       <View style={s.eventoTop}>
         <Text style={s.eventoTitulo}>{titulo}</Text>
-        <View style={[s.eventoTag, { backgroundColor: tag.bg }]}>
-          <Text style={[s.eventoTagText, { color: tag.text }]}>{tag.label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={[s.eventoTag, { backgroundColor: tag.bg }]}>
+            <Text style={[s.eventoTagText, { color: tag.text }]}>{tag.label}</Text>
+          </View>
+          {/* Só líder do grupo e admin. Um encontro com a data errada não
+              tinha conserto nenhum: a lista some sozinha quando a data passa,
+              mas um ano digitado errado ficaria ali para sempre. */}
+          {podeEditar && (
+            <>
+              <TouchableOpacity onPress={onEditar} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+                <Ionicons name="create-outline" size={16} color={C.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onApagar} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+                <Ionicons name="trash-outline" size={16} color={C.textMuted} />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
       <Text style={s.eventoDesc}>{descricao}</Text>
@@ -180,8 +197,9 @@ function GrupoEventoCard({ evento, tag }: {
 
 // Card de devocional do grupo — título, referência, versículo e texto
 // traduzidos automaticamente pro idioma do app.
-function GrupoDevocionalCard({ dev, cor, isOpen, onToggle }: {
+function GrupoDevocionalCard({ dev, cor, isOpen, onToggle, onApagar }: {
   dev: GrupoDevocional; cor: string; isOpen: boolean; onToggle: () => void;
+  onApagar?: () => void;
 }) {
   const { i18n } = useTranslation();
   const { isDark } = useTheme();
@@ -202,6 +220,11 @@ function GrupoDevocionalCard({ dev, cor, isOpen, onToggle }: {
           <Text style={s.devTitulo}>{titulo}</Text>
           <Text style={s.devRef}>{referencia} · {dataLabel}</Text>
         </View>
+        {onApagar && (
+          <TouchableOpacity onPress={onApagar} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }} style={{ marginRight: 6 }}>
+            <Ionicons name="trash-outline" size={15} color={C.textMuted} />
+          </TouchableOpacity>
+        )}
         <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={C.textMuted} />
       </TouchableOpacity>
       {isOpen && (
@@ -278,7 +301,7 @@ function GerenciarParticipantesModal({ visible, grupo, grupoNome, cor, onClose }
     Alert.alert('Remover do grupo', `Remover ${participante.nome} ${participante.sobrenome} do grupo ${grupoNome}?`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('grupo_membros').delete().eq('id', participante.id);
+        await apagarLinha('grupo_membros', participante.id);
         fetchParticipantes();
       }},
     ]);
@@ -410,7 +433,7 @@ function GerenciarLideresModal({ visible, grupo, grupoNome, cor, onClose }: {
     Alert.alert('Remover líder', `Remover ${lider.nome} da liderança do grupo ${grupoNome}?`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('group_leaders').delete().eq('id', lider.id);
+        await apagarLinha('group_leaders', lider.id);
         fetchLideres();
       }},
     ]);
@@ -517,6 +540,7 @@ export default function GruposScreen() {
   const [devocionais, setDevocionais] = useState<GrupoDevocional[]>([]);
   const [shorts, setShorts] = useState<GrupoShort[]>([]);
   const [arquivos, setArquivos] = useState<GrupoArquivo[]>([]);
+  const [encontroEditando, setEncontroEditando] = useState<GrupoEvento | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -532,6 +556,29 @@ export default function GruposScreen() {
 
   const grupo = GRUPOS[activeTab];
   const souLiderDesteGrupo = isAdmin || gruposLiderados.includes(activeTab);
+
+  // Uma confirmação só para todo conteúdo de grupo. A RLS já decide quem
+  // pode: as policies de `grupo_eventos`, `shorts_videos`, `grupo_arquivos` e
+  // `devocionais` liberam o admin e o líder DAQUELE grupo, e mais ninguém —
+  // esconder o botão é conveniência, não é a trava.
+  const confirmarRemocao = (tabela: string, id: string, titulo: string) => {
+    Alert.alert(
+      t('grupos.removerConteudoTitulo'),
+      t('grupos.removerConteudoMsg', { titulo }),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        { text: t('common.remover'), style: 'destructive', onPress: async () => {
+          if (await apagarLinha(tabela, id)) {
+            fetchGrupoData(activeTab, temAcessoConteudo);
+          }
+        }},
+      ],
+    );
+  };
+
+  // A notificação que já foi para o sininho quando o conteúdo foi publicado
+  // NÃO é apagada junto: ela é histórico do que aconteceu, e o push já saiu
+  // para os celulares de qualquer jeito. Some sozinha do mural com o tempo.
   const temAcessoConteudo = souLiderDesteGrupo || meusGrupos.includes(activeTab);
 
   // Se a tela já estava montada (usuário já estava na aba Membros) e a Home
@@ -642,7 +689,9 @@ export default function GruposScreen() {
           {souLiderDesteGrupo && (
             <TouchableOpacity
               style={[s.waBtn, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)' }]}
-              onPress={() => setAdminModalVisible(true)}
+              // Limpa a edição pendente: sem isto, depois de corrigir um encontro
+              // o botão de admin reabriria o modal no formulário daquele encontro.
+              onPress={() => { setEncontroEditando(null); setAdminModalVisible(true); }}
             >
               <Ionicons name="megaphone-outline" size={16} color="#fff" />
             </TouchableOpacity>
@@ -732,7 +781,14 @@ export default function GruposScreen() {
               </View>
             ) : (
               eventos.map(evento => (
-                <GrupoEventoCard key={evento.id} evento={evento} tag={tipoTag(evento.tipo)} />
+                <GrupoEventoCard
+                  key={evento.id}
+                  evento={evento}
+                  tag={tipoTag(evento.tipo)}
+                  podeEditar={souLiderDesteGrupo}
+                  onEditar={() => { setEncontroEditando(evento); setAdminModalVisible(true); }}
+                  onApagar={() => confirmarRemocao('grupo_eventos', evento.id, evento.titulo)}
+                />
               ))
             )}
 
@@ -752,6 +808,9 @@ export default function GruposScreen() {
                   cor={grupo.cor}
                   isOpen={expandedDev === devocionais[0].id}
                   onToggle={() => setExpandedDev(expandedDev === devocionais[0].id ? null : devocionais[0].id)}
+                  onApagar={souLiderDesteGrupo
+                    ? () => confirmarRemocao('devocionais', devocionais[0].id, devocionais[0].titulo)
+                    : undefined}
                 />
                 <TouchableOpacity
                   style={[s.verTodosDevocionais, { backgroundColor: grupo.cor + '14', borderColor: grupo.cor + '40' }]}
@@ -801,6 +860,15 @@ export default function GruposScreen() {
                       <View style={s.shortInfo}>
                         <Text style={s.shortTitle} numberOfLines={2}>{short.titulo}</Text>
                       </View>
+                      {souLiderDesteGrupo && (
+                        <TouchableOpacity
+                          style={s.removerBadge}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          onPress={() => confirmarRemocao('shorts_videos', short.id, short.titulo)}
+                        >
+                          <Ionicons name="trash-outline" size={13} color="#fff" />
+                        </TouchableOpacity>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -825,6 +893,14 @@ export default function GruposScreen() {
                   <Ionicons name="document-text-outline" size={18} color={grupo.cor} />
                 </View>
                 <Text style={s.arquivoTitulo} numberOfLines={1}>{arq.titulo}</Text>
+                {souLiderDesteGrupo && (
+                  <TouchableOpacity
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    onPress={() => confirmarRemocao('grupo_arquivos', arq.id, arq.titulo)}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={C.textMuted} />
+                  </TouchableOpacity>
+                )}
                 <Ionicons name="open-outline" size={16} color={C.textMuted} />
               </TouchableOpacity>
             ))}
@@ -873,7 +949,16 @@ export default function GruposScreen() {
         grupo={activeTab}
         grupoNome={grupo.nome}
         cor={grupo.cor}
-        onClose={() => setAdminModalVisible(false)}
+        encontroParaEditar={encontroEditando && {
+          id: encontroEditando.id,
+          titulo: encontroEditando.titulo,
+          descricao: encontroEditando.descricao,
+          dataISO: encontroEditando.dataISO,
+          horario: encontroEditando.horario,
+          local: encontroEditando.local,
+          tipo: encontroEditando.tipo as 'presencial' | 'online' | 'casa',
+        }}
+        onClose={() => { setAdminModalVisible(false); setEncontroEditando(null); }}
         onSaved={() => fetchGrupoData(activeTab, temAcessoConteudo)}
       />
 
@@ -957,6 +1042,9 @@ function buildS(C: Paleta) { return StyleSheet.create({
   shortThumb: { width: '100%', height: '100%' },
   shortThumbPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   shortPlayOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
+  // Badge da lixeira no canto do short: fica por cima da miniatura, com fundo
+  // escuro, porque a imagem pode ser clara e um ícone solto sumiria nela.
+  removerBadge: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   shortInfo: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 8, backgroundColor: 'rgba(0,0,0,0.55)' },
   shortTitle: { fontSize: 11, fontWeight: '700', color: '#fff' },
   // Materiais

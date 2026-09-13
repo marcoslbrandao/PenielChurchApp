@@ -7,8 +7,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { PAISES, Pais, bandeira, formatarNumeroLocal, montarTelefone, splitTelefone, paisPorNome, paisPorIso2, paisPadraoDdi } from '../lib/paises';
+import { useTranslation } from 'react-i18next';
 
 const C = {
   bg: '#F7F4EE', surface: '#FFFFFF', surfaceAlt: '#F0EDE8',
@@ -59,17 +61,34 @@ const EMPTY: Omit<Membro, 'id'> = {
 const ESTADO_CIVIL = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União estável'];
 const MINISTERIOS = ['Louvor', 'Infantil', 'Jovens', 'Intercessão', 'Mídia', 'Recepção', 'Outro'];
 const FUNCOES = ['Líder', 'Co-líder', 'Membro', 'Voluntário', 'Pastor', 'Diácono'];
-const SEXO_OPCOES: { valor: string; label: string }[] = [
-  { valor: 'masculino', label: 'Masculino' },
-  { valor: 'feminino', label: 'Feminino' },
-  { valor: 'prefiro_nao_informar', label: 'Prefiro não informar' },
+const SEXO_OPCOES: { valor: string; chave: string }[] = [
+  { valor: 'masculino', chave: 'membros.op.masculino' },
+  { valor: 'feminino', chave: 'membros.op.feminino' },
+  { valor: 'prefiro_nao_informar', chave: 'membros.op.prefiroNaoInformar' },
 ];
+
+// Chave de tradução de cada opção gravada no banco. O que não estiver aqui
+// aparece como está — é o caso de valor antigo digitado à mão.
+const OPCAO_CHAVE: Record<string, string> = {
+  'Solteiro(a)': 'membros.op.solteiro', 'Casado(a)': 'membros.op.casado',
+  'Divorciado(a)': 'membros.op.divorciado', 'Viúvo(a)': 'membros.op.viuvo',
+  'União estável': 'membros.op.uniaoEstavel',
+  'Louvor': 'membros.op.louvor', 'Infantil': 'membros.op.infantil',
+  'Jovens': 'membros.op.jovens', 'Intercessão': 'membros.op.intercessao',
+  'Mídia': 'membros.op.midia', 'Recepção': 'membros.op.recepcao',
+  'Outro': 'membros.op.outro', 'Líder': 'membros.op.lider',
+  'Co-líder': 'membros.op.coLider', 'Membro': 'membros.op.membro',
+  'Voluntário': 'membros.op.voluntario', 'Pastor': 'membros.op.pastor',
+  'Diácono': 'membros.op.diacono',
+};
 
 function statusColor(s: Membro['status']) {
   return s === 'lider' ? C.accent : s === 'membro' ? C.success : C.textMuted;
 }
-function statusLabel(s: Membro['status']) {
-  return s === 'lider' ? 'Líder' : s === 'membro' ? 'Membro' : 'Visitante';
+// Devolve a CHAVE — a função vive fora de qualquer componente, onde não há
+// `t`. Quem renderiza traduz.
+function statusChave(s: Membro['status']) {
+  return s === 'lider' ? 'membros.op.lider' : s === 'membro' ? 'membros.op.membro' : 'membros.op.visitante';
 }
 function getAge(dob: string): string {
   if (!dob) return '';
@@ -136,8 +155,13 @@ function Field({ label, value, onChangeText, placeholder = '', keyboardType = 'd
   );
 }
 
-function SelectPill({ label, options, value, onChange }: {
+// `rotulo` existe para traduzir o que APARECE sem mexer no que é GRAVADO.
+// Estado civil, ministério e função vão para o banco exatamente como estão
+// nestas listas: traduzir o valor faria a mesma pessoa ficar 'Casado(a)' na
+// ficha de um admin e 'Married' na de outro, e os filtros parariam de casar.
+function SelectPill({ label, options, value, onChange, rotulo }: {
   label: string; options: string[]; value: string; onChange: (v: string) => void;
+  rotulo?: (opcao: string) => string;
 }) {
   return (
     <View style={fm.fieldWrap}>
@@ -146,7 +170,7 @@ function SelectPill({ label, options, value, onChange }: {
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {options.map(opt => (
             <TouchableOpacity key={opt} style={[fm.pill, value === opt && fm.pillActive]} onPress={() => onChange(opt)}>
-              <Text style={[fm.pillText, value === opt && fm.pillTextActive]}>{opt}</Text>
+              <Text style={[fm.pillText, value === opt && fm.pillTextActive]}>{rotulo ? rotulo(opt) : opt}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -159,6 +183,7 @@ function FamiliaPicker({ label, value, onChange, membros, excludeId }: {
   label: string; value: string | null; onChange: (id: string | null) => void;
   membros: Membro[]; excludeId?: string;
 }) {
+  const { t } = useTranslation();
   const [expandido, setExpandido] = useState(false);
   const [busca, setBusca] = useState('');
   const selecionado = membros.find(m => m.id === value);
@@ -185,7 +210,7 @@ function FamiliaPicker({ label, value, onChange, membros, excludeId }: {
       {expandido && !selecionado && (
         <View style={fm.familiaBusca}>
           <TextInput
-            style={fm.fieldInput} placeholder="Buscar pelo nome..." placeholderTextColor={C.textDim}
+            style={fm.fieldInput} placeholder={t('membros.buscarPeloNome')} placeholderTextColor={C.textDim}
             value={busca} onChangeText={setBusca}
           />
           <View style={{ maxHeight: 160, marginTop: 6 }}>
@@ -194,7 +219,7 @@ function FamiliaPicker({ label, value, onChange, membros, excludeId }: {
                 <Text style={fm.familiaOpcaoText}>{m.nome} {m.sobrenome}</Text>
               </TouchableOpacity>
             ))}
-            {opcoes.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>Nenhum membro encontrado.</Text>}
+            {opcoes.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>{t('membros.nenhumMembroEncontrado')}</Text>}
           </View>
         </View>
       )}
@@ -205,6 +230,7 @@ function FamiliaPicker({ label, value, onChange, membros, excludeId }: {
 function ContaSection({ membro, profileId, onProfileIdChange }: {
   membro: Membro | null; profileId: string | null; onProfileIdChange: (id: string | null) => void;
 }) {
+  const { t } = useTranslation();
   const [busca, setBusca] = useState('');
   const [resultados, setResultados] = useState<ProfileLite[]>([]);
   const [perfilVinculado, setPerfilVinculado] = useState<ProfileLite | null>(null);
@@ -244,19 +270,19 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
   const vincular = async (perfil: ProfileLite) => {
     if (!membro) return;
     const { error } = await supabase.from('members').update({ profile_id: perfil.id }).eq('id', membro.id);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onProfileIdChange(perfil.id);
     setBusca(''); setResultados([]);
   };
 
   const desvincular = () => {
     if (!membro) return;
-    Alert.alert('Desvincular conta', 'Remover o vínculo com essa conta de login? A pessoa deixará de aparecer como líder de grupos/áreas se estiver designada.', [
+    Alert.alert(t('membros.desvincularConta'), t('membros.removerOVinculoComEssa'), [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Desvincular', style: 'destructive', onPress: async () => {
           const { error } = await supabase.from('members').update({ profile_id: null }).eq('id', membro.id);
-          if (error) { Alert.alert('Erro', error.message); return; }
+          if (error) { Alert.alert(t('common.erro'), error.message); return; }
           onProfileIdChange(null);
         },
       },
@@ -268,11 +294,11 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
     setSalvandoPapel(true);
     if (grupos.includes(grupo)) {
       const { error } = await supabase.from('group_leaders').delete().eq('profile_id', profileId).eq('grupo', grupo);
-      if (error) { Alert.alert('Erro', error.message); setSalvandoPapel(false); return; }
+      if (error) { Alert.alert(t('common.erro'), error.message); setSalvandoPapel(false); return; }
       setGrupos(prev => prev.filter(g => g !== grupo));
     } else {
       const { error } = await supabase.from('group_leaders').insert({ profile_id: profileId, grupo });
-      if (error) { Alert.alert('Erro', error.message); setSalvandoPapel(false); return; }
+      if (error) { Alert.alert(t('common.erro'), error.message); setSalvandoPapel(false); return; }
       setGrupos(prev => [...prev, grupo]);
     }
     setSalvandoPapel(false);
@@ -283,11 +309,11 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
     setSalvandoPapel(true);
     if (areasLideradas.includes(areaId)) {
       const { error } = await supabase.from('escala_area_lideres').delete().eq('profile_id', profileId).eq('area_id', areaId);
-      if (error) { Alert.alert('Erro', error.message); setSalvandoPapel(false); return; }
+      if (error) { Alert.alert(t('common.erro'), error.message); setSalvandoPapel(false); return; }
       setAreasLideradas(prev => prev.filter(a => a !== areaId));
     } else {
       const { error } = await supabase.from('escala_area_lideres').insert({ profile_id: profileId, area_id: areaId });
-      if (error) { Alert.alert('Erro', error.message); setSalvandoPapel(false); return; }
+      if (error) { Alert.alert(t('common.erro'), error.message); setSalvandoPapel(false); return; }
       setAreasLideradas(prev => [...prev, areaId]);
     }
     setSalvandoPapel(false);
@@ -310,10 +336,10 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
       </Text>
 
       <View style={fm.fieldWrap}>
-        <Text style={fm.fieldLabel}>Conta do App</Text>
+        <Text style={fm.fieldLabel}>{t('membros.contaDoApp')}</Text>
         {perfilVinculado ? (
           <View style={fm.familiaChip}>
-            <Text style={fm.familiaChipText}>{perfilVinculado.full_name ?? 'Sem nome'}</Text>
+            <Text style={fm.familiaChipText}>{perfilVinculado.full_name ?? t('membros.semNome')}</Text>
             <TouchableOpacity onPress={desvincular}>
               <Ionicons name="close-circle" size={18} color={C.textMuted} />
             </TouchableOpacity>
@@ -323,16 +349,16 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
         ) : (
           <View style={fm.familiaBusca}>
             <TextInput
-              style={fm.fieldInput} placeholder="Buscar conta pelo nome..." placeholderTextColor={C.textDim}
+              style={fm.fieldInput} placeholder={t('membros.buscarContaPeloNome')} placeholderTextColor={C.textDim}
               value={busca} onChangeText={setBusca}
             />
             {resultados.map(r => (
               <TouchableOpacity key={r.id} style={fm.familiaOpcao} onPress={() => vincular(r)}>
-                <Text style={fm.familiaOpcaoText}>{r.full_name ?? 'Sem nome'}</Text>
+                <Text style={fm.familiaOpcaoText}>{r.full_name ?? t('membros.semNome')}</Text>
               </TouchableOpacity>
             ))}
             {busca.trim().length >= 2 && resultados.length === 0 && (
-              <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>Nenhuma conta encontrada.</Text>
+              <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>{t('membros.nenhumaContaEncontrada')}</Text>
             )}
           </View>
         )}
@@ -341,7 +367,7 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
       {!!profileId && !carregando && (
         <>
           <View style={fm.fieldWrap}>
-            <Text style={fm.fieldLabel}>Líder de Grupo</Text>
+            <Text style={fm.fieldLabel}>{t('membros.liderDeGrupo')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
               {(['mulheres', 'homens', 'jovens'] as const).map(g => (
                 <TouchableOpacity key={g} disabled={salvandoPapel} style={[fm.pill, grupos.includes(g) && fm.pillActive]} onPress={() => alternarGrupo(g)}>
@@ -354,14 +380,14 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
           </View>
 
           <View style={fm.fieldWrap}>
-            <Text style={fm.fieldLabel}>Líder de Área de Escala</Text>
+            <Text style={fm.fieldLabel}>{t('membros.liderDeAreaDeEscala')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
               {areas.map(a => (
                 <TouchableOpacity key={a.id} disabled={salvandoPapel} style={[fm.pill, areasLideradas.includes(a.id) && fm.pillActive]} onPress={() => alternarArea(a.id)}>
                   <Text style={[fm.pillText, areasLideradas.includes(a.id) && fm.pillTextActive]}>{a.nome}</Text>
                 </TouchableOpacity>
               ))}
-              {areas.length === 0 && <Text style={{ fontSize: 12, color: C.textDim }}>Nenhuma área cadastrada.</Text>}
+              {areas.length === 0 && <Text style={{ fontSize: 12, color: C.textDim }}>{t('membros.nenhumaAreaCadastrada')}</Text>}
             </View>
           </View>
         </>
@@ -380,6 +406,7 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
 function TelefoneField({ label, value, onChange, paisPadrao }: {
   label: string; value: string; onChange: (v: string) => void; paisPadrao: string;
 }) {
+  const { t } = useTranslation();
   const [expandido, setExpandido] = useState(false);
   const [busca, setBusca] = useState('');
   const parsed = value ? splitTelefone(value) : { iso2: paisPadrao, numeroLocal: '' };
@@ -407,14 +434,14 @@ function TelefoneField({ label, value, onChange, paisPadrao }: {
         </TouchableOpacity>
         <TextInput
           style={[fm.fieldInput, { flex: 1 }]} value={numeroLocal} onChangeText={atualizarNumero}
-          placeholder={iso2 === 'GB' ? '7700 900000' : iso2 === 'BR' ? '(11) 99999-0000' : 'Número'}
+          placeholder={iso2 === 'GB' ? '7700 900000' : iso2 === 'BR' ? '(11) 99999-0000' : t('membros.numero')}
           placeholderTextColor={C.textDim} keyboardType="phone-pad"
         />
       </View>
       {expandido && (
         <View style={fm.familiaBusca}>
           <TextInput
-            style={fm.fieldInput} placeholder="Buscar país ou DDI..." placeholderTextColor={C.textDim}
+            style={fm.fieldInput} placeholder={t('membros.buscarPaisOuDdi')} placeholderTextColor={C.textDim}
             value={busca} onChangeText={setBusca}
           />
           <ScrollView style={{ maxHeight: 200, marginTop: 6 }} keyboardShouldPersistTaps="handled">
@@ -423,7 +450,7 @@ function TelefoneField({ label, value, onChange, paisPadrao }: {
                 <Text style={fm.familiaOpcaoText}>{bandeira(p.iso2)}  {p.nome}  (+{p.ddi})</Text>
               </TouchableOpacity>
             ))}
-            {opcoes.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>Nenhum país encontrado.</Text>}
+            {opcoes.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>{t('membros.nenhumPaisEncontrado')}</Text>}
           </ScrollView>
         </View>
       )}
@@ -437,6 +464,7 @@ function TelefoneField({ label, value, onChange, paisPadrao }: {
 function PaisEnderecoField({ label, value, onChange }: {
   label: string; value: string; onChange: (nome: string) => void;
 }) {
+  const { t } = useTranslation();
   const [expandido, setExpandido] = useState(false);
   const [busca, setBusca] = useState('');
   const atual = paisPorNome(value);
@@ -447,14 +475,14 @@ function PaisEnderecoField({ label, value, onChange }: {
       <Text style={fm.fieldLabel}>{label}</Text>
       <TouchableOpacity style={fm.ddiBtnFull} onPress={() => setExpandido(e => !e)}>
         <Text style={fm.ddiBtnText} numberOfLines={1}>
-          {atual ? `${bandeira(atual.iso2)} ${atual.nome}` : (value || 'Selecionar país')}
+          {atual ? `${bandeira(atual.iso2)} ${atual.nome}` : (value || t('membros.selecionarPais'))}
         </Text>
         <Ionicons name={expandido ? 'chevron-up' : 'chevron-down'} size={14} color={C.textMuted} />
       </TouchableOpacity>
       {expandido && (
         <View style={fm.familiaBusca}>
           <TextInput
-            style={fm.fieldInput} placeholder="Buscar país..." placeholderTextColor={C.textDim}
+            style={fm.fieldInput} placeholder={t('membros.buscarPais')} placeholderTextColor={C.textDim}
             value={busca} onChangeText={setBusca}
           />
           <ScrollView style={{ maxHeight: 200, marginTop: 6 }} keyboardShouldPersistTaps="handled">
@@ -463,7 +491,7 @@ function PaisEnderecoField({ label, value, onChange }: {
                 <Text style={fm.familiaOpcaoText}>{bandeira(p.iso2)} {p.nome}</Text>
               </TouchableOpacity>
             ))}
-            {opcoes.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>Nenhum país encontrado.</Text>}
+            {opcoes.length === 0 && <Text style={{ fontSize: 12, color: C.textDim, padding: 8 }}>{t('membros.nenhumPaisEncontrado')}</Text>}
           </ScrollView>
         </View>
       )}
@@ -476,6 +504,7 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
   visible: boolean; membro: Membro | null; membros: Membro[]; isAdmin: boolean;
   onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [form, setForm] = useState<Omit<Membro, 'id'>>({ ...EMPTY });
   const [section, setSection] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -533,8 +562,8 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
   };
 
   const handleSave = async () => {
-    if (!form.nome.trim()) { Alert.alert('Atenção', 'Nome é obrigatório.'); return; }
-    if (!form.telefone.trim()) { Alert.alert('Atenção', 'Telefone é obrigatório.'); return; }
+    if (!form.nome.trim()) { Alert.alert(t('common.atencao'), t('membros.nomeEObrigatorio')); return; }
+    if (!form.telefone.trim()) { Alert.alert(t('common.atencao'), t('membros.telefoneEObrigatorio')); return; }
     setSaving(true);
 
     // Tudo dentro de um try/catch/finally de propósito (16ª rodada — bug
@@ -575,21 +604,25 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
       }
 
       if (error) {
-        Alert.alert('Erro ao salvar', error.message);
+        Alert.alert(t('membros.erroAoSalvar'), error.message);
       } else {
         onSaved();
         onClose();
       }
     } catch (e: any) {
-      Alert.alert('Erro ao salvar', e?.message ?? 'Algo deu errado. Tente novamente.');
+      Alert.alert(t('membros.erroAoSalvar'), e?.message ?? 'Algo deu errado. Tente novamente.');
     } finally {
       setSaving(false);
     }
   };
 
+  // Traduz a opção pelo mapa; valor fora do mapa (digitado à mão numa versão
+  // antiga) aparece como está, em vez de virar uma chave crua na tela.
+  const rotularOpcao = (opcao: string) => t(OPCAO_CHAVE[opcao] ?? '', { defaultValue: opcao });
+
   const SECTIONS = isAdmin
-    ? ['Pessoal', 'Contato', 'Endereço', 'Igreja', 'Família', 'Conta']
-    : ['Pessoal', 'Contato', 'Endereço', 'Igreja', 'Família'];
+    ? ['membros.passoPessoal', 'membros.contato', 'membros.endereco', 'membros.igreja', 'membros.familia', 'membros.contaDoApp']
+    : ['membros.passoPessoal', 'membros.contato', 'membros.endereco', 'membros.igreja', 'membros.familia'];
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -610,7 +643,7 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
             <View style={fm.sectionTabs}>
               {SECTIONS.map((sec, idx) => (
                 <TouchableOpacity key={sec} style={[fm.sectionTab, section === idx && fm.sectionTabActive]} onPress={() => setSection(idx)}>
-                  <Text allowFontScaling={false} numberOfLines={1} style={[fm.sectionTabText, section === idx && fm.sectionTabTextActive]}>{sec}</Text>
+                  <Text allowFontScaling={false} numberOfLines={1} style={[fm.sectionTabText, section === idx && fm.sectionTabTextActive]}>{t(sec)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -632,24 +665,25 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
               {section === 0 && (
                 <View style={fm.sectionContent}>
                   <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <View style={{ flex: 1 }}><Field label="Nome *" value={form.nome} onChangeText={set('nome')} placeholder="Nome" /></View>
-                    <View style={{ flex: 1.5 }}><Field label="Sobrenome" value={form.sobrenome} onChangeText={set('sobrenome')} placeholder="Sobrenome" /></View>
+                    <View style={{ flex: 1 }}><Field label={t('membros.nome')} value={form.nome} onChangeText={set('nome')} placeholder={t('membros.nome2')} /></View>
+                    <View style={{ flex: 1.5 }}><Field label={t('membros.sobrenome')} value={form.sobrenome} onChangeText={set('sobrenome')} placeholder={t('membros.sobrenome')} /></View>
                   </View>
-                  <Field label="Data de Nascimento" value={form.data_nascimento} onChangeText={t => formatDate(t, 'data_nascimento')} placeholder="DD/MM/AAAA" keyboardType="numeric" maxLength={10} />
-                  <SelectPill label="Sexo" options={SEXO_OPCOES.map(o => o.label)}
-                    value={SEXO_OPCOES.find(o => o.valor === form.sexo)?.label ?? ''}
-                    onChange={(label) => set('sexo')(SEXO_OPCOES.find(o => o.label === label)?.valor ?? '')} />
-                  <Field label="Nacionalidade" value={form.nacionalidade} onChangeText={set('nacionalidade')} placeholder="Ex: Brasileira" />
-                  <SelectPill label="Estado Civil" options={ESTADO_CIVIL} value={form.estado_civil} onChange={set('estado_civil')} />
-                  <Field label="Profissão" value={form.profissao} onChangeText={set('profissao')} placeholder="Ex: Professor" />
-                  <Field label="Talentos / Hobbies" value={form.talentos_hobbies} onChangeText={set('talentos_hobbies')} placeholder="Ex: Violão, culinária, futebol" />
+                  <Field label={t('membros.dataDeNascimento')} value={form.data_nascimento} onChangeText={txt => formatDate(txt, 'data_nascimento')} placeholder={t('membros.ddMmAaaa')} keyboardType="numeric" maxLength={10} />
+                  <SelectPill label={t('membros.sexo')} options={SEXO_OPCOES.map(o => o.valor)}
+                    value={form.sexo}
+                    rotulo={(v) => t(SEXO_OPCOES.find(o => o.valor === v)?.chave ?? '', { defaultValue: v })}
+                    onChange={set('sexo')} />
+                  <Field label={t('membros.nacionalidade')} value={form.nacionalidade} onChangeText={set('nacionalidade')} placeholder={t('membros.exBrasileira')} />
+                  <SelectPill label={t('membros.estadoCivil')} options={ESTADO_CIVIL} value={form.estado_civil} onChange={set('estado_civil')} rotulo={rotularOpcao} />
+                  <Field label={t('membros.profissao')} value={form.profissao} onChangeText={set('profissao')} placeholder={t('membros.exProfessor')} />
+                  <Field label={t('membros.talentosHobbies')} value={form.talentos_hobbies} onChangeText={set('talentos_hobbies')} placeholder={t('membros.exViolaoCulinariaFutebol')} />
                 </View>
               )}
               {section === 1 && (
                 <View style={fm.sectionContent}>
-                  <TelefoneField label="Telefone / WhatsApp *" value={form.telefone} onChange={set('telefone')} paisPadrao={paisPadraoDdi(form.pais)} />
-                  <Field label="E-mail" value={form.email} onChangeText={set('email')} placeholder="email@exemplo.com" keyboardType="email-address" />
-                  <Field label="Instagram" value={form.instagram} onChangeText={set('instagram')} placeholder="@usuario" autoCapitalize="none" />
+                  <TelefoneField label={t('membros.telefoneWhatsapp')} value={form.telefone} onChange={set('telefone')} paisPadrao={paisPadraoDdi(form.pais)} />
+                  <Field label={t('membros.eMail')} value={form.email} onChangeText={set('email')} placeholder="email@exemplo.com" keyboardType="email-address" />
+                  <Field label={t('membros.instagram')} value={form.instagram} onChangeText={set('instagram')} placeholder="@usuario" autoCapitalize="none" />
                 </View>
               )}
               {section === 2 && (
@@ -659,14 +693,14 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                       cheia (não dividindo espaço com outro campo) porque a
                       lista de busca que abre embaixo precisa da largura
                       inteira pra ficar legível. */}
-                  <PaisEnderecoField label="País" value={form.pais} onChange={set('pais')} />
-                  <Field label="Endereço (rua e número)" value={form.endereco} onChangeText={set('endereco')} placeholder="Ex: 45 Abbey Square" />
-                  <Field label="Complemento" value={form.complemento} onChangeText={set('complemento')} placeholder="Ex: Apto 3B, próximo ao mercado" />
+                  <PaisEnderecoField label={t('membros.pais')} value={form.pais} onChange={set('pais')} />
+                  <Field label={t('membros.enderecoRuaENumero')} value={form.endereco} onChangeText={set('endereco')} placeholder={t('membros.ex45AbbeySquare')} />
+                  <Field label={t('membros.complemento')} value={form.complemento} onChangeText={set('complemento')} placeholder={t('membros.exApto3bProximoAo')} />
                   <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <View style={{ flex: 2 }}><Field label="Cidade" value={form.cidade} onChangeText={set('cidade')} placeholder="Cidade" /></View>
+                    <View style={{ flex: 2 }}><Field label={t('membros.cidade')} value={form.cidade} onChangeText={set('cidade')} placeholder={t('membros.cidade')} /></View>
                     <View style={{ flex: 1 }}>
                       <Field
-                        label={cepBrasil ? 'Estado' : 'Estado / Região'}
+                        label={cepBrasil ? t('membros.estado') : t('membros.estadoRegiao')}
                         value={form.estado}
                         onChangeText={v => set('estado')(cepBrasil ? v.toUpperCase().slice(0, 2) : v.slice(0, 40))}
                         placeholder={cepBrasil ? 'SP' : 'Ex: Berkshire'}
@@ -675,10 +709,10 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                     </View>
                   </View>
                   <Field
-                    label={cepBrasil ? 'CEP' : cepReinoUnido ? 'Postcode' : 'Código Postal'}
+                    label={cepBrasil ? 'CEP' : cepReinoUnido ? 'Postcode' : t('membros.codigoPostal')}
                     value={form.cep}
                     onChangeText={formatCep}
-                    placeholder={cepBrasil ? '00000-000' : cepReinoUnido ? 'RG1 3BE' : 'Código postal'}
+                    placeholder={cepBrasil ? '00000-000' : cepReinoUnido ? 'RG1 3BE' : t('membros.codigoPostal')}
                     keyboardType={cepBrasil ? 'numeric' : 'default'}
                     maxLength={cepBrasil ? 9 : 14}
                   />
@@ -689,9 +723,9 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                   <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, lineHeight: 18 }}>
                     Vincule este membro a outros já cadastrados. O vínculo de cônjuge é automático nos dois sentidos.
                   </Text>
-                  <FamiliaPicker label="Cônjuge" value={form.conjuge_id} onChange={set('conjuge_id')} membros={membros} excludeId={membro?.id} />
-                  <FamiliaPicker label="Pai" value={form.pai_id} onChange={set('pai_id')} membros={membros} excludeId={membro?.id} />
-                  <FamiliaPicker label="Mãe" value={form.mae_id} onChange={set('mae_id')} membros={membros} excludeId={membro?.id} />
+                  <FamiliaPicker label={t('membros.conjuge')} value={form.conjuge_id} onChange={set('conjuge_id')} membros={membros} excludeId={membro?.id} />
+                  <FamiliaPicker label={t('membros.pai')} value={form.pai_id} onChange={set('pai_id')} membros={membros} excludeId={membro?.id} />
+                  <FamiliaPicker label={t('membros.mae')} value={form.mae_id} onChange={set('mae_id')} membros={membros} excludeId={membro?.id} />
                 </View>
               )}
               {section === 5 && isAdmin && <ContaSection membro={membro} profileId={form.profile_id} onProfileIdChange={set('profile_id')} />}
@@ -699,9 +733,9 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                 <View style={fm.sectionContent}>
                   <View style={fm.toggleRow}>
                     <View>
-                      <Text style={fm.fieldLabel}>Batizado(a)?</Text>
+                      <Text style={fm.fieldLabel}>{t('membros.batizadoA')}</Text>
                       <Text style={[fm.toggleStatus, { color: form.batizado ? C.success : C.textMuted }]}>
-                        {form.batizado ? 'Sim — nas águas' : 'Ainda não'}
+                        {form.batizado ? t('membros.simNasAguas') : t('membros.aindaNao')}
                       </Text>
                     </View>
                     <TouchableOpacity style={[fm.toggleBtn, form.batizado && fm.toggleBtnActive]} onPress={() => set('batizado')(!form.batizado)}>
@@ -709,12 +743,12 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                     </TouchableOpacity>
                   </View>
                   {form.batizado && (
-                    <Field label="Data do Batismo" value={form.data_batismo} onChangeText={t => formatDate(t, 'data_batismo')} placeholder="DD/MM/AAAA" keyboardType="numeric" maxLength={10} />
+                    <Field label={t('membros.dataDoBatismo')} value={form.data_batismo} onChangeText={txt => formatDate(txt, 'data_batismo')} placeholder={t('membros.ddMmAaaa')} keyboardType="numeric" maxLength={10} />
                   )}
                   {!form.batizado && (
                     <View style={fm.toggleRow}>
                       <View style={{ flex: 1 }}>
-                        <Text style={fm.fieldLabel}>Deseja se batizar?</Text>
+                        <Text style={fm.fieldLabel}>{t('membros.desejaSeBatizar')}</Text>
                         <Text style={[fm.toggleStatus, { color: form.deseja_batizar ? C.success : C.textMuted }]}>
                           {form.deseja_batizar ? 'Sim' : 'Não'}
                         </Text>
@@ -724,11 +758,11 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                       </TouchableOpacity>
                     </View>
                   )}
-                  <Field label="Chegou na Peniel em (mês/ano)" value={form.membro_desde} onChangeText={formatMesAno} placeholder="MM/AAAA" keyboardType="numeric" maxLength={7} />
+                  <Field label={t('membros.chegouNaPenielEmMes')} value={form.membro_desde} onChangeText={formatMesAno} placeholder={t('membros.mmAaaa')} keyboardType="numeric" maxLength={7} />
 
                   <View style={fm.toggleRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={fm.fieldLabel}>Pertenceu a outra igreja antes?</Text>
+                      <Text style={fm.fieldLabel}>{t('membros.pertenceuAOutraIgrejaAntes')}</Text>
                       <Text style={[fm.toggleStatus, { color: form.igreja_anterior ? C.success : C.textMuted }]}>
                         {form.igreja_anterior ? 'Sim' : 'Não'}
                       </Text>
@@ -738,12 +772,12 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                     </TouchableOpacity>
                   </View>
                   {form.igreja_anterior && (
-                    <Field label="Qual igreja?" value={form.igreja_anterior_nome} onChangeText={set('igreja_anterior_nome')} placeholder="Nome da igreja" />
+                    <Field label={t('membros.qualIgreja')} value={form.igreja_anterior_nome} onChangeText={set('igreja_anterior_nome')} placeholder={t('membros.nomeDaIgreja')} />
                   )}
 
                   <View style={fm.toggleRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={fm.fieldLabel}>Participou ou participa de algum ministério?</Text>
+                      <Text style={fm.fieldLabel}>{t('membros.participouOuParticipaDeAlgum')}</Text>
                       <Text style={[fm.toggleStatus, { color: form.ministerio_anterior ? C.success : C.textMuted }]}>
                         {form.ministerio_anterior ? 'Sim' : 'Não'}
                       </Text>
@@ -753,15 +787,15 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                     </TouchableOpacity>
                   </View>
                   {form.ministerio_anterior && (
-                    <Field label="Qual ministério?" value={form.ministerio_anterior_qual} onChangeText={set('ministerio_anterior_qual')} placeholder="Ex: Louvor, infantil, intercessão..." />
+                    <Field label={t('membros.qualMinisterio')} value={form.ministerio_anterior_qual} onChangeText={set('ministerio_anterior_qual')} placeholder={t('membros.exLouvorInfantilIntercessao')} />
                   )}
 
-                  <SelectPill label="Ministério em Peniel (atual)" options={MINISTERIOS} value={form.ministerio} onChange={set('ministerio')} />
-                  <SelectPill label="Função" options={FUNCOES} value={form.funcao} onChange={set('funcao')} />
+                  <SelectPill label={t('membros.ministerioEmPenielAtual')} options={MINISTERIOS} value={form.ministerio} onChange={set('ministerio')} rotulo={rotularOpcao} />
+                  <SelectPill label={t('membros.funcao')} options={FUNCOES} value={form.funcao} onChange={set('funcao')} rotulo={rotularOpcao} />
 
                   <View style={fm.toggleRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={fm.fieldLabel}>Deseja trabalhar em alguma área da igreja?</Text>
+                      <Text style={fm.fieldLabel}>{t('membros.desejaTrabalharEmAlgumaArea')}</Text>
                       <Text style={[fm.toggleStatus, { color: form.deseja_servir ? C.success : C.textMuted }]}>
                         {form.deseja_servir ? 'Sim' : 'Não'}
                       </Text>
@@ -771,23 +805,23 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                     </TouchableOpacity>
                   </View>
                   {form.deseja_servir && (
-                    <Field label="Qual área?" value={form.deseja_servir_area} onChangeText={set('deseja_servir_area')} placeholder="Ex: Louvor, recepção, mídia..." />
+                    <Field label={t('membros.qualArea')} value={form.deseja_servir_area} onChangeText={set('deseja_servir_area')} placeholder={t('membros.exLouvorRecepcaoMidia')} />
                   )}
 
                   <View style={fm.fieldWrap}>
-                    <Text style={fm.fieldLabel}>Status</Text>
+                    <Text style={fm.fieldLabel}>{t('membros.status')}</Text>
                     <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
                       {(['visitante', 'membro', 'lider'] as Membro['status'][]).map(s => (
                         <TouchableOpacity key={s} style={[fm.pill, form.status === s && { backgroundColor: statusColor(s) + '22', borderColor: statusColor(s) }]} onPress={() => set('status')(s)}>
-                          <Text style={[fm.pillText, form.status === s && { color: statusColor(s), fontWeight: '700' }]}>{statusLabel(s)}</Text>
+                          <Text style={[fm.pillText, form.status === s && { color: statusColor(s), fontWeight: '700' }]}>{t(statusChave(s))}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
                   {/* Escrito pela própria pessoa no cadastro dela — fica antes
                       das observações, que são notas internas da liderança. */}
-                  <Field label="O que a pessoa quis compartilhar" value={form.compartilhar_mais} onChangeText={set('compartilhar_mais')} placeholder="Preenchido pelo próprio membro no cadastro" multiline />
-                  <Field label="Observações" value={form.observacoes} onChangeText={set('observacoes')} placeholder="Notas internas..." />
+                  <Field label={t('membros.oQueAPessoaQuis')} value={form.compartilhar_mais} onChangeText={set('compartilhar_mais')} placeholder={t('membros.preenchidoPeloProprioMembroNo')} multiline />
+                  <Field label={t('membros.observacoes')} value={form.observacoes} onChangeText={set('observacoes')} placeholder={t('membros.notasInternas')} />
                 </View>
               )}
             </ScrollView>
@@ -796,19 +830,19 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
               {section > 0 && (
                 <TouchableOpacity style={fm.prevBtn} onPress={() => setSection(s => s - 1)}>
                   <Ionicons name="arrow-back" size={16} color={C.primary} />
-                  <Text style={fm.prevBtnText}>Anterior</Text>
+                  <Text style={fm.prevBtnText}>{t('membros.anterior')}</Text>
                 </TouchableOpacity>
               )}
               <View style={{ flex: 1 }} />
               {section < SECTIONS.length - 1 ? (
                 <TouchableOpacity style={fm.nextBtn} onPress={() => setSection(s => s + 1)}>
-                  <Text style={fm.nextBtnText}>Próximo</Text>
+                  <Text style={fm.nextBtnText}>{t('membros.proximo')}</Text>
                   <Ionicons name="arrow-forward" size={16} color="#fff" />
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity style={fm.saveBtn} onPress={handleSave} disabled={saving}>
                   {saving ? <ActivityIndicator color="#fff" size="small" /> : (
-                    <><Ionicons name="checkmark" size={18} color="#fff" /><Text style={fm.saveBtnText}>Salvar</Text></>
+                    <><Ionicons name="checkmark" size={18} color="#fff" /><Text style={fm.saveBtnText}>{t('common.salvar')}</Text></>
                   )}
                 </TouchableOpacity>
               )}
@@ -866,12 +900,14 @@ const fm = StyleSheet.create({
 function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
   membro: Membro | null; membros: Membro[]; onClose: () => void; onEdit: () => void; onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   if (!membro) return null;
   const nomeDe = (id: string | null) => {
     const m = membros.find(x => x.id === id);
     return m ? `${m.nome} ${m.sobrenome}` : '';
   };
-  const sexoLabel = SEXO_OPCOES.find(o => o.valor === membro.sexo)?.label ?? '';
+  const sexoChave = SEXO_OPCOES.find(o => o.valor === membro.sexo)?.chave;
+  const sexoLabel = sexoChave ? t(sexoChave) : '';
   // Label em cima e valor embaixo (em vez de lado a lado numa coluna de
   // largura fixa) — com uma coluna estreita, rótulos mais longos como
   // "Nacionalidade" ou "Já serviu em ministério" quebravam no meio da
@@ -914,66 +950,66 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
                 <Text style={dd.name}>{membro.nome} {membro.sobrenome}</Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
                   <View style={[dd.badge, { backgroundColor: statusColor(membro.status) + '18' }]}>
-                    <Text style={[dd.badgeText, { color: statusColor(membro.status) }]}>{statusLabel(membro.status)}</Text>
+                    <Text style={[dd.badgeText, { color: statusColor(membro.status) }]}>{t(statusChave(membro.status))}</Text>
                   </View>
                   {membro.batizado && (
                     <View style={[dd.badge, { backgroundColor: C.primary + '15' }]}>
                       <Ionicons name="water-outline" size={11} color={C.primary} />
-                      <Text style={[dd.badgeText, { color: C.primary }]}>Batizado</Text>
+                      <Text style={[dd.badgeText, { color: C.primary }]}>{t('membros.batizado')}</Text>
                     </View>
                   )}
                   {isBirthdayThisMonth(membro.data_nascimento) && (
                     <View style={[dd.badge, { backgroundColor: C.accent + '20' }]}>
-                      <Text style={[dd.badgeText, { color: C.accent }]}>🎂 Aniversário</Text>
+                      <Text style={[dd.badgeText, { color: C.accent }]}>{t('membros.aniversarioEmoji')}</Text>
                     </View>
                   )}
                 </View>
               </View>
             </View>
-            <Text style={dd.sectionTitle}>Dados Pessoais</Text>
+            <Text style={dd.sectionTitle}>{t('membros.dadosPessoais')}</Text>
             <View style={dd.card}>
-              <Row icon="calendar-outline" label="Nascimento" value={`${formatDateBR(membro.data_nascimento)} ${getAge(membro.data_nascimento) ? '· ' + getAge(membro.data_nascimento) : ''}`} />
-              <Row icon="male-female-outline" label="Sexo" value={sexoLabel} />
-              <Row icon="flag-outline" label="Nacionalidade" value={membro.nacionalidade} />
-              <Row icon="heart-outline" label="Estado Civil" value={membro.estado_civil} />
-              <Row icon="briefcase-outline" label="Profissão" value={membro.profissao} />
-              <Row icon="color-palette-outline" label="Talentos" value={membro.talentos_hobbies} />
+              <Row icon="calendar-outline" label={t('membros.nascimento')} value={`${formatDateBR(membro.data_nascimento)} ${getAge(membro.data_nascimento) ? '· ' + getAge(membro.data_nascimento) : ''}`} />
+              <Row icon="male-female-outline" label={t('membros.sexo')} value={sexoLabel} />
+              <Row icon="flag-outline" label={t('membros.nacionalidade')} value={membro.nacionalidade} />
+              <Row icon="heart-outline" label={t('membros.estadoCivil')} value={membro.estado_civil} />
+              <Row icon="briefcase-outline" label={t('membros.profissao')} value={membro.profissao} />
+              <Row icon="color-palette-outline" label={t('membros.talentos')} value={membro.talentos_hobbies} />
             </View>
-            <Text style={dd.sectionTitle}>Contato</Text>
+            <Text style={dd.sectionTitle}>{t('membros.contato')}</Text>
             <View style={dd.card}>
-              <Row icon="call-outline" label="Telefone" value={membro.telefone} />
-              <Row icon="mail-outline" label="E-mail" value={membro.email} />
-              <Row icon="logo-instagram" label="Instagram" value={membro.instagram} />
+              <Row icon="call-outline" label={t('membros.telefone')} value={membro.telefone} />
+              <Row icon="mail-outline" label={t('membros.eMail')} value={membro.email} />
+              <Row icon="logo-instagram" label={t('membros.instagram')} value={membro.instagram} />
             </View>
-            <Text style={dd.sectionTitle}>Endereço</Text>
+            <Text style={dd.sectionTitle}>{t('membros.endereco')}</Text>
             <View style={dd.card}>
-              <Row icon="home-outline" label="Endereço" value={membro.endereco} />
-              {!!membro.complemento && <Row icon="business-outline" label="Complemento" value={membro.complemento} />}
-              <Row icon="location-outline" label="Cidade" value={`${membro.cidade || ''}${membro.estado ? ' – ' + membro.estado : ''}`.trim()} />
-              <Row icon="map-outline" label="CEP" value={membro.cep} />
-              <Row icon="earth-outline" label="País" value={membro.pais} />
+              <Row icon="home-outline" label={t('membros.endereco')} value={membro.endereco} />
+              {!!membro.complemento && <Row icon="business-outline" label={t('membros.complemento')} value={membro.complemento} />}
+              <Row icon="location-outline" label={t('membros.cidade')} value={`${membro.cidade || ''}${membro.estado ? ' – ' + membro.estado : ''}`.trim()} />
+              <Row icon="map-outline" label={t('membros.cep')} value={membro.cep} />
+              <Row icon="earth-outline" label={t('membros.pais')} value={membro.pais} />
             </View>
             {(membro.conjuge_id || membro.pai_id || membro.mae_id) && (
               <>
-                <Text style={dd.sectionTitle}>Família</Text>
+                <Text style={dd.sectionTitle}>{t('membros.familia')}</Text>
                 <View style={dd.card}>
-                  <Row icon="heart-circle-outline" label="Cônjuge" value={nomeDe(membro.conjuge_id)} />
-                  <Row icon="man-outline" label="Pai" value={nomeDe(membro.pai_id)} />
-                  <Row icon="woman-outline" label="Mãe" value={nomeDe(membro.mae_id)} />
+                  <Row icon="heart-circle-outline" label={t('membros.conjuge')} value={nomeDe(membro.conjuge_id)} />
+                  <Row icon="man-outline" label={t('membros.pai')} value={nomeDe(membro.pai_id)} />
+                  <Row icon="woman-outline" label={t('membros.mae')} value={nomeDe(membro.mae_id)} />
                 </View>
               </>
             )}
-            <Text style={dd.sectionTitle}>Igreja</Text>
+            <Text style={dd.sectionTitle}>{t('membros.igreja')}</Text>
             <View style={dd.card}>
-              <Row icon="water-outline" label="Batismo" value={membro.batizado ? (membro.data_batismo ? `Sim · ${formatDateBR(membro.data_batismo)}` : 'Sim') : (membro.deseja_batizar ? 'Não — deseja se batizar' : 'Não')} />
-              <Row icon="calendar-outline" label="Chegou na Peniel" value={formatMesAnoFromISO(membro.membro_desde)} />
-              <Row icon="business-outline" label="Outra igreja antes" value={membro.igreja_anterior ? `Sim · ${membro.igreja_anterior_nome || '—'}` : 'Não'} />
-              <Row icon="people-outline" label="Já serviu em ministério" value={membro.ministerio_anterior ? `Sim · ${membro.ministerio_anterior_qual || '—'}` : 'Não'} />
-              <Row icon="hand-right-outline" label="Quer servir" value={membro.deseja_servir ? `Sim · ${membro.deseja_servir_area || '—'}` : 'Não'} />
-              <Row icon="people-circle-outline" label="Ministério em Peniel" value={membro.ministerio} />
-              <Row icon="star-outline" label="Função" value={membro.funcao} />
-              {!!membro.compartilhar_mais && <Row icon="chatbubble-ellipses-outline" label="Compartilhou" value={membro.compartilhar_mais} />}
-              {!!membro.observacoes && <Row icon="document-text-outline" label="Obs." value={membro.observacoes} />}
+              <Row icon="water-outline" label={t('membros.batismo')} value={membro.batizado ? (membro.data_batismo ? `${t('membros.sim')} · ${formatDateBR(membro.data_batismo)}` : t('membros.sim')) : (membro.deseja_batizar ? t('membros.naoDesejaSeBatizar') : t('membros.nao'))} />
+              <Row icon="calendar-outline" label={t('membros.chegouNaPeniel')} value={formatMesAnoFromISO(membro.membro_desde)} />
+              <Row icon="business-outline" label={t('membros.outraIgrejaAntes')} value={membro.igreja_anterior ? `Sim · ${membro.igreja_anterior_nome || '—'}` : 'Não'} />
+              <Row icon="people-outline" label={t('membros.jaServiuEmMinisterio')} value={membro.ministerio_anterior ? `Sim · ${membro.ministerio_anterior_qual || '—'}` : 'Não'} />
+              <Row icon="hand-right-outline" label={t('membros.querServir')} value={membro.deseja_servir ? `Sim · ${membro.deseja_servir_area || '—'}` : 'Não'} />
+              <Row icon="people-circle-outline" label={t('membros.ministerioEmPeniel')} value={membro.ministerio} />
+              <Row icon="star-outline" label={t('membros.funcao')} value={membro.funcao} />
+              {!!membro.compartilhar_mais && <Row icon="chatbubble-ellipses-outline" label={t('membros.compartilhou')} value={membro.compartilhar_mais} />}
+              {!!membro.observacoes && <Row icon="document-text-outline" label={t('membros.obs')} value={membro.observacoes} />}
             </View>
           </ScrollView>
         </View>
@@ -1005,6 +1041,7 @@ const dd = StyleSheet.create({
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function MembrosScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [role, setRole] = useState<string | null>(null);
   const [loadingRole, setLoadingRole] = useState(true);
@@ -1042,12 +1079,12 @@ export default function MembrosScreen() {
   }, [role, fetchMembros]);
 
   const handleDelete = (id: string) => {
-    Alert.alert('Remover Membro', 'Deseja remover este membro?', [
+    Alert.alert(t('membros.removerMembro'), t('membros.desejaRemoverEsteMembro'), [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Remover', style: 'destructive',
         onPress: async () => {
-          await supabase.from('members').delete().eq('id', id);
+          await apagarLinha('members', id);
           setDetailMembro(null);
           fetchMembros();
         },
@@ -1082,11 +1119,11 @@ export default function MembrosScreen() {
       <SafeAreaView style={s.safe} edges={['top']}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={s.header}>
-          <Text style={s.headerTitle}>Membros</Text>
+          <Text style={s.headerTitle}>{t('membros.membros')}</Text>
         </View>
         <View style={s.empty}>
           <Ionicons name="lock-closed-outline" size={48} color={C.textDim} />
-          <Text style={[s.emptyText, { fontWeight: '700', fontSize: 16, marginTop: 12 }]}>Acesso restrito</Text>
+          <Text style={[s.emptyText, { fontWeight: '700', fontSize: 16, marginTop: 12 }]}>{t('membros.acessoRestrito')}</Text>
           <Text style={s.emptyText}>Esta lista com os dados pessoais dos membros é exclusiva para os administradores da igreja.</Text>
         </View>
       </SafeAreaView>
@@ -1099,12 +1136,12 @@ export default function MembrosScreen() {
 
       <View style={s.header}>
         <View>
-          <Text style={s.headerTitle}>Membros</Text>
+          <Text style={s.headerTitle}>{t('membros.membros')}</Text>
           <Text style={s.headerSub}>{membros.length} cadastrados</Text>
         </View>
         <TouchableOpacity style={s.addBtn} onPress={() => { setEditingMembro(null); setFormVisible(true); }}>
           <Ionicons name="person-add-outline" size={18} color={C.primary} />
-          <Text style={s.addBtnText}>Novo</Text>
+          <Text style={s.addBtnText}>{t('membros.novo')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -1112,12 +1149,12 @@ export default function MembrosScreen() {
       <View style={s.statsRow}>
         {[
           { label: 'Membros', value: membros.filter(m => m.status === 'membro').length, color: C.success },
-          { label: 'Líderes', value: membros.filter(m => m.status === 'lider').length, color: C.accent },
-          { label: 'Visitantes', value: membros.filter(m => m.status === 'visitante').length, color: C.textMuted },
-          { label: 'Aniv. mês', value: birthdayCount, color: '#7C4DFF' },
+          { label: t('membros.lideres'), value: membros.filter(m => m.status === 'lider').length, color: C.accent },
+          { label: t('membros.visitantes'), value: membros.filter(m => m.status === 'visitante').length, color: C.textMuted },
+          { label: t('membros.anivMes'), value: birthdayCount, color: '#7C4DFF', aniversario: true },
         ].map(stat => (
           <TouchableOpacity key={stat.label} style={s.statCard}
-            onPress={() => stat.label === 'Aniv. mês' && setFilterBirthday(f => !f)}>
+            onPress={() => stat.aniversario && setFilterBirthday(f => !f)}>
             <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
             <Text style={s.statLabel}>{stat.label}</Text>
           </TouchableOpacity>
@@ -1128,7 +1165,7 @@ export default function MembrosScreen() {
       <View style={s.searchRow}>
         <View style={s.searchBox}>
           <Ionicons name="search-outline" size={16} color={C.textMuted} />
-          <TextInput style={s.searchInput} placeholder="Buscar por nome ou e-mail..." placeholderTextColor={C.textDim} value={search} onChangeText={setSearch} />
+          <TextInput style={s.searchInput} placeholder={t('membros.buscarPorNomeOuE')} placeholderTextColor={C.textDim} value={search} onChangeText={setSearch} />
           {!!search && <TouchableOpacity onPress={() => setSearch('')}><Ionicons name="close-circle" size={16} color={C.textMuted} /></TouchableOpacity>}
         </View>
       </View>
@@ -1137,11 +1174,11 @@ export default function MembrosScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRowScroll} contentContainerStyle={s.filterRow}>
         {(['todos', 'membro', 'lider', 'visitante'] as const).map(f => (
           <TouchableOpacity key={f} style={[s.filterPill, filterStatus === f && s.filterPillActive]} onPress={() => setFilterStatus(f)}>
-            <Text allowFontScaling={false} numberOfLines={1} style={[s.filterPillText, filterStatus === f && s.filterPillTextActive]}>{f === 'todos' ? 'Todos' : statusLabel(f)}</Text>
+            <Text allowFontScaling={false} numberOfLines={1} style={[s.filterPillText, filterStatus === f && s.filterPillTextActive]}>{f === 'todos' ? t('membros.todos') : t(statusChave(f))}</Text>
           </TouchableOpacity>
         ))}
         <TouchableOpacity style={[s.filterPill, filterBirthday && { backgroundColor: C.accent + '18', borderColor: C.accent }]} onPress={() => setFilterBirthday(f => !f)}>
-          <Text allowFontScaling={false} numberOfLines={1} style={[s.filterPillText, filterBirthday && { color: C.accent, fontWeight: '700' }]}>🎂 Mês</Text>
+          <Text allowFontScaling={false} numberOfLines={1} style={[s.filterPillText, filterBirthday && { color: C.accent, fontWeight: '700' }]}>{t('membros.mesEmoji')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -1149,7 +1186,7 @@ export default function MembrosScreen() {
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size="large" color={C.primary} />
-          <Text style={{ color: C.textMuted, marginTop: 12 }}>Carregando membros...</Text>
+          <Text style={{ color: C.textMuted, marginTop: 12 }}>{t('membros.carregandoMembros')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -1176,7 +1213,7 @@ export default function MembrosScreen() {
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
                   <View style={[s.statusBadge, { backgroundColor: statusColor(m.status) + '18' }]}>
-                    <Text style={[s.statusBadgeText, { color: statusColor(m.status) }]}>{statusLabel(m.status)}</Text>
+                    <Text style={[s.statusBadgeText, { color: statusColor(m.status) }]}>{t(statusChave(m.status))}</Text>
                   </View>
                   {m.batizado && <Ionicons name="water-outline" size={13} color={C.primary} />}
                 </View>

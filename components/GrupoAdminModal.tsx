@@ -3,11 +3,12 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
+import type { TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../lib/theme';
 
-type Secao = 'aviso' | 'devocional' | 'short' | 'material';
+type Secao = 'aviso' | 'encontro' | 'devocional' | 'short' | 'material';
 
 function paletaGrupoAdmin(isDark: boolean) {
   return isDark ? {
@@ -28,18 +29,48 @@ function paletaGrupoAdmin(isDark: boolean) {
 }
 type PaletaGrupoAdmin = ReturnType<typeof paletaGrupoAdmin>;
 
+// DD/MM/AAAA → AAAA-MM-DD, devolvendo '' quando não é data de verdade.
+// Valida o calendário (31/02 não passa) remontando a data e conferindo se o
+// Date concorda — sem isso o Postgres é quem recusaria, com uma mensagem que
+// a pessoa não entende.
+function dataBRparaISO(br: string): string {
+  const m = br.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return '';
+  const [, d, mes, a] = m;
+  const iso = `${a}-${mes}-${d}`;
+  const teste = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(teste.getTime())) return '';
+  if (teste.getUTCDate() !== Number(d) || teste.getUTCMonth() + 1 !== Number(mes)) return '';
+  return iso;
+}
+
+// AAAA-MM-DD → DD/MM/AAAA, para recarregar a data no formulário de edição.
+function isoParaDataBR(iso: string): string {
+  const m = (iso ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+}
+
 // Painel de admin de um grupo específico — só pro líder daquele grupo (ou
 // admin geral). Publica direto em `avisos` / `devocionais` / `shorts_videos`
 // com `grupo` preenchido, então a RLS já garante que só quem foi adicionado
 // ao grupo enxerga o que for postado aqui (e o push de aviso vai só pra
 // eles também — ver supabase/functions/content-notifications).
-export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClose, onSaved }: {
+export type EncontroParaEditar = {
+  id: string; titulo: string; descricao: string; dataISO: string;
+  horario: string; local: string; tipo: 'presencial' | 'online' | 'casa';
+};
+
+export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClose, onSaved, encontroParaEditar }: {
   visible: boolean;
   grupo: string;
   grupoNome: string;
   cor: string;
   onClose: () => void;
   onSaved?: () => void;
+  // Quando vem preenchido, o modal abre direto na aba Encontro com os campos
+  // carregados e o botão vira "Salvar alterações". É o caminho de quem errou
+  // a data e precisa consertar — antes só dava para apagar e refazer.
+  encontroParaEditar?: EncontroParaEditar | null;
 }) {
   const [secao, setSecao] = useState<Secao>('aviso');
 
@@ -59,6 +90,13 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
   const [materialTitulo, setMaterialTitulo] = useState('');
   const [materialUrl, setMaterialUrl] = useState('');
 
+  const [encTitulo, setEncTitulo] = useState('');
+  const [encDescricao, setEncDescricao] = useState('');
+  const [encData, setEncData] = useState('');
+  const [encHorario, setEncHorario] = useState('');
+  const [encLocal, setEncLocal] = useState('');
+  const [encTipo, setEncTipo] = useState<'presencial' | 'online' | 'casa'>('presencial');
+
   const [saving, setSaving] = useState(false);
 
   const { isDark } = useTheme();
@@ -72,8 +110,21 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
       setDevTitulo(''); setDevVersiculo(''); setDevReferencia(''); setDevTexto('');
       setShortTitulo(''); setShortUrl(''); setShortPlataforma('youtube');
       setMaterialTitulo(''); setMaterialUrl('');
+      setEncTitulo(''); setEncDescricao(''); setEncData(''); setEncHorario(''); setEncLocal(''); setEncTipo('presencial');
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible || !encontroParaEditar) return;
+    const e = encontroParaEditar;
+    setSecao('encontro');
+    setEncTitulo(e.titulo);
+    setEncDescricao(e.descricao ?? '');
+    setEncData(isoParaDataBR(e.dataISO));
+    setEncHorario(e.horario);
+    setEncLocal(e.local);
+    setEncTipo(e.tipo);
+  }, [visible, encontroParaEditar?.id]);
 
   const publicarAviso = async () => {
     if (!avisoTitulo.trim() || !avisoTexto.trim()) { Alert.alert('Atenção', 'Preencha o título e o texto do aviso.'); return; }
@@ -130,8 +181,53 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
     onSaved?.();
   };
 
+  // "Próximos Eventos" é a PRIMEIRA seção de toda aba de grupo, e ficava
+  // permanentemente vazia: `grupo_eventos` só era lida, não havia insert em
+  // tela nenhuma do app. O gatilho `evento_grupo_no_mural` (migração
+  // 20260908230000) já existia esperando por este insert — ele espelha o
+  // encontro em `avisos` com `grupo` preenchido, e é assim que o push sai
+  // para quem é do grupo, e só para quem é do grupo.
+  const publicarEncontro = async () => {
+    if (!encTitulo.trim() || !encData.trim() || !encHorario.trim() || !encLocal.trim()) {
+      Alert.alert('Atenção', 'Preencha título, data, horário e local do encontro.'); return;
+    }
+    const iso = dataBRparaISO(encData);
+    if (!iso) { Alert.alert('Atenção', 'A data precisa estar no formato DD/MM/AAAA.'); return; }
+
+    const campos = {
+      titulo: encTitulo.trim(),
+      descricao: encDescricao.trim() || null,
+      data: iso,
+      horario: encHorario.trim(),
+      local: encLocal.trim(),
+      tipo: encTipo,
+      grupo,
+    };
+
+    setSaving(true);
+    // Editando: `update`, e NÃO um insert seguido de delete. O gatilho
+    // `evento_grupo_no_mural` dispara no insert — refazer a linha mandaria um
+    // push novo a cada correção de horário, e o grupo receberia "Novo
+    // encontro" três vezes pelo mesmo encontro.
+    const { error } = encontroParaEditar
+      ? await supabase.from('grupo_eventos').update(campos).eq('id', encontroParaEditar.id)
+      : await supabase.from('grupo_eventos').insert(campos);
+    setSaving(false);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    Alert.alert(
+      encontroParaEditar ? 'Salvo' : 'Publicado',
+      encontroParaEditar
+        ? 'Encontro atualizado. O grupo não recebe notificação nova por uma correção.'
+        : `Encontro publicado pro grupo ${grupoNome}.`,
+    );
+    setEncTitulo(''); setEncDescricao(''); setEncData(''); setEncHorario(''); setEncLocal('');
+    onSaved?.();
+    if (encontroParaEditar) onClose();
+  };
+
   const SECOES: { id: Secao; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { id: 'aviso', label: 'Aviso', icon: 'megaphone-outline' },
+    { id: 'encontro', label: 'Encontro', icon: 'calendar-outline' },
     { id: 'devocional', label: 'Devocional', icon: 'book-outline' },
     { id: 'short', label: 'Short', icon: 'film-outline' },
     { id: 'material', label: 'Material', icon: 'document-text-outline' },
@@ -184,6 +280,37 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
                   <Field s={s} C={C} label="Texto" value={avisoTexto} onChangeText={setAvisoTexto} placeholder="Detalhes do aviso..." multiline height={100} />
                   <Text style={s.hint}>Quem está no grupo {grupoNome} recebe push na hora. Mais ninguém vê esse aviso.</Text>
                   <SaveBtn s={s} cor={cor} saving={saving} onPress={publicarAviso} label="Enviar aviso ao grupo" icon="megaphone-outline" />
+                </>
+              )}
+
+              {secao === 'encontro' && (
+                <>
+                  <View style={s.fieldWrap}>
+                    <Text style={s.fieldLabel}>Tipo</Text>
+                    <View style={s.pillsRow}>
+                      {(['presencial', 'online', 'casa'] as const).map(tp => (
+                        <TouchableOpacity key={tp} style={[s.pill, encTipo === tp && { backgroundColor: cor + '22', borderColor: cor }]} onPress={() => setEncTipo(tp)}>
+                          <Text style={[s.pillText, encTipo === tp && { color: cor, fontWeight: '700' }]}>
+                            {tp === 'presencial' ? '⛪ Na igreja' : tp === 'online' ? '💻 Online' : '🏠 Em casa'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                  <Field s={s} C={C} label="Título" value={encTitulo} onChangeText={setEncTitulo} placeholder="Ex: Café da manhã das mulheres" />
+                  <Field s={s} C={C} label="Data" value={encData} onChangeText={setEncData} placeholder="DD/MM/AAAA" keyboardType="numbers-and-punctuation" />
+                  <Field s={s} C={C} label="Horário" value={encHorario} onChangeText={setEncHorario} placeholder="Ex: 10h às 12h" />
+                  <Field
+                    s={s} C={C} label="Local" value={encLocal} onChangeText={setEncLocal}
+                    placeholder={encTipo === 'online' ? 'Ex: link do Zoom' : encTipo === 'casa' ? 'Ex: casa da Ana — Reading' : 'Ex: Salão da igreja'}
+                  />
+                  <Field s={s} C={C} label="Descrição (opcional)" value={encDescricao} onChangeText={setEncDescricao} placeholder="Detalhes, o que levar..." multiline height={90} />
+                  <Text style={s.hint}>
+                    {encontroParaEditar
+                      ? 'Correção de encontro já publicado: o grupo não recebe notificação de novo.'
+                      : `Aparece em "Próximos Eventos" da aba ${grupoNome} e some sozinho depois que a data passa. Quem está no grupo recebe push.`}
+                  </Text>
+                  <SaveBtn s={s} cor={cor} saving={saving} onPress={publicarEncontro} label={encontroParaEditar ? 'Salvar alterações' : 'Publicar encontro'} icon="calendar-outline" />
                 </>
               )}
 
@@ -245,10 +372,11 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
   );
 }
 
-function Field({ s, C, label, value, onChangeText, placeholder, multiline, height, autoCapitalize }: {
+function Field({ s, C, label, value, onChangeText, placeholder, multiline, height, autoCapitalize, keyboardType }: {
   s: ReturnType<typeof buildStyles>; C: PaletaGrupoAdmin;
   label: string; value: string; onChangeText: (t: string) => void; placeholder: string;
   multiline?: boolean; height?: number; autoCapitalize?: 'none' | 'sentences';
+  keyboardType?: TextInputProps['keyboardType'];
 }) {
   return (
     <View style={s.fieldWrap}>
@@ -257,6 +385,7 @@ function Field({ s, C, label, value, onChangeText, placeholder, multiline, heigh
         style={[s.fieldInput, multiline ? { height, textAlignVertical: 'top', paddingTop: 10 } : null]}
         placeholder={placeholder} placeholderTextColor={C.placeholder}
         value={value} onChangeText={onChangeText} multiline={multiline} autoCapitalize={autoCapitalize}
+        keyboardType={keyboardType}
       />
     </View>
   );
@@ -281,8 +410,10 @@ function buildStyles(C: PaletaGrupoAdmin) { return StyleSheet.create({
   title: { fontSize: 17, fontWeight: '800', color: C.text },
   subtitle: { fontSize: 11, color: C.textMuted, marginTop: 3 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: C.border },
-  tabItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 10 },
-  tabLabel: { fontSize: 12, color: C.textMuted, fontWeight: '500' },
+  // Empilhado (ícone em cima) porque com cinco abas o rótulo ao lado do
+  // ícone não cabe num celular estreito e quebra a linha.
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, paddingVertical: 8 },
+  tabLabel: { fontSize: 11, color: C.textMuted, fontWeight: '500' },
   fieldWrap: { marginBottom: 14 },
   fieldLabel: { fontSize: 12, fontWeight: '700', color: C.textMuted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 },
   fieldInput: { borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, fontSize: 15, color: C.text, backgroundColor: C.inputBg },

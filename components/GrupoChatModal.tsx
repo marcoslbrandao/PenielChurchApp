@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+import { apagarLinha } from '../lib/db';
 import { useTheme } from '../lib/theme';
 
 function paletaChat(isDark: boolean) {
@@ -156,7 +157,7 @@ export default function GrupoChatModal({
       {
         text: 'Apagar', style: 'destructive', onPress: async () => {
           setMensagens(prev => prev.filter(m => m.id !== msg.id));
-          await supabase.from('grupo_chat_mensagens').delete().eq('id', msg.id);
+          await apagarLinha('grupo_chat_mensagens', msg.id);
         },
       },
     ]);

@@ -428,3 +428,10 @@ entrypoint = "./functions/create-payment-intent/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/create-payment-intent/*.html" ]
+
+[functions.stripe-webhook]
+enabled = true
+# O Stripe não manda JWT — quem autentica é a assinatura do webhook,
+# conferida dentro da função com STRIPE_WEBHOOK_SECRET.
+verify_jwt = false
+entrypoint = "./functions/stripe-webhook/index.ts"

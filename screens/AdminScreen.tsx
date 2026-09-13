@@ -11,8 +11,10 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../lib/supabase';
+import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { useBirthdays } from '../lib/useBirthdays';
+import { useTranslation } from 'react-i18next';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -74,21 +76,23 @@ type PrayerRequest = {
   profiles?: { full_name: string | null } | null;
 };
 
+// Guarda a CHAVE de tradução, não o texto: estas constantes moram fora de
+// qualquer componente, onde não existe `t`. Quem renderiza traduz.
 const NOME_GRUPO: Record<string, string> = {
-  mulheres: 'Grupo de Mulheres', homens: 'Grupo de Homens',
-  jovens: 'Peniel Alive', estudo_biblico: 'Estudo Bíblico',
+  mulheres: 'admin.grupoDeMulheres', homens: 'admin.grupoDeHomens',
+  jovens: 'admin.penielAlive', estudo_biblico: 'admin.estudoBiblico',
 };
 
 // Opções de destino do devocional: geral (aparece pra todo mundo na Home)
 // ou de um grupo específico (só quem tem acesso ao grupo vê — a RLS de
 // `devocionais` já trata isso, não precisa de nada extra aqui além de
 // mandar o valor certo de `grupo` no insert).
-const GRUPO_DEVOCIONAL_OPCOES: { valor: string | null; label: string }[] = [
-  { valor: null, label: '🏠 Devocional Peniel (Home)' },
-  { valor: 'mulheres', label: 'Mulheres' },
-  { valor: 'homens', label: 'Homens' },
-  { valor: 'jovens', label: 'Peniel Alive' },
-  { valor: 'estudo_biblico', label: 'Estudo Bíblico' },
+const GRUPO_DEVOCIONAL_OPCOES: { valor: string | null; chave: string }[] = [
+  { valor: null, chave: 'admin.devocionalPenielHome' },
+  { valor: 'mulheres', chave: 'admin.mulheres' },
+  { valor: 'homens', chave: 'admin.homens' },
+  { valor: 'jovens', chave: 'admin.penielAlive' },
+  { valor: 'estudo_biblico', chave: 'admin.estudoBiblico' },
 ];
 
 type EscalaArea = { id: string; nome: string; vagas_padrao: number };
@@ -116,6 +120,7 @@ function formatDate(iso: string | null): string {
 function NovoConviteModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [tipo, setTipo] = useState<'membro' | 'banda'>('membro');
   const [email, setEmail] = useState('');
   const [days, setDays] = useState('30');
@@ -137,7 +142,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
     });
 
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
 
     // Compartilhar o código
     const mensagem = tipo === 'banda'
@@ -156,7 +161,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
         <View style={mo.sheet}>
           <View style={mo.header}>
-            <Text style={mo.title}>Novo Convite</Text>
+            <Text style={mo.title}>{t('admin.novoConvite')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
@@ -164,26 +169,26 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
 
           {/* Tipo de convite */}
           <View style={mo.fieldWrap}>
-            <Text style={mo.fieldLabel}>Tipo de convite</Text>
+            <Text style={mo.fieldLabel}>{t('admin.tipoDeConvite')}</Text>
             <View style={mo.daysRow}>
               <TouchableOpacity style={[mo.dayPill, tipo === 'membro' && mo.dayPillActive]} onPress={() => setTipo('membro')}>
-                <Text style={[mo.dayPillText, tipo === 'membro' && mo.dayPillTextActive]}>👤 Membro</Text>
+                <Text style={[mo.dayPillText, tipo === 'membro' && mo.dayPillTextActive]}>{t('admin.pillMembro')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[mo.dayPill, tipo === 'banda' && mo.dayPillActive]} onPress={() => setTipo('banda')}>
-                <Text style={[mo.dayPillText, tipo === 'banda' && mo.dayPillTextActive]}>🎵 Banda</Text>
+                <Text style={[mo.dayPillText, tipo === 'banda' && mo.dayPillTextActive]}>{t('admin.pillBanda')}</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Código gerado */}
           <View style={mo.codeBox}>
-            <Text style={mo.codeLabel}>Código gerado automaticamente</Text>
+            <Text style={mo.codeLabel}>{t('admin.codigoGeradoAutomaticamente')}</Text>
             <Text style={mo.code}>{code}</Text>
           </View>
 
           {/* Email (opcional) */}
           <View style={mo.fieldWrap}>
-            <Text style={mo.fieldLabel}>E-mail do convidado (opcional)</Text>
+            <Text style={mo.fieldLabel}>{t('admin.eMailDoConvidadoOpcional')}</Text>
             <View style={mo.fieldRow}>
               <Ionicons name="mail-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
               <TextInput
@@ -196,7 +201,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
 
           {/* Validade */}
           <View style={mo.fieldWrap}>
-            <Text style={mo.fieldLabel}>Válido por (dias)</Text>
+            <Text style={mo.fieldLabel}>{t('admin.validoPorDias')}</Text>
             <View style={mo.daysRow}>
               {['7', '15', '30', '60'].map(d => (
                 <TouchableOpacity
@@ -212,7 +217,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
 
           <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
             {saving ? <ActivityIndicator color="#fff" /> : (
-              <><Ionicons name="share-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Criar e Compartilhar</Text></>
+              <><Ionicons name="share-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.criarECompartilhar')}</Text></>
             )}
           </TouchableOpacity>
         </View>
@@ -248,6 +253,7 @@ const mo = StyleSheet.create({
 function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
   visible: boolean; onClose: () => void; onSaved: () => void; adminId: string | undefined;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProfileLite[]>([]);
   const [selected, setSelected] = useState<ProfileLite | null>(null);
@@ -274,15 +280,15 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
   }, [query]);
 
   const handleSave = async () => {
-    if (!selected) { Alert.alert('Atenção', 'Selecione o membro.'); return; }
+    if (!selected) { Alert.alert(t('common.atencao'), t('admin.selecioneOMembro')); return; }
     const valorNum = Number(valor.replace(',', '.'));
-    if (!valorNum || valorNum <= 0) { Alert.alert('Atenção', 'Informe um valor válido.'); return; }
+    if (!valorNum || valorNum <= 0) { Alert.alert(t('common.atencao'), t('admin.informeUmValorValido')); return; }
     setSaving(true);
     const { error } = await supabase.from('offerings').insert({
       user_id: selected.id, valor: valorNum, tipo, metodo, data, registrado_por: adminId,
     });
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
     onClose();
   };
@@ -294,17 +300,17 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
-              <Text style={mo.title}>Registrar Oferta</Text>
+              <Text style={mo.title}>{t('admin.registrarOferta')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Membro</Text>
+              <Text style={mo.fieldLabel}>{t('admin.membro')}</Text>
               {selected ? (
                 <View style={[mo.fieldRow, { justifyContent: 'space-between' }]}>
-                  <Text style={{ fontSize: 15, color: C.text, fontWeight: '600' }}>{selected.full_name ?? 'Sem nome'}</Text>
+                  <Text style={{ fontSize: 15, color: C.text, fontWeight: '600' }}>{selected.full_name ?? t('admin.semNome')}</Text>
                   <TouchableOpacity onPress={() => { setSelected(null); setQuery(''); }}>
                     <Ionicons name="close-circle" size={18} color={C.textMuted} />
                   </TouchableOpacity>
@@ -314,7 +320,7 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
                   <View style={mo.fieldRow}>
                     <Ionicons name="search-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
                     <TextInput
-                      style={mo.fieldInput} placeholder="Buscar pelo nome..."
+                      style={mo.fieldInput} placeholder={t('admin.buscarPeloNome')}
                       placeholderTextColor={C.textDim} value={query} onChangeText={setQuery}
                     />
                   </View>
@@ -324,7 +330,7 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
                       style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border }}
                       onPress={() => setSelected(r)}
                     >
-                      <Text style={{ fontSize: 14, color: C.text }}>{r.full_name ?? 'Sem nome'}</Text>
+                      <Text style={{ fontSize: 14, color: C.text }}>{r.full_name ?? t('admin.semNome')}</Text>
                     </TouchableOpacity>
                   ))}
                 </>
@@ -332,7 +338,7 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Valor (£)</Text>
+              <Text style={mo.fieldLabel}>{t('admin.valor')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
                   style={mo.fieldInput} placeholder="0.00" placeholderTextColor={C.textDim}
@@ -342,12 +348,14 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Tipo</Text>
+              <Text style={mo.fieldLabel}>{t('admin.tipo')}</Text>
               <View style={mo.daysRow}>
-                {(['dizimo', 'oferta', 'missoes', 'outro'] as const).map(t => (
-                  <TouchableOpacity key={t} style={[mo.dayPill, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
-                    <Text style={[mo.dayPillText, tipo === t && mo.dayPillTextActive]}>
-                      {t === 'dizimo' ? 'Dízimo' : t === 'oferta' ? 'Oferta' : t === 'missoes' ? 'Missões' : 'Outro'}
+                {/* O parâmetro do map se chamava `t` e sombreava a função de
+                    tradução dentro deste bloco — renomeado para `tp`. */}
+                {(['dizimo', 'oferta', 'missoes', 'outro'] as const).map(tp => (
+                  <TouchableOpacity key={tp} style={[mo.dayPill, tipo === tp && mo.dayPillActive]} onPress={() => setTipo(tp)}>
+                    <Text style={[mo.dayPillText, tipo === tp && mo.dayPillTextActive]}>
+                      {tp === 'dizimo' ? t('admin.tipoDizimo') : tp === 'oferta' ? t('admin.tipoOferta') : tp === 'missoes' ? t('admin.tipoMissoes') : t('admin.tipoOutro')}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -355,12 +363,12 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Método</Text>
+              <Text style={mo.fieldLabel}>{t('admin.metodo')}</Text>
               <View style={mo.daysRow}>
                 {(['sumup', 'pix', 'dinheiro', 'transferencia'] as const).map(m => (
                   <TouchableOpacity key={m} style={[mo.dayPill, metodo === m && mo.dayPillActive]} onPress={() => setMetodo(m)}>
                     <Text style={[mo.dayPillText, metodo === m && mo.dayPillTextActive]}>
-                      {m === 'sumup' ? 'SumUp' : m === 'pix' ? 'PIX' : m === 'dinheiro' ? 'Dinheiro' : 'Transferência'}
+                      {m === 'sumup' ? 'SumUp' : m === 'pix' ? 'PIX' : m === 'dinheiro' ? t('admin.metodoDinheiro') : t('admin.metodoTransferencia')}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -368,7 +376,7 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Data (AAAA-MM-DD)</Text>
+              <Text style={mo.fieldLabel}>{t('admin.dataAaaaMmDd')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
                   style={mo.fieldInput} value={data} onChangeText={setData}
@@ -379,7 +387,7 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="checkmark" size={18} color="#fff" /><Text style={mo.saveBtnText}>Registrar Oferta</Text></>
+                <><Ionicons name="checkmark" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.registrarOferta')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -394,6 +402,7 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
 function NovoAvisoModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [titulo, setTitulo] = useState('');
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<'geral' | 'evento' | 'urgente'>('geral');
@@ -404,13 +413,13 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
   }, [visible]);
 
   const handleSave = async () => {
-    if (!titulo.trim() || !texto.trim()) { Alert.alert('Atenção', 'Preencha o título e o texto do aviso.'); return; }
+    if (!titulo.trim() || !texto.trim()) { Alert.alert(t('common.atencao'), t('admin.preenchaOTituloEO')); return; }
     setSaving(true);
     const { error } = await supabase.from('avisos').insert({
       titulo: titulo.trim(), texto: texto.trim(), tipo, data: new Date().toISOString(), grupo: null,
     });
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
     onClose();
   };
@@ -422,14 +431,14 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
-              <Text style={mo.title}>Novo Aviso</Text>
+              <Text style={mo.title}>{t('admin.novoAviso')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Tipo</Text>
+              <Text style={mo.fieldLabel}>{t('admin.tipo')}</Text>
               <View style={mo.daysRow}>
                 {(['geral', 'evento', 'urgente'] as const).map(t => (
                   <TouchableOpacity key={t} style={[mo.dayPill, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
@@ -442,27 +451,27 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Título</Text>
+              <Text style={mo.fieldLabel}>{t('admin.titulo')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
-                  style={mo.fieldInput} placeholder="Ex: Culto especial de Ação de Graças"
+                  style={mo.fieldInput} placeholder={t('admin.exCultoEspecialDeAcao')}
                   placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo}
                 />
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Texto</Text>
+              <Text style={mo.fieldLabel}>{t('admin.texto')}</Text>
               <TextInput
                 style={[mo.fieldRow, { height: 100, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
-                placeholder="Escreva o aviso..." placeholderTextColor={C.textDim}
+                placeholder={t('admin.escrevaOAviso')} placeholderTextColor={C.textDim}
                 value={texto} onChangeText={setTexto} multiline
               />
             </View>
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="megaphone-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Aviso</Text></>
+                <><Ionicons name="megaphone-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.publicarAviso')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -477,6 +486,7 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
 function NovoDevocionalModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [titulo, setTitulo] = useState('');
   const [versiculo, setVersiculo] = useState('');
   const [referencia, setReferencia] = useState('');
@@ -490,7 +500,7 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
 
   const handleSave = async () => {
     if (!titulo.trim() || !versiculo.trim() || !referencia.trim() || !texto.trim()) {
-      Alert.alert('Atenção', 'Preencha todos os campos do devocional.');
+      Alert.alert(t('common.atencao'), t('admin.preenchaTodosOsCamposDo'));
       return;
     }
     setSaving(true);
@@ -499,7 +509,7 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
       texto: texto.trim(), autor: 'Peniel Church', data: new Date().toISOString(), grupo,
     });
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
     onClose();
   };
@@ -511,39 +521,39 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
-              <Text style={mo.title}>Novo Devocional</Text>
+              <Text style={mo.title}>{t('admin.novoDevocional')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Destino</Text>
+              <Text style={mo.fieldLabel}>{t('admin.destino')}</Text>
               <View style={[mo.daysRow, { flexWrap: 'wrap' }]}>
                 {GRUPO_DEVOCIONAL_OPCOES.map(op => (
                   <TouchableOpacity
-                    key={op.label}
+                    key={op.chave}
                     style={[mo.dayPill, grupo === op.valor && mo.dayPillActive]}
                     onPress={() => setGrupo(op.valor)}
                   >
-                    <Text style={[mo.dayPillText, grupo === op.valor && mo.dayPillTextActive]}>{op.label}</Text>
+                    <Text style={[mo.dayPillText, grupo === op.valor && mo.dayPillTextActive]}>{t(op.chave)}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Título</Text>
+              <Text style={mo.fieldLabel}>{t('admin.titulo')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
-                  style={mo.fieldInput} placeholder="Ex: Confiando no tempo de Deus"
+                  style={mo.fieldInput} placeholder={t('admin.exConfiandoNoTempoDe')}
                   placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo}
                 />
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Versículo</Text>
+              <Text style={mo.fieldLabel}>{t('admin.versiculo')}</Text>
               <TextInput
                 style={[mo.fieldRow, { height: 70, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
                 placeholder='Ex: "Tudo posso naquele que me fortalece."'
@@ -552,27 +562,27 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Referência</Text>
+              <Text style={mo.fieldLabel}>{t('admin.referencia')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
-                  style={mo.fieldInput} placeholder="Ex: Filipenses 4:13"
+                  style={mo.fieldInput} placeholder={t('admin.exFilipenses413')}
                   placeholderTextColor={C.textDim} value={referencia} onChangeText={setReferencia}
                 />
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Reflexão</Text>
+              <Text style={mo.fieldLabel}>{t('admin.reflexao')}</Text>
               <TextInput
                 style={[mo.fieldRow, { height: 120, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
-                placeholder="Escreva a reflexão do devocional..." placeholderTextColor={C.textDim}
+                placeholder={t('admin.escrevaAReflexaoDoDevocional')} placeholderTextColor={C.textDim}
                 value={texto} onChangeText={setTexto} multiline
               />
             </View>
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="book-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Devocional</Text></>
+                <><Ionicons name="book-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.publicarDevocional')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -589,6 +599,7 @@ const DIAS_SEMANA_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 function NovoEventoModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<'presencial' | 'online' | 'casa'>('presencial');
   const [recorrente, setRecorrente] = useState(true);
@@ -616,11 +627,11 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
 
   const handleSave = async () => {
     if (!nome.trim() || !horario.trim() || !local.trim()) {
-      Alert.alert('Atenção', 'Preencha ao menos nome, horário e local.');
+      Alert.alert(t('common.atencao'), t('admin.preenchaAoMenosNomeHorario'));
       return;
     }
     if (!recorrente && !data.trim()) {
-      Alert.alert('Atenção', 'Informe a data no formato AAAA-MM-DD para um evento não recorrente.');
+      Alert.alert(t('common.atencao'), t('admin.informeADataNoFormato'));
       return;
     }
     setSaving(true);
@@ -642,7 +653,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
       cta_url: destaqueHome ? (ctaUrl.trim() || null) : null,
     });
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
     onClose();
   };
@@ -654,21 +665,21 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
-              <Text style={mo.title}>Novo Evento</Text>
+              <Text style={mo.title}>{t('admin.novoEvento')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Nome do evento</Text>
+              <Text style={mo.fieldLabel}>{t('admin.nomeDoEvento')}</Text>
               <View style={mo.fieldRow}>
-                <TextInput style={mo.fieldInput} placeholder="Ex: Culto de Jovens" placeholderTextColor={C.textDim} value={nome} onChangeText={setNome} />
+                <TextInput style={mo.fieldInput} placeholder={t('admin.exCultoDeJovens')} placeholderTextColor={C.textDim} value={nome} onChangeText={setNome} />
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Tipo de local</Text>
+              <Text style={mo.fieldLabel}>{t('admin.tipoDeLocal')}</Text>
               <View style={mo.daysRow}>
                 {(['presencial', 'online', 'casa'] as const).map(t => (
                   <TouchableOpacity key={t} style={[mo.dayPill, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
@@ -681,20 +692,20 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Repetição</Text>
+              <Text style={mo.fieldLabel}>{t('admin.repeticao')}</Text>
               <View style={mo.daysRow}>
                 <TouchableOpacity style={[mo.dayPill, recorrente && mo.dayPillActive]} onPress={() => setRecorrente(true)}>
-                  <Text style={[mo.dayPillText, recorrente && mo.dayPillTextActive]}>🔁 Toda semana</Text>
+                  <Text style={[mo.dayPillText, recorrente && mo.dayPillTextActive]}>{t('admin.todaSemana')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[mo.dayPill, !recorrente && mo.dayPillActive]} onPress={() => setRecorrente(false)}>
-                  <Text style={[mo.dayPillText, !recorrente && mo.dayPillTextActive]}>📅 Data única</Text>
+                  <Text style={[mo.dayPillText, !recorrente && mo.dayPillTextActive]}>{t('admin.dataUnica')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {recorrente ? (
               <View style={mo.fieldWrap}>
-                <Text style={mo.fieldLabel}>Dia da semana</Text>
+                <Text style={mo.fieldLabel}>{t('admin.diaDaSemana')}</Text>
                 <View style={mo.daysRow}>
                   {DIAS_SEMANA_LABELS.map((label, idx) => (
                     <TouchableOpacity key={idx} style={[mo.dayPill, diaSemana === idx && mo.dayPillActive]} onPress={() => setDiaSemana(idx)}>
@@ -705,30 +716,30 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
               </View>
             ) : (
               <View style={mo.fieldWrap}>
-                <Text style={mo.fieldLabel}>Data (AAAA-MM-DD)</Text>
+                <Text style={mo.fieldLabel}>{t('admin.dataAaaaMmDd')}</Text>
                 <View style={mo.fieldRow}>
-                  <TextInput style={mo.fieldInput} placeholder="Ex: 2026-08-28" placeholderTextColor={C.textDim} value={data} onChangeText={setData} />
+                  <TextInput style={mo.fieldInput} placeholder={t('admin.ex20260828')} placeholderTextColor={C.textDim} value={data} onChangeText={setData} />
                 </View>
               </View>
             )}
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Horário</Text>
+              <Text style={mo.fieldLabel}>{t('admin.horario')}</Text>
               <View style={mo.fieldRow}>
-                <TextInput style={mo.fieldInput} placeholder="Ex: 19h00" placeholderTextColor={C.textDim} value={horario} onChangeText={setHorario} />
+                <TextInput style={mo.fieldInput} placeholder={t('admin.ex19h00')} placeholderTextColor={C.textDim} value={horario} onChangeText={setHorario} />
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Local</Text>
+              <Text style={mo.fieldLabel}>{t('admin.local')}</Text>
               <View style={mo.fieldRow}>
-                <TextInput style={mo.fieldInput} placeholder="Ex: Abbey Square, Reading" placeholderTextColor={C.textDim} value={local} onChangeText={setLocal} />
+                <TextInput style={mo.fieldInput} placeholder={t('admin.exAbbeySquareReading')} placeholderTextColor={C.textDim} value={local} onChangeText={setLocal} />
               </View>
             </View>
 
             {tipo === 'online' && (
               <View style={mo.fieldWrap}>
-                <Text style={mo.fieldLabel}>Link do Zoom</Text>
+                <Text style={mo.fieldLabel}>{t('admin.linkDoZoom')}</Text>
                 <View style={mo.fieldRow}>
                   <TextInput style={mo.fieldInput} placeholder="https://..." placeholderTextColor={C.textDim} value={linkZoom} onChangeText={setLinkZoom} autoCapitalize="none" />
                 </View>
@@ -737,7 +748,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
 
             {tipo === 'presencial' && (
               <View style={mo.fieldWrap}>
-                <Text style={mo.fieldLabel}>Link do Google Maps</Text>
+                <Text style={mo.fieldLabel}>{t('admin.linkDoGoogleMaps')}</Text>
                 <View style={mo.fieldRow}>
                   <TextInput style={mo.fieldInput} placeholder="https://maps.google.com/?q=..." placeholderTextColor={C.textDim} value={mapUrl} onChangeText={setMapUrl} autoCapitalize="none" />
                 </View>
@@ -745,16 +756,16 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
             )}
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Descrição</Text>
+              <Text style={mo.fieldLabel}>{t('admin.descricao')}</Text>
               <TextInput
                 style={[mo.fieldRow, { height: 80, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
-                placeholder="Breve descrição do evento..." placeholderTextColor={C.textDim}
+                placeholder={t('admin.breveDescricaoDoEvento')} placeholderTextColor={C.textDim}
                 value={descricao} onChangeText={setDescricao} multiline
               />
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Evento especial (aparece em destaque)</Text>
+              <Text style={mo.fieldLabel}>{t('admin.eventoEspecialApareceEmDestaque')}</Text>
               <View style={mo.daysRow}>
                 <TouchableOpacity style={[mo.dayPill, especial && mo.dayPillActive]} onPress={() => setEspecial(!especial)}>
                   <Text style={[mo.dayPillText, especial && mo.dayPillTextActive]}>
@@ -765,7 +776,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Destaque na Home (chamada de ação)</Text>
+              <Text style={mo.fieldLabel}>{t('admin.destaqueNaHomeChamadaDe')}</Text>
               <View style={mo.daysRow}>
                 <TouchableOpacity style={[mo.dayPill, destaqueHome && mo.dayPillActive]} onPress={() => setDestaqueHome(!destaqueHome)}>
                   <Text style={[mo.dayPillText, destaqueHome && mo.dayPillTextActive]}>
@@ -779,24 +790,24 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
             {destaqueHome && (
               <>
                 <View style={mo.fieldWrap}>
-                  <Text style={mo.fieldLabel}>Texto do botão (opcional)</Text>
+                  <Text style={mo.fieldLabel}>{t('admin.textoDoBotaoOpcional')}</Text>
                   <View style={mo.fieldRow}>
-                    <TextInput style={mo.fieldInput} placeholder="Ex: Inscreva-se" placeholderTextColor={C.textDim} value={ctaTexto} onChangeText={setCtaTexto} />
+                    <TextInput style={mo.fieldInput} placeholder={t('admin.exInscrevaSe')} placeholderTextColor={C.textDim} value={ctaTexto} onChangeText={setCtaTexto} />
                   </View>
                 </View>
                 <View style={mo.fieldWrap}>
-                  <Text style={mo.fieldLabel}>Link do botão (opcional)</Text>
+                  <Text style={mo.fieldLabel}>{t('admin.linkDoBotaoOpcional')}</Text>
                   <View style={mo.fieldRow}>
                     <TextInput style={mo.fieldInput} placeholder="https://..." placeholderTextColor={C.textDim} value={ctaUrl} onChangeText={setCtaUrl} autoCapitalize="none" />
                   </View>
-                  <Text style={mo.fieldHint}>Sem link, tocar no card leva pra aba Agenda.</Text>
+                  <Text style={mo.fieldHint}>{t('admin.semLinkTocarNoCard')}</Text>
                 </View>
               </>
             )}
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="calendar-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Evento</Text></>
+                <><Ionicons name="calendar-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.publicarEvento')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -811,6 +822,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
 function NovoShortModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [titulo, setTitulo] = useState('');
   const [url, setUrl] = useState('');
   const [plataforma, setPlataforma] = useState<'youtube' | 'instagram'>('youtube');
@@ -821,13 +833,13 @@ function NovoShortModal({ visible, onClose, onSaved }: {
   }, [visible]);
 
   const handleSave = async () => {
-    if (!titulo.trim() || !url.trim()) { Alert.alert('Atenção', 'Preencha o título e o link do vídeo.'); return; }
+    if (!titulo.trim() || !url.trim()) { Alert.alert(t('common.atencao'), t('admin.preenchaOTituloEO2')); return; }
     setSaving(true);
     const { error } = await supabase.from('shorts_videos').insert({
       titulo: titulo.trim(), url: url.trim(), plataforma, grupo: null,
     });
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
     onClose();
   };
@@ -839,14 +851,14 @@ function NovoShortModal({ visible, onClose, onSaved }: {
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
-              <Text style={mo.title}>Novo Short</Text>
+              <Text style={mo.title}>{t('admin.novoShort')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Plataforma</Text>
+              <Text style={mo.fieldLabel}>{t('admin.plataforma')}</Text>
               <View style={mo.daysRow}>
                 {(['youtube', 'instagram'] as const).map(p => (
                   <TouchableOpacity key={p} style={[mo.dayPill, plataforma === p && mo.dayPillActive]} onPress={() => setPlataforma(p)}>
@@ -859,14 +871,14 @@ function NovoShortModal({ visible, onClose, onSaved }: {
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Título</Text>
+              <Text style={mo.fieldLabel}>{t('admin.titulo')}</Text>
               <View style={mo.fieldRow}>
-                <TextInput style={mo.fieldInput} placeholder="Ex: 1 minuto de fé" placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo} />
+                <TextInput style={mo.fieldInput} placeholder={t('admin.ex1MinutoDeFe')} placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo} />
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Link do vídeo</Text>
+              <Text style={mo.fieldLabel}>{t('admin.linkDoVideo')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
                   style={mo.fieldInput}
@@ -878,7 +890,7 @@ function NovoShortModal({ visible, onClose, onSaved }: {
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="film-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Short</Text></>
+                <><Ionicons name="film-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.publicarShort')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -893,6 +905,7 @@ function NovoShortModal({ visible, onClose, onSaved }: {
 function NovaMensagemModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [titulo, setTitulo] = useState('');
   const [resumo, setResumo] = useState('');
   const [conteudo, setConteudo] = useState('');
@@ -910,7 +923,7 @@ function NovaMensagemModal({ visible, onClose, onSaved }: {
   const escolherImagem = async () => {
     const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissao.granted) {
-      Alert.alert('Permissão necessária', 'Precisamos de acesso às suas fotos para escolher a imagem de capa.');
+      Alert.alert(t('admin.permissaoNecessaria'), t('admin.precisamosDeAcessoAsSuas'));
       return;
     }
     const resultado = await ImagePicker.launchImageLibraryAsync({
@@ -923,7 +936,7 @@ function NovaMensagemModal({ visible, onClose, onSaved }: {
 
   const handleSave = async () => {
     if (!titulo.trim() || !resumo.trim() || !conteudo.trim()) {
-      Alert.alert('Atenção', 'Preencha ao menos título, resumo e conteúdo da mensagem.');
+      Alert.alert(t('common.atencao'), t('admin.preenchaAoMenosTituloResumo'));
       return;
     }
     setSaving(true);
@@ -945,7 +958,7 @@ function NovaMensagemModal({ visible, onClose, onSaved }: {
       } catch (e: any) {
         setSaving(false);
         setEnviandoImagem(false);
-        Alert.alert('Erro ao enviar imagem', e?.message ?? 'Tente novamente.');
+        Alert.alert(t('admin.erroAoEnviarImagem'), e?.message ?? 'Tente novamente.');
         return;
       }
       setEnviandoImagem(false);
@@ -957,7 +970,7 @@ function NovaMensagemModal({ visible, onClose, onSaved }: {
       data: new Date().toISOString().slice(0, 10),
     });
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
     onClose();
   };
@@ -969,59 +982,59 @@ function NovaMensagemModal({ visible, onClose, onSaved }: {
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
-              <Text style={mo.title}>Nova Mensagem</Text>
+              <Text style={mo.title}>{t('admin.novaMensagem')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Imagem de capa (opcional)</Text>
+              <Text style={mo.fieldLabel}>{t('admin.imagemDeCapaOpcional')}</Text>
               <TouchableOpacity style={nm.imagemPicker} onPress={escolherImagem} disabled={enviandoImagem}>
                 {imagemLocal ? (
                   <Image source={{ uri: imagemLocal }} style={nm.imagemPreview} resizeMode="cover" />
                 ) : (
                   <View style={nm.imagemPlaceholder}>
                     <Ionicons name="image-outline" size={24} color={C.textDim} />
-                    <Text style={nm.imagemPlaceholderTexto}>Toque para escolher uma foto</Text>
+                    <Text style={nm.imagemPlaceholderTexto}>{t('admin.toqueParaEscolherUmaFoto')}</Text>
                   </View>
                 )}
               </TouchableOpacity>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Título</Text>
+              <Text style={mo.fieldLabel}>{t('admin.titulo')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
-                  style={mo.fieldInput} placeholder="Ex: O Cego que Enxergava"
+                  style={mo.fieldInput} placeholder={t('admin.exOCegoQueEnxergava')}
                   placeholderTextColor={C.textDim} value={titulo} onChangeText={setTitulo}
                 />
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Resumo (aparece na Home e na lista)</Text>
+              <Text style={mo.fieldLabel}>{t('admin.resumoApareceNaHomeE')}</Text>
               <TextInput
                 style={[mo.fieldRow, { height: 70, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
-                placeholder="Um breve resumo da mensagem de domingo..."
+                placeholder={t('admin.umBreveResumoDaMensagem')}
                 placeholderTextColor={C.textDim} value={resumo} onChangeText={setResumo} multiline
               />
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Conteúdo completo</Text>
+              <Text style={mo.fieldLabel}>{t('admin.conteudoCompleto')}</Text>
               <TextInput
                 style={[mo.fieldRow, { height: 200, textAlignVertical: 'top', paddingVertical: 10, color: C.text, fontSize: 15 }]}
-                placeholder="Escreva o texto completo. Separe parágrafos com uma linha em branco."
+                placeholder={t('admin.escrevaOTextoCompletoSepare')}
                 placeholderTextColor={C.textDim} value={conteudo} onChangeText={setConteudo} multiline
               />
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Autor / Pregador</Text>
+              <Text style={mo.fieldLabel}>{t('admin.autorPregador')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
-                  style={mo.fieldInput} placeholder="Ex: Pr. João Silva"
+                  style={mo.fieldInput} placeholder={t('admin.exPrJoaoSilva')}
                   placeholderTextColor={C.textDim} value={autor} onChangeText={setAutor}
                 />
               </View>
@@ -1029,7 +1042,7 @@ function NovaMensagemModal({ visible, onClose, onSaved }: {
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="newspaper-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Publicar Mensagem</Text></>
+                <><Ionicons name="newspaper-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.publicarMensagem')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -1051,6 +1064,7 @@ const nm = StyleSheet.create({
 function NovaAreaModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [nome, setNome] = useState('');
   const [vagas, setVagas] = useState('2');
   const [saving, setSaving] = useState(false);
@@ -1058,13 +1072,13 @@ function NovaAreaModal({ visible, onClose, onSaved }: {
   useEffect(() => { if (!visible) { setNome(''); setVagas('2'); } }, [visible]);
 
   const handleSave = async () => {
-    if (!nome.trim()) { Alert.alert('Atenção', 'Informe o nome da área.'); return; }
+    if (!nome.trim()) { Alert.alert(t('common.atencao'), t('admin.informeONomeDaArea')); return; }
     setSaving(true);
     const { error } = await supabase.from('escala_areas').insert({
       nome: nome.trim(), vagas_padrao: Number(vagas) || 1,
     });
     setSaving(false);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
     onClose();
   };
@@ -1075,24 +1089,24 @@ function NovaAreaModal({ visible, onClose, onSaved }: {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
         <View style={mo.sheet}>
           <View style={mo.header}>
-            <Text style={mo.title}>Nova Área de Escala</Text>
+            <Text style={mo.title}>{t('admin.novaAreaDeEscala')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
           </View>
 
           <View style={mo.fieldWrap}>
-            <Text style={mo.fieldLabel}>Nome da área</Text>
+            <Text style={mo.fieldLabel}>{t('admin.nomeDaArea')}</Text>
             <View style={mo.fieldRow}>
               <TextInput
-                style={mo.fieldInput} placeholder="Ex: Som, Estacionamento..."
+                style={mo.fieldInput} placeholder={t('admin.exSomEstacionamento')}
                 placeholderTextColor={C.textDim} value={nome} onChangeText={setNome}
               />
             </View>
           </View>
 
           <View style={mo.fieldWrap}>
-            <Text style={mo.fieldLabel}>Vagas por domingo</Text>
+            <Text style={mo.fieldLabel}>{t('admin.vagasPorDomingo')}</Text>
             <View style={mo.fieldRow}>
               <TextInput
                 style={mo.fieldInput} placeholder="2" placeholderTextColor={C.textDim}
@@ -1102,7 +1116,7 @@ function NovaAreaModal({ visible, onClose, onSaved }: {
           </View>
 
           <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={mo.saveBtnText}>Criar Área</Text>}
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={mo.saveBtnText}>{t('admin.criarArea')}</Text>}
           </TouchableOpacity>
         </View>
         </KeyboardAvoidingView>
@@ -1115,6 +1129,7 @@ function NovaAreaModal({ visible, onClose, onSaved }: {
 function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
   visible: boolean; area: EscalaArea | null; onClose: () => void; onChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const [voluntarios, setVoluntarios] = useState<AreaVoluntario[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -1154,17 +1169,17 @@ function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
   const adicionar = async (membro: MembroDiretorio) => {
     if (!area) return;
     const { error } = await supabase.from('escala_area_voluntarios').insert({ area_id: area.id, membro_id: membro.id });
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     setQuery(''); setResultados([]);
     fetchVoluntarios();
     onChanged();
   };
 
   const remover = (v: AreaVoluntario) => {
-    Alert.alert('Remover do time', `Remover ${v.nome} ${v.sobrenome} do time de ${area?.nome}?`, [
+    Alert.alert(t('admin.removerDoTime'), `Remover ${v.nome} ${v.sobrenome} do time de ${area?.nome}?`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('escala_area_voluntarios').delete().eq('id', v.id);
+        await apagarLinha('escala_area_voluntarios', v.id);
         fetchVoluntarios();
         onChanged();
       }},
@@ -1189,7 +1204,7 @@ function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
               <Ionicons name="search-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
               <TextInput
                 style={mo.fieldInput}
-                placeholder="Buscar no diretório pra adicionar..."
+                placeholder={t('admin.buscarNoDiretorioPraAdicionar')}
                 placeholderTextColor={C.textDim}
                 value={query}
                 onChangeText={setQuery}
@@ -1215,7 +1230,7 @@ function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
               {loading ? (
                 <ActivityIndicator color={C.purple} style={{ marginVertical: 20 }} />
               ) : voluntarios.length === 0 ? (
-                <Text style={s.emptyText}>Ninguém adicionado ainda.</Text>
+                <Text style={s.emptyText}>{t('admin.ninguemAdicionadoAinda')}</Text>
               ) : (
                 voluntarios.map(v => (
                   <View key={v.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border }}>
@@ -1259,6 +1274,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
   visible: boolean; areas: EscalaArea[]; voluntarios: AreaVoluntario[]; userId: string | undefined;
   onClose: () => void; onGerado: () => void;
 }) {
+  const { t } = useTranslation();
   const [dataInicio, setDataInicio] = useState('');
   const [semanas, setSemanas] = useState('26');
   const [gerando, setGerando] = useState(false);
@@ -1269,12 +1285,12 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
 
   const handleGerar = async () => {
     const [d, m, y] = dataInicio.split('/');
-    if (!d || !m || !y || y.length !== 4) { Alert.alert('Atenção', 'Informe a data de início no formato DD/MM/AAAA.'); return; }
+    if (!d || !m || !y || y.length !== 4) { Alert.alert(t('common.atencao'), t('admin.informeADataDeInicio')); return; }
     const inicio = new Date(Number(y), Number(m) - 1, Number(d));
-    if (inicio.getDay() !== 0) { Alert.alert('Atenção', 'A data de início precisa ser um domingo.'); return; }
+    if (inicio.getDay() !== 0) { Alert.alert(t('common.atencao'), t('admin.aDataDeInicioPrecisa')); return; }
     const numSemanas = Number(semanas);
-    if (!numSemanas || numSemanas < 1 || numSemanas > 52) { Alert.alert('Atenção', 'Informe uma quantidade de domingos entre 1 e 52.'); return; }
-    if (areas.length === 0) { Alert.alert('Atenção', 'Cadastre ao menos uma área de escala antes de gerar.'); return; }
+    if (!numSemanas || numSemanas < 1 || numSemanas > 52) { Alert.alert(t('common.atencao'), t('admin.informeUmaQuantidadeDeDomingos')); return; }
+    if (areas.length === 0) { Alert.alert(t('common.atencao'), t('admin.cadastreAoMenosUmaArea')); return; }
 
     setGerando(true);
 
@@ -1297,7 +1313,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
 
     if (existentesError) {
       setGerando(false);
-      Alert.alert('Erro', existentesError.message);
+      Alert.alert(t('common.erro'), existentesError.message);
       return;
     }
 
@@ -1350,17 +1366,17 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
 
     if (novas.length === 0) {
       setGerando(false);
-      Alert.alert('Nada a gerar', 'Não há voluntários disponíveis nas áreas cadastradas, ou o período já está totalmente preenchido.');
+      Alert.alert(t('admin.nadaAGerar'), t('admin.naoHaVoluntariosDisponiveisNas'));
       return;
     }
 
     const { error: insertError } = await supabase.from('escala_designacoes').insert(novas);
     setGerando(false);
-    if (insertError) { Alert.alert('Erro ao gerar', insertError.message); return; }
+    if (insertError) { Alert.alert(t('admin.erroAoGerar'), insertError.message); return; }
 
     onGerado();
     onClose();
-    Alert.alert('Escala gerada', `${novas.length} designações criadas ao longo de ${numSemanas} domingos.`);
+    Alert.alert(t('admin.escalaGerada'), `${novas.length} designações criadas ao longo de ${numSemanas} domingos.`);
   };
 
   return (
@@ -1369,7 +1385,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
           <View style={mo.sheet}>
             <View style={mo.header}>
-              <Text style={mo.title}>Gerar Escala do Semestre</Text>
+              <Text style={mo.title}>{t('admin.gerarEscalaDoSemestre')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
@@ -1380,17 +1396,17 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
             </Text>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Domingo de início</Text>
+              <Text style={mo.fieldLabel}>{t('admin.domingoDeInicio')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
-                  style={mo.fieldInput} placeholder="DD/MM/AAAA" placeholderTextColor={C.textDim}
+                  style={mo.fieldInput} placeholder={t('admin.ddMmAaaa')} placeholderTextColor={C.textDim}
                   value={dataInicio} onChangeText={setDataInicio} keyboardType="numeric" maxLength={10}
                 />
               </View>
             </View>
 
             <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>Quantidade de domingos</Text>
+              <Text style={mo.fieldLabel}>{t('admin.quantidadeDeDomingos')}</Text>
               <View style={mo.fieldRow}>
                 <TextInput
                   style={mo.fieldInput} placeholder="26" placeholderTextColor={C.textDim}
@@ -1401,7 +1417,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
 
             <TouchableOpacity style={[mo.saveBtn, gerando && { opacity: 0.7 }]} onPress={handleGerar} disabled={gerando}>
               {gerando ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="shuffle-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>Gerar Escala</Text></>
+                <><Ionicons name="shuffle-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.gerarEscala')}</Text></>
               )}
             </TouchableOpacity>
           </View>
@@ -1413,6 +1429,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AdminScreen() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { todayBirthdays, monthBirthdays } = useBirthdays();
   const [role, setRole] = useState<string | null>(null);
@@ -1545,30 +1562,30 @@ export default function AdminScreen() {
   }, [user]);
 
   const deleteOffering = (id: string) => {
-    Alert.alert('Remover Registro', 'Deseja remover este registro de oferta?', [
+    Alert.alert(t('admin.removerRegistro'), t('admin.desejaRemoverEsteRegistroDe'), [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('offerings').delete().eq('id', id);
+        await apagarLinha('offerings', id);
         fetchData();
       }},
     ]);
   };
 
   const deleteAviso = (id: string) => {
-    Alert.alert('Remover Aviso', 'Deseja remover este aviso?', [
+    Alert.alert(t('admin.removerAviso'), t('admin.desejaRemoverEsteAviso'), [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('avisos').delete().eq('id', id);
+        await apagarLinha('avisos', id);
         fetchData();
       }},
     ]);
   };
 
   const deleteDevocional = (id: string) => {
-    Alert.alert('Remover Devocional', 'Deseja remover este devocional?', [
+    Alert.alert(t('admin.removerDevocional'), t('admin.desejaRemoverEsteDevocional'), [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('devocionais').delete().eq('id', id);
+        await apagarLinha('devocionais', id);
         fetchData();
       }},
     ]);
@@ -1580,10 +1597,10 @@ export default function AdminScreen() {
   };
 
   const deleteContato = (id: string) => {
-    Alert.alert('Remover Mensagem', 'Deseja remover esta mensagem de contato?', [
+    Alert.alert(t('admin.removerMensagem'), t('admin.desejaRemoverEstaMensagemDe'), [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('contact_messages').delete().eq('id', id);
+        await apagarLinha('contact_messages', id);
         fetchData();
       }},
     ]);
@@ -1591,7 +1608,7 @@ export default function AdminScreen() {
 
   const responderPorEmail = (msg: ContactMessage) => {
     if (!msg.email) return;
-    const assunto = msg.grupo ? `Re: ${NOME_GRUPO[msg.grupo] ?? msg.grupo} — Peniel Church App` : 'Re: Peniel Church App';
+    const assunto = msg.grupo ? `Re: ${NOME_GRUPO[msg.grupo] ? t(NOME_GRUPO[msg.grupo]) : msg.grupo} — Peniel Church App` : 'Re: Peniel Church App';
     Linking.openURL(`mailto:${msg.email}?subject=${encodeURIComponent(assunto)}`).catch(() => {});
   };
 
@@ -1609,7 +1626,7 @@ export default function AdminScreen() {
       .from('agenda_eventos')
       .update({ destaque_home: !evento.destaque_home })
       .eq('id', evento.id);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     fetchData();
   };
 
@@ -1622,35 +1639,35 @@ export default function AdminScreen() {
     atual: boolean,
   ) => {
     const { error } = await supabase.from(tabela).update({ destaque_home: !atual }).eq('id', id);
-    if (error) { Alert.alert('Erro', error.message); return; }
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     fetchData();
   };
 
   const deleteEvento = (id: string) => {
-    Alert.alert('Remover Evento', 'Deseja remover este evento da agenda?', [
+    Alert.alert(t('admin.removerEvento'), t('admin.desejaRemoverEsteEventoDa'), [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('agenda_eventos').delete().eq('id', id);
+        await apagarLinha('agenda_eventos', id);
         fetchData();
       }},
     ]);
   };
 
   const deleteShort = (id: string) => {
-    Alert.alert('Remover Short', 'Deseja remover este vídeo?', [
+    Alert.alert(t('admin.removerShort'), t('admin.desejaRemoverEsteVideo'), [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('shorts_videos').delete().eq('id', id);
+        await apagarLinha('shorts_videos', id);
         fetchData();
       }},
     ]);
   };
 
   const deleteMensagem = (id: string) => {
-    Alert.alert('Remover Mensagem', 'Deseja remover esta mensagem do blog?', [
+    Alert.alert(t('admin.removerMensagem'), t('admin.desejaRemoverEstaMensagemDo'), [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('mensagens').delete().eq('id', id);
+        await apagarLinha('mensagens', id);
         fetchData();
       }},
     ]);
@@ -1659,10 +1676,10 @@ export default function AdminScreen() {
   useEffect(() => { if (!loadingRole && role) fetchData(); }, [loadingRole, role, fetchData]);
 
   const deleteInvite = (id: string) => {
-    Alert.alert('Remover Convite', 'Deseja remover este código?', [
+    Alert.alert(t('admin.removerConvite'), t('admin.desejaRemoverEsteCodigo'), [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Remover', style: 'destructive', onPress: async () => {
-        await supabase.from('invite_codes').delete().eq('id', id);
+        await apagarLinha('invite_codes', id);
         fetchData();
       }},
     ]);
@@ -1697,12 +1714,12 @@ export default function AdminScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['top']}>
         <View style={s.header}>
-          <Text style={s.headerTitle}>Admin</Text>
+          <Text style={s.headerTitle}>{t('admin.admin')}</Text>
         </View>
         <View style={s.denied}>
           <Ionicons name="lock-closed-outline" size={48} color={C.textDim} />
-          <Text style={s.deniedTitle}>Acesso Restrito</Text>
-          <Text style={s.deniedSub}>Esta área é exclusiva para os administradores da igreja.</Text>
+          <Text style={s.deniedTitle}>{t('admin.acessoRestrito')}</Text>
+          <Text style={s.deniedSub}>{t('admin.estaAreaEExclusivaPara')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -1715,8 +1732,8 @@ export default function AdminScreen() {
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.headerTitle}>Painel Admin</Text>
-          <Text style={s.headerSub}>{ehAdmin ? 'Administrador' : 'Líder de escala'}</Text>
+          <Text style={s.headerTitle}>{t('admin.painelAdmin')}</Text>
+          <Text style={s.headerSub}>{ehAdmin ? t('admin.administrador') : t('admin.liderDeEscala')}</Text>
         </View>
         {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && (
           <TouchableOpacity
@@ -1734,7 +1751,7 @@ export default function AdminScreen() {
           >
             <Ionicons name="add" size={18} color={C.primary} />
             <Text style={s.newBtnText}>
-              {abaAtual === 'ofertas' ? 'Nova Oferta' : abaAtual === 'avisos' ? 'Novo Aviso' : abaAtual === 'devocionais' ? 'Novo Devocional' : abaAtual === 'agenda' ? 'Novo Evento' : abaAtual === 'shorts' ? 'Novo Short' : abaAtual === 'mensagens' ? 'Nova Mensagem' : abaAtual === 'escalas' ? 'Nova Área' : 'Novo Convite'}
+              {abaAtual === 'ofertas' ? t('admin.novaOferta') : abaAtual === 'avisos' ? t('admin.novoAviso') : abaAtual === 'devocionais' ? t('admin.novoDevocional') : abaAtual === 'agenda' ? t('admin.novoEvento') : abaAtual === 'shorts' ? t('admin.novoShort') : abaAtual === 'mensagens' ? t('admin.novaMensagem') : abaAtual === 'escalas' ? t('admin.novaArea') : t('admin.novoConvite')}
             </Text>
           </TouchableOpacity>
         )}
@@ -1771,7 +1788,7 @@ export default function AdminScreen() {
                 <View style={s.tabDot} />
               )}
               <Text style={[s.tabBtnText, abaAtual === tab && { color: C.purple, fontWeight: '700' }]}>
-                {tab === 'convites' ? 'Convites' : tab === 'avisos' ? 'Avisos' : tab === 'devocionais' ? 'Devocionais' : tab === 'mensagens' ? 'Mensagens' : tab === 'contato' ? 'Contato' : tab === 'oracao' ? 'Oração' : tab === 'agenda' ? 'Agenda' : tab === 'shorts' ? 'Shorts' : tab === 'ofertas' ? 'Ofertas' : tab === 'escalas' ? 'Escalas' : 'Estatísticas'}
+                {t(`admin.aba_${tab}`)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1800,24 +1817,24 @@ export default function AdminScreen() {
               <View style={s.summaryRow}>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.success }]}>{invites.filter(i => !i.is_used).length}</Text>
-                  <Text style={s.summaryLabel}>Disponíveis</Text>
+                  <Text style={s.summaryLabel}>{t('admin.disponiveis')}</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.textMuted }]}>{invites.filter(i => i.is_used).length}</Text>
-                  <Text style={s.summaryLabel}>Usados</Text>
+                  <Text style={s.summaryLabel}>{t('admin.usados')}</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.purple }]}>{invites.length}</Text>
-                  <Text style={s.summaryLabel}>Total</Text>
+                  <Text style={s.summaryLabel}>{t('admin.total')}</Text>
                 </View>
               </View>
 
               {invites.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="ticket-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhum convite gerado ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumConviteGeradoAinda')}</Text>
                   <TouchableOpacity style={s.emptyBtn} onPress={() => setModalVisible(true)}>
-                    <Text style={s.emptyBtnText}>Criar primeiro convite</Text>
+                    <Text style={s.emptyBtnText}>{t('admin.criarPrimeiroConvite')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -1830,7 +1847,7 @@ export default function AdminScreen() {
                         </Text>
                         {invite.tipo === 'banda' && (
                           <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
-                            <Text style={[s.statusBadgeText, { color: C.purple }]}>🎵 Banda</Text>
+                            <Text style={[s.statusBadgeText, { color: C.purple }]}>{t('admin.pillBanda')}</Text>
                           </View>
                         )}
                       </View>
@@ -1874,9 +1891,9 @@ export default function AdminScreen() {
               {avisos.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="megaphone-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhum aviso publicado ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumAvisoPublicadoAinda')}</Text>
                   <TouchableOpacity style={s.emptyBtn} onPress={() => setAvisoModalVisible(true)}>
-                    <Text style={s.emptyBtnText}>Publicar primeiro aviso</Text>
+                    <Text style={s.emptyBtnText}>{t('admin.publicarPrimeiroAviso')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -1897,7 +1914,7 @@ export default function AdminScreen() {
                         </View>
                         {a.destaque_home && (
                           <View style={[s.statusBadge, { backgroundColor: C.accent + '30' }]}>
-                            <Text style={[s.statusBadgeText, { color: C.accentDim }]}>🏠 Na Home</Text>
+                            <Text style={[s.statusBadgeText, { color: C.accentDim }]}>{t('admin.naHome')}</Text>
                           </View>
                         )}
                       </View>
@@ -1928,9 +1945,9 @@ export default function AdminScreen() {
               {devocionais.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="book-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhum devocional publicado ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumDevocionalPublicadoAinda')}</Text>
                   <TouchableOpacity style={s.emptyBtn} onPress={() => setDevocionalModalVisible(true)}>
-                    <Text style={s.emptyBtnText}>Publicar primeiro devocional</Text>
+                    <Text style={s.emptyBtnText}>{t('admin.publicarPrimeiroDevocional')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -1947,7 +1964,7 @@ export default function AdminScreen() {
                         </View>
                         <View style={[s.statusBadge, { backgroundColor: (d.grupo ? C.accentDim : C.success) + '18' }]}>
                           <Text style={[s.statusBadgeText, { color: d.grupo ? C.accentDim : C.success }]}>
-                            {d.grupo ? (NOME_GRUPO[d.grupo] ?? d.grupo) : '🏠 Devocional Peniel'}
+                            {d.grupo ? (NOME_GRUPO[d.grupo] ? t(NOME_GRUPO[d.grupo]) : d.grupo) : t('admin.devocionalPeniel')}
                           </Text>
                         </View>
                       </View>
@@ -1972,9 +1989,9 @@ export default function AdminScreen() {
               {mensagens.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="newspaper-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhuma mensagem publicada ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumaMensagemPublicadaAinda')}</Text>
                   <TouchableOpacity style={s.emptyBtn} onPress={() => setMensagemModalVisible(true)}>
-                    <Text style={s.emptyBtnText}>Publicar primeira mensagem</Text>
+                    <Text style={s.emptyBtnText}>{t('admin.publicarPrimeiraMensagem')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -2012,17 +2029,17 @@ export default function AdminScreen() {
               <View style={s.summaryRow}>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.danger }]}>{contatoMensagens.filter(m => m.status !== 'respondido').length}</Text>
-                  <Text style={s.summaryLabel}>Pendentes</Text>
+                  <Text style={s.summaryLabel}>{t('admin.pendentes')}</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.purple }]}>{contatoMensagens.length}</Text>
-                  <Text style={s.summaryLabel}>Total</Text>
+                  <Text style={s.summaryLabel}>{t('admin.total')}</Text>
                 </View>
               </View>
               {contatoMensagens.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="chatbubble-ellipses-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhuma mensagem de contato ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumaMensagemDeContatoAinda')}</Text>
                 </View>
               ) : (
                 contatoMensagens.map(msg => (
@@ -2032,7 +2049,7 @@ export default function AdminScreen() {
                         <Text style={s.inviteCode}>{msg.nome}</Text>
                         {!!msg.grupo && (
                           <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
-                            <Text style={[s.statusBadgeText, { color: C.purple }]}>{NOME_GRUPO[msg.grupo] ?? msg.grupo}</Text>
+                            <Text style={[s.statusBadgeText, { color: C.purple }]}>{NOME_GRUPO[msg.grupo] ? t(NOME_GRUPO[msg.grupo]) : msg.grupo}</Text>
                           </View>
                         )}
                       </View>
@@ -2085,21 +2102,21 @@ export default function AdminScreen() {
               <View style={s.summaryRow}>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.danger }]}>{pedidosOracao.filter(p => p.status === 'aberto').length}</Text>
-                  <Text style={s.summaryLabel}>Abertos</Text>
+                  <Text style={s.summaryLabel}>{t('admin.abertos')}</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.accentDim }]}>{pedidosOracao.filter(p => p.status === 'em_oracao').length}</Text>
-                  <Text style={s.summaryLabel}>Em oração</Text>
+                  <Text style={s.summaryLabel}>{t('admin.emOracao')}</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.purple }]}>{pedidosOracao.length}</Text>
-                  <Text style={s.summaryLabel}>Total</Text>
+                  <Text style={s.summaryLabel}>{t('admin.total')}</Text>
                 </View>
               </View>
               {pedidosOracao.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="heart-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhum pedido de oração ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumPedidoDeOracaoAinda')}</Text>
                 </View>
               ) : (
                 pedidosOracao.map(p => (
@@ -2142,9 +2159,9 @@ export default function AdminScreen() {
               {eventosAgenda.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="calendar-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhum evento cadastrado ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumEventoCadastradoAinda')}</Text>
                   <TouchableOpacity style={s.emptyBtn} onPress={() => setEventoModalVisible(true)}>
-                    <Text style={s.emptyBtnText}>Criar primeiro evento</Text>
+                    <Text style={s.emptyBtnText}>{t('admin.criarPrimeiroEvento')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -2160,7 +2177,7 @@ export default function AdminScreen() {
                         )}
                         {e.destaque_home && (
                           <View style={[s.statusBadge, { backgroundColor: C.accent + '30' }]}>
-                            <Text style={[s.statusBadgeText, { color: C.accentDim }]}>🏠 Na Home</Text>
+                            <Text style={[s.statusBadgeText, { color: C.accentDim }]}>{t('admin.naHome')}</Text>
                           </View>
                         )}
                       </View>
@@ -2202,9 +2219,9 @@ export default function AdminScreen() {
               {shorts.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="film-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhum vídeo curto publicado ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumVideoCurtoPublicadoAinda')}</Text>
                   <TouchableOpacity style={s.emptyBtn} onPress={() => setShortModalVisible(true)}>
-                    <Text style={s.emptyBtnText}>Publicar primeiro short</Text>
+                    <Text style={s.emptyBtnText}>{t('admin.publicarPrimeiroShort')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -2221,7 +2238,7 @@ export default function AdminScreen() {
                         </View>
                         {sh.destaque_home && (
                           <View style={[s.statusBadge, { backgroundColor: C.accent + '30' }]}>
-                            <Text style={[s.statusBadgeText, { color: C.accentDim }]}>🏠 Na Home</Text>
+                            <Text style={[s.statusBadgeText, { color: C.accentDim }]}>{t('admin.naHome')}</Text>
                           </View>
                         )}
                       </View>
@@ -2251,20 +2268,20 @@ export default function AdminScreen() {
                   <Text style={[s.summaryNum, { fontSize: 20, color: C.purple }]}>
                     £{offerings.reduce((sum, o) => sum + Number(o.valor), 0).toFixed(0)}
                   </Text>
-                  <Text style={s.summaryLabel}>Total registrado</Text>
+                  <Text style={s.summaryLabel}>{t('admin.totalRegistrado')}</Text>
                 </View>
                 <View style={s.summaryCard}>
                   <Text style={[s.summaryNum, { color: C.success }]}>{offerings.length}</Text>
-                  <Text style={s.summaryLabel}>Registros</Text>
+                  <Text style={s.summaryLabel}>{t('admin.registros')}</Text>
                 </View>
               </View>
 
               {offerings.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="gift-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>Nenhuma oferta registrada ainda</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumaOfertaRegistradaAinda')}</Text>
                   <TouchableOpacity style={s.emptyBtn} onPress={() => setOfertaModalVisible(true)}>
-                    <Text style={s.emptyBtnText}>Registrar primeira oferta</Text>
+                    <Text style={s.emptyBtnText}>{t('admin.registrarPrimeiraOferta')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -2275,7 +2292,7 @@ export default function AdminScreen() {
                       <View style={s.inviteMetaRow}>
                         <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
                           <Text style={[s.statusBadgeText, { color: C.purple }]}>
-                            £{Number(o.valor).toFixed(2)} · {o.tipo === 'dizimo' ? 'Dízimo' : o.tipo === 'oferta' ? 'Oferta' : o.tipo === 'missoes' ? 'Missões' : 'Outro'}
+                            £{Number(o.valor).toFixed(2)} · {o.tipo === 'dizimo' ? t('admin.tipoDizimo') : o.tipo === 'oferta' ? t('admin.tipoOferta') : o.tipo === 'missoes' ? t('admin.tipoMissoes') : t('admin.tipoOutro')}
                           </Text>
                         </View>
                       </View>
@@ -2305,18 +2322,18 @@ export default function AdminScreen() {
                     onPress={() => setGerarEscalaModalVisible(true)}
                   >
                     <View style={s.inviteLeft}>
-                      <Text style={[s.inviteCode, { color: C.purple }]}>Gerar Escala do Semestre</Text>
-                      <Text style={s.emptyText}>Distribui os voluntários pelos domingos automaticamente</Text>
+                      <Text style={[s.inviteCode, { color: C.purple }]}>{t('admin.gerarEscalaDoSemestre')}</Text>
+                      <Text style={s.emptyText}>{t('admin.distribuiOsVoluntariosPelosDomingos')}</Text>
                     </View>
                     <Ionicons name="shuffle-outline" size={22} color={C.purple} />
                   </TouchableOpacity>
                 )}
-                <Text style={s.sectionLabel}>Áreas de Serviço</Text>
+                <Text style={s.sectionLabel}>{t('admin.areasDeServico')}</Text>
                 {areasVisiveis.length === 0 ? (
                   <View style={s.empty}>
                     <Ionicons name="people-circle-outline" size={40} color={C.textDim} />
                     <Text style={s.emptyText}>
-                      {role === 'admin' ? 'Nenhuma área cadastrada ainda' : 'Você ainda não lidera nenhuma área de escala'}
+                      {role === 'admin' ? t('admin.nenhumaAreaCadastradaAinda') : t('admin.voceAindaNaoLideraArea')}
                     </Text>
                   </View>
                 ) : (
@@ -2346,13 +2363,13 @@ export default function AdminScreen() {
           {/* ══ ESTATÍSTICAS ══════════════════════════════════════════════════ */}
           {abaAtual === 'stats' && (
             <>
-              <Text style={s.sectionLabel}>Usuários do App</Text>
+              <Text style={s.sectionLabel}>{t('admin.usuariosDoApp')}</Text>
               <View style={s.statsGrid}>
                 {[
-                  { label: 'Total', value: stats.total, icon: 'people-outline', color: C.primary },
-                  { label: 'Membros', value: stats.membros, icon: 'person-outline', color: C.success },
-                  { label: 'Líderes', value: stats.lideres, icon: 'star-outline', color: C.accent },
-                  { label: 'Visitantes', value: stats.visitantes, icon: 'eye-outline', color: C.textMuted },
+                  { label: t('admin.total'), value: stats.total, icon: 'people-outline', color: C.primary },
+                  { label: t('admin.statMembros'), value: stats.membros, icon: 'person-outline', color: C.success },
+                  { label: t('admin.statLideres'), value: stats.lideres, icon: 'star-outline', color: C.accent },
+                  { label: t('admin.statVisitantes'), value: stats.visitantes, icon: 'eye-outline', color: C.textMuted },
                 ].map(stat => (
                   <View key={stat.label} style={s.statCard}>
                     <View style={[s.statIcon, { backgroundColor: stat.color + '18' }]}>
@@ -2364,18 +2381,18 @@ export default function AdminScreen() {
                 ))}
               </View>
 
-              <Text style={[s.sectionLabel, { marginTop: 24 }]}>Convites</Text>
+              <Text style={[s.sectionLabel, { marginTop: 24 }]}>{t('admin.convites')}</Text>
               <View style={s.inviteStatsCard}>
                 <View style={s.inviteStatRow}>
-                  <Text style={s.inviteStatLabel}>Total gerados</Text>
+                  <Text style={s.inviteStatLabel}>{t('admin.totalGerados')}</Text>
                   <Text style={s.inviteStatValue}>{invites.length}</Text>
                 </View>
                 <View style={s.inviteStatRow}>
-                  <Text style={s.inviteStatLabel}>Utilizados</Text>
+                  <Text style={s.inviteStatLabel}>{t('admin.utilizados')}</Text>
                   <Text style={[s.inviteStatValue, { color: C.success }]}>{invites.filter(i => i.is_used).length}</Text>
                 </View>
                 <View style={[s.inviteStatRow, { borderBottomWidth: 0 }]}>
-                  <Text style={s.inviteStatLabel}>Disponíveis</Text>
+                  <Text style={s.inviteStatLabel}>{t('admin.disponiveis')}</Text>
                   <Text style={[s.inviteStatValue, { color: C.purple }]}>{invites.filter(i => !i.is_used).length}</Text>
                 </View>
               </View>
@@ -2383,19 +2400,19 @@ export default function AdminScreen() {
               {/* Taxa de conversão */}
               {invites.length > 0 && (
                 <View style={s.conversionCard}>
-                  <Text style={s.conversionLabel}>Taxa de ativação</Text>
+                  <Text style={s.conversionLabel}>{t('admin.taxaDeAtivacao')}</Text>
                   <Text style={s.conversionValue}>
                     {Math.round((invites.filter(i => i.is_used).length / invites.length) * 100)}%
                   </Text>
-                  <Text style={s.conversionSub}>dos convites foram utilizados</Text>
+                  <Text style={s.conversionSub}>{t('admin.dosConvitesForamUtilizados')}</Text>
                 </View>
               )}
 
               {/* Aniversários do mês */}
-              <Text style={[s.sectionLabel, { marginTop: 24 }]}>🎂 Aniversários do Mês</Text>
+              <Text style={[s.sectionLabel, { marginTop: 24 }]}>{t('admin.aniversariosDoMes')}</Text>
               {monthBirthdays.length === 0 ? (
                 <View style={[s.empty, { paddingVertical: 24 }]}>
-                  <Text style={s.emptyText}>Nenhum aniversário este mês</Text>
+                  <Text style={s.emptyText}>{t('admin.nenhumAniversarioEsteMes')}</Text>
                 </View>
               ) : (
                 monthBirthdays.map(member => {
@@ -2416,7 +2433,7 @@ export default function AdminScreen() {
                       </View>
                       {isToday && (
                         <View style={s.todayBadge}>
-                          <Text style={s.todayBadgeText}>Hoje</Text>
+                          <Text style={s.todayBadgeText}>{t('admin.hoje')}</Text>
                         </View>
                       )}
                     </View>

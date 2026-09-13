@@ -14,10 +14,12 @@ import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 import { supabase } from '../lib/supabase';
+import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { useAcesso } from '../lib/acesso';
 import { IDIOMAS, trocarIdioma } from '../lib/i18n';
 import { useTheme, ThemeMode } from '../lib/theme';
+import { pushEstaAtivo, definirPush, removerTokenDesteAparelho } from '../lib/useNotifications';
 
 // Versão real do app.json (não mais um texto fixo desatualizado), + info de
 // qual atualização OTA (EAS Update) está rodando agora — útil pra confirmar
@@ -47,12 +49,19 @@ interface MenuSection { title: string; items: MenuItem[]; }
 function paleta(isDark: boolean) {
   return isDark ? {
     primary: '#100D28', primaryLight: '#3B2E7A',
+    // `primary` é cor de FUNDO (cabeçalho, botão cheio). Usada como cor de
+    // ícone ou número sobre `surface` (#1C1940) no tema escuro ela dá 1,14:1
+    // de contraste — o ícone some. `icone` é a versão legível para desenhar
+    // por cima da superfície: 7,4:1, passa em AA e AAA.
+    icone: '#B9A9FF',
     accent: '#F5C842', accentLight: '#FFD873',
     bg: '#0E0B22', surface: '#1C1940', surfaceAlt: '#241F4D',
     text: '#F1EFFA', textMuted: '#A6A0C7', textDim: '#726A99',
     border: '#332D5C', danger: '#FF6B6B', success: '#4ADE80',
   } : {
     primary: '#1A1740', primaryLight: '#2D2870',
+    icone: '#1A1740', // no claro é o próprio primary: 13,9:1 sobre o branco
+
     accent: '#C8960A', accentLight: '#F5C842',
     bg: '#F7F4EE', surface: '#FFFFFF', surfaceAlt: '#F0EDE8',
     text: '#1A1A2E', textMuted: '#6B7280', textDim: '#9CA3AF',
@@ -182,7 +191,7 @@ function SavedVersesModal({ visible, userId, onClose }: {
     Alert.alert(t('common.remover'), t('perfil.removerVersiculoConfirm'), [
       { text: t('common.cancelar'), style: 'cancel' },
       { text: t('common.remover'), style: 'destructive', onPress: async () => {
-        await supabase.from('saved_verses').delete().eq('id', id);
+        await apagarLinha('saved_verses', id);
         fetchItems();
       }},
     ]);
@@ -499,6 +508,7 @@ function DeleteAccountModal({ visible, onClose }: { visible: boolean; onClose: (
               const { data, error } = await supabase.functions.invoke('delete-account');
               if (error) throw error;
               if (data?.error) throw new Error(data.error);
+              await removerTokenDesteAparelho();
               await supabase.auth.signOut();
               onClose();
               // Espera o modal terminar de fechar antes de abrir o Alert nativo —
@@ -581,8 +591,31 @@ export default function ProfileScreen() {
   const { isDark, mode, setMode } = useTheme();
   const C = useMemo(() => paleta(isDark), [isDark]);
   const styles = useMemo(() => buildStyles(C), [C]);
+  // O interruptor era decorativo: guardava um booleano que ninguém lia, não
+  // mexia em `push_tokens` e voltava para "ligado" toda vez que a tela
+  // remontava. Configuração de privacidade que mente é reprovação certa na
+  // review da Apple — e, pior, a pessoa achava que tinha desligado.
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [salvandoNotificacoes, setSalvandoNotificacoes] = useState(false);
+
+  useEffect(() => { pushEstaAtivo().then(setNotificationsEnabled); }, []);
+
+  const alternarNotificacoes = async (ativo: boolean) => {
+    // Otimista na tela, mas o estado volta se a operação falhar — senão o
+    // interruptor mostraria "desligado" com o push continuando a chegar.
+    setNotificationsEnabled(ativo);
+    setSalvandoNotificacoes(true);
+    try {
+      await definirPush(ativo, user?.id);
+    } catch {
+      setNotificationsEnabled(!ativo);
+      Alert.alert(t('common.erro'), t('perfil.notificacoesFalha'));
+    } finally {
+      setSalvandoNotificacoes(false);
+    }
+  };
   const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState<{ estudos: number; versiculos: number; oracoes: number } | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [savedVersesVisible, setSavedVersesVisible] = useState(false);
@@ -607,6 +640,29 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (!user) { setProfile(null); setLoadingProfile(false); return; }
     fetchProfile();
+  }, [user?.id]);
+
+  // As três estatísticas da primeira dobra ficavam em '—' fixo no código,
+  // com os dados existindo logo abaixo na mesma tela (a lista de estudos, os
+  // pedidos de oração e os versículos salvos já eram lidos pelos modais).
+  // `head: true` traz só a contagem, sem baixar as linhas.
+  useEffect(() => {
+    if (!user) { setStats(null); return; }
+    let cancelado = false;
+    (async () => {
+      const conta = (tabela: string) =>
+        supabase.from(tabela).select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+      const [estudos, versiculos, oracoes] = await Promise.all([
+        conta('reading_history'), conta('saved_verses'), conta('prayer_requests'),
+      ]);
+      if (cancelado) return;
+      setStats({
+        estudos: estudos.count ?? 0,
+        versiculos: versiculos.count ?? 0,
+        oracoes: oracoes.count ?? 0,
+      });
+    })();
+    return () => { cancelado = true; };
   }, [user?.id]);
 
   const handleTrocarFoto = async () => {
@@ -675,6 +731,12 @@ export default function ProfileScreen() {
     Alert.alert(t('perfil.sairDaContaTitulo'), t('perfil.confirmaSair'), [
       { text: t('common.cancelar'), style: 'cancel' },
       { text: t('perfil.sairBtn'), style: 'destructive', onPress: async () => {
+        // Antes de encerrar a sessão, e não depois: a policy de delete de
+        // `push_tokens` exige `user_id = auth.uid()`, então já deslogado não
+        // dá mais para apagar. Sem isso, a linha continuava apontando para a
+        // conta antiga e o aparelho deslogado seguia recebendo os pushes
+        // daquela pessoa — inclusive os que são só para membros.
+        await removerTokenDesteAparelho();
         const { error } = await supabase.auth.signOut();
         if (error) Alert.alert(t('common.erro'), error.message);
       }},
@@ -733,7 +795,8 @@ export default function ProfileScreen() {
         {
           icon: 'notifications-outline', label: t('perfil.notificacoes'),
           rightElement: (
-            <Switch value={notificationsEnabled} onValueChange={setNotificationsEnabled}
+            <Switch value={notificationsEnabled} onValueChange={alternarNotificacoes}
+              disabled={salvandoNotificacoes}
               trackColor={{ false: C.border, true: C.primaryLight }}
               thumbColor={notificationsEnabled ? C.accent : '#fff'} />
           ),
@@ -828,7 +891,12 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          {[{ value: '—', label: t('perfil.statEstudos') }, { value: '—', label: t('perfil.statEventos') }, { value: '—', label: t('perfil.statOracoes') }].map(stat => (
+          {/* Visitante sem conta continua vendo '—': não há o que contar. */}
+          {[
+            { value: stats ? String(stats.estudos) : '—', label: t('perfil.statEstudos') },
+            { value: stats ? String(stats.versiculos) : '—', label: t('perfil.statVersiculos') },
+            { value: stats ? String(stats.oracoes) : '—', label: t('perfil.statOracoes') },
+          ].map(stat => (
             <View key={stat.label} style={styles.statItem}>
               <Text style={styles.statValue}>{stat.value}</Text>
               <Text style={styles.statLabel}>{stat.label}</Text>
@@ -847,7 +915,7 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
             onPress={() => navigation.navigate((isLoggedIn ? 'AtivarMembro' : 'Auth') as never)}
           >
-            <Ionicons name={isLoggedIn ? 'key-outline' : 'log-in-outline'} size={20} color={C.primary} />
+            <Ionicons name={isLoggedIn ? 'key-outline' : 'log-in-outline'} size={20} color={C.icone} />
             <View style={{ flex: 1 }}>
               <Text style={styles.loginCtaTitle}>
                 {isLoggedIn ? t('perfil.souMembroTitulo') : t('perfil.entrarOuCriarConta')}
@@ -873,7 +941,7 @@ export default function ProfileScreen() {
                   activeOpacity={item.rightElement ? 1 : 0.7}
                   disabled={!item.onPress && !item.rightElement}
                 >
-                  <Ionicons name={item.icon} size={20} color={item.color ?? C.primary} style={styles.menuIcon} />
+                  <Ionicons name={item.icon} size={20} color={item.color ?? C.icone} style={styles.menuIcon} />
                   <Text style={[styles.menuLabel, item.color && { color: item.color }]}>{item.label}</Text>
                   <View style={styles.menuRight}>
                     {item.rightElement ?? (item.onPress && <Ionicons name="chevron-forward" size={16} color={C.textMuted} />)}
@@ -946,7 +1014,7 @@ function buildStyles(C: Paleta) { return StyleSheet.create({
   badgeText: { fontSize: 12, color: C.primary, fontWeight: '600' },
   statsRow: { flexDirection: 'row', marginHorizontal: 20, marginTop: 12, backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.border, overflow: 'hidden' },
   statItem: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRightWidth: 1, borderRightColor: C.border },
-  statValue: { fontSize: 22, fontWeight: '700', color: C.primary },
+  statValue: { fontSize: 22, fontWeight: '700', color: C.icone },
   statLabel: { fontSize: 12, color: C.textMuted, marginTop: 2 },
   loginCta: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginTop: 12, backgroundColor: C.surface, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: C.border },
   loginCtaTitle: { fontSize: 14, fontWeight: '700', color: C.text },

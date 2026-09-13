@@ -18,6 +18,7 @@ import { useTheme } from '../lib/theme';
 import { useAcesso } from '../lib/acesso';
 import { WebView } from 'react-native-webview';
 import { extractYoutubeId, youtubeThumbnail } from '../lib/youtube';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Paleta local — só os elementos "claros" da Home (cards brancos: live,
 // acesso rápido, eventos, especial) precisam trocar no escuro. Os blocos já
@@ -181,9 +182,11 @@ function SearchModal({ visible, onClose, navigation }: {
   const avisoAbertoTitulo = useCampoTraduzido(avisoAberto?.titulo, 'avisos', avisoAberto?.id, 'titulo');
   const avisoAbertoTexto = useCampoTraduzido(avisoAberto?.texto, 'avisos', avisoAberto?.id, 'texto');
 
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={sm.overlay}>
+      <View style={[sm.overlay, { paddingTop: insets.top + 12 }]}>
         <View style={sm.sheet}>
           <View style={sm.searchRow}>
             <Ionicons name="search-outline" size={18} color="rgba(255,255,255,0.5)" />
@@ -271,7 +274,8 @@ const sm = StyleSheet.create({
   notifTexto: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4, lineHeight: 18 },
   notifData: { fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 6 },
   notifExcluirBtn: { alignSelf: 'flex-start', padding: 4 },
-  overlay: { flex: 1, backgroundColor: '#1A1740', paddingTop: 55 },
+  // O `paddingTop` real vem da área segura, em cada uso.
+  overlay: { flex: 1, backgroundColor: '#1A1740' },
   sheet: { flex: 1, paddingHorizontal: 18 },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, paddingHorizontal: 14, height: 46 },
   input: { flex: 1, fontSize: 15, color: '#fff' },
@@ -875,11 +879,16 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
     label: tipo === 'presencial' ? t('grupos.tagPresencial') : tipo === 'online' ? t('grupos.tagOnline') : tipo === 'jovens' ? t('home.tagJovens') : t('grupos.tagCasa'),
   });
 
+  // Antes de qualquer `return` condicional: hook que roda às vezes quebra a
+  // ordem dos hooks. `paddingTop` fixo em 55 sobrava em aparelho sem entalhe
+  // e faltava nos iPhone mais novos.
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerEsquerda}>
           <Image source={require('../assets/peniel-logo.png')} style={styles.logo} />
           <View>
@@ -1139,7 +1148,7 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
 
       {/* ── Notificações (sininho) ─────────────────────────────────────────── */}
       <Modal visible={notifModalVisible} animationType="slide" transparent onRequestClose={() => setNotifModalVisible(false)}>
-        <View style={sm.overlay}>
+        <View style={[sm.overlay, { paddingTop: insets.top + 12 }]}>
           <View style={sm.sheet}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <Text style={{ fontSize: 18, fontWeight: '700', color: '#fff' }}>{t('home.notificacoes')}</Text>
@@ -1171,7 +1180,7 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
 
 function buildStyles(C: PaletaHome) { return StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: { backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerEsquerda: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   logo: { width: 48, height: 48, borderRadius: 24 },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },

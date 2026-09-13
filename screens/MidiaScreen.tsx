@@ -415,13 +415,16 @@ export default function MidiaScreen() {
             <Text style={s.podcastSub}>{t('midia.podcastSub')}</Text>
           </View>
 
+          {/* Sobrou só o YouTube porque só ele existe de verdade. Os outros
+              três abriam a HOME do Spotify, da Apple e do Google Podcasts —
+              nenhum levava a um podcast da igreja, que ainda não existe. E o
+              Google Podcasts foi descontinuado: aquele botão era um link
+              morto sob o rótulo "Ouça em". Quando o podcast estrear, é só
+              voltar com as plataformas, cada uma com o link real do programa. */}
           <Text style={s.sectionLabel}>{t('midia.oucaEm')}</Text>
           <View style={s.platformsGrid}>
             {[
-              { nome: 'Spotify',       icon: 'musical-note',   cor: '#1DB954', url: 'https://spotify.com' },
-              { nome: 'Apple Podcasts',icon: 'logo-apple',     cor: '#FC3C44', url: 'https://podcasts.apple.com' },
               { nome: 'YouTube',       icon: 'logo-youtube',   cor: '#FF0000', url: YOUTUBE_CHANNEL_URL },
-              { nome: 'Google',        icon: 'logo-google',    cor: '#4285F4', url: 'https://podcasts.google.com' },
             ].map(p => (
               <TouchableOpacity
                 key={p.nome}
@@ -538,7 +541,10 @@ const s = StyleSheet.create({
   podcastTitle: { fontSize: 20, fontWeight: '800', color: C.text },
   podcastSub: { fontSize: 13, color: C.textMuted },
   platformsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-  platformCard: { width: '47%', backgroundColor: C.surface, borderRadius: 14, padding: 16, alignItems: 'center', gap: 8, borderWidth: 1 },
+  // `flexGrow` em vez de largura fixa: com uma plataforma só o card ocupa a
+  // linha inteira em vez de ficar um quadradinho solto no canto, e quando
+  // voltarem as outras ele se reparte em dois por linha como antes.
+  platformCard: { flexGrow: 1, minWidth: '47%', backgroundColor: C.surface, borderRadius: 14, padding: 16, alignItems: 'center', gap: 8, borderWidth: 1 },
   platformNome: { fontSize: 12, fontWeight: '600', color: C.text },
   podcastEmBreve: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: C.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: C.border },
   podcastEmBreveText: { flex: 1, fontSize: 13, color: C.textMuted, lineHeight: 20 },

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../lib/theme';
 import { usePaymentSheet } from '@stripe/stripe-react-native';
 import { supabase } from '../lib/supabase';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Paleta local — header, card do valor e card do versículo já são roxo
 // escuro por design e funcionam nos dois temas sem mudar. Só os blocos
@@ -133,9 +134,14 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
     }
   };
 
+  // `paddingTop` fixo em 55 dava um respiro engraçado em aparelho sem
+  // entalhe e apertava o título contra o relógio nos iPhone mais novos. A
+  // área segura é a medida real do aparelho.
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={styles.headerSub}>{t('oferta.contribuaComAObra')}</Text>
           <Text style={styles.headerTitulo}>{t('oferta.titulo')}</Text>
@@ -282,7 +288,7 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
 
 function buildStyles(C: PaletaOferta) { return StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
-  header: { backgroundColor: '#1A1740', paddingTop: 55, paddingBottom: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
   headerTitulo: { fontSize: 18, fontWeight: '500', color: '#fff', marginTop: 2 },

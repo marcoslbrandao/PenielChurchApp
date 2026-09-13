@@ -51,7 +51,6 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
   const [outroAtivo, setOutroAtivo] = useState(false);
   const [valorCustom, setValorCustom] = useState('');
   const [tipoSelecionado, setTipoSelecionado] = useState('dizimo');
-  const [recorrencia, setRecorrencia] = useState('unica');
 
   // ─── Pagamento via Stripe (PaymentSheet) ──────────────────────────────────
   // Um único botão que cobre cartão + Apple Pay + Google Pay, tudo dentro da
@@ -222,36 +221,6 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
           ))}
         </View>
 
-        {/* ── Recorrência ───────────────────────────────────────────────────── */}
-        <View style={styles.recorrenciaCard}>
-          <View style={styles.recorrenciaTop}>
-            <Text style={styles.recorrenciaTitulo}>{t('oferta.frequencia')}</Text>
-            <View style={styles.recorrenciaAbas}>
-              <TouchableOpacity
-                style={[styles.recorrenciaAba, recorrencia === 'unica' && styles.recorrenciaAbaAtiva]}
-                onPress={() => setRecorrencia('unica')}
-              >
-                <Text style={[styles.recorrenciaAbaTexto, recorrencia === 'unica' && styles.recorrenciaAbaTextoAtivo]}>
-                  {t('oferta.unica')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.recorrenciaAba, recorrencia === 'mensal' && styles.recorrenciaAbaAtiva]}
-                onPress={() => setRecorrencia('mensal')}
-              >
-                <Text style={[styles.recorrenciaAbaTexto, recorrencia === 'mensal' && styles.recorrenciaAbaTextoAtivo]}>
-                  {t('oferta.mensal')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <Text style={styles.recorrenciaDesc}>
-            {recorrencia === 'mensal'
-              ? t('oferta.freqMensalDesc')
-              : t('oferta.freqUnicaDesc')}
-          </Text>
-        </View>
-
         {/* ── Resumo ────────────────────────────────────────────────────────── */}
         <View style={styles.resumoCard}>
           <View style={styles.resumoLinha}>
@@ -266,7 +235,13 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
           </View>
           <View style={[styles.resumoLinha, { borderBottomWidth: 0 }]}>
             <Text style={styles.resumoLabel}>{t('oferta.frequencia')}</Text>
-            <Text style={styles.resumoValor}>{recorrencia === 'mensal' ? t('oferta.todoMes') : t('oferta.umaVez')}</Text>
+            {/* Fixo em "uma vez": a opção "Mensal" foi removida em 13 Set. Ela
+                mostrava "Sua contribuição será debitada mensalmente" e "Todo
+                mês" no resumo, mas `recorrencia` nunca entrava no corpo da
+                requisição — a Edge Function criava um PaymentIntent avulso.
+                Quem escolhia Mensal era cobrado UMA vez achando que tinha
+                assinado. Volta quando houver Stripe Subscriptions de verdade. */}
+            <Text style={styles.resumoValor}>{t('oferta.umaVez')}</Text>
           </View>
         </View>
 
@@ -342,15 +317,6 @@ function buildStyles(C: PaletaOferta) { return StyleSheet.create({
   tipoNomeAtivo: { color: '#534AB7' },
   tipoSub: { fontSize: 11, color: C.textMuted },
   // Recorrência
-  recorrenciaCard: { backgroundColor: C.cardBg, borderRadius: 14, borderWidth: 0.5, borderColor: C.cardBorder, padding: 14, marginHorizontal: 14, marginBottom: 16 },
-  recorrenciaTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  recorrenciaTitulo: { fontSize: 13, fontWeight: '500', color: C.textPrimary },
-  recorrenciaAbas: { flexDirection: 'row', backgroundColor: C.abasBg, borderRadius: 8, overflow: 'hidden' },
-  recorrenciaAba: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-  recorrenciaAbaAtiva: { backgroundColor: '#534AB7' },
-  recorrenciaAbaTexto: { fontSize: 12, fontWeight: '500', color: C.textMuted },
-  recorrenciaAbaTextoAtivo: { color: '#fff' },
-  recorrenciaDesc: { fontSize: 12, color: C.textMuted, lineHeight: 18 },
   // Resumo
   resumoCard: { backgroundColor: C.cardBg, borderRadius: 14, borderWidth: 0.5, borderColor: C.cardBorder, marginHorizontal: 14, marginBottom: 16, overflow: 'hidden' },
   resumoLinha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 0.5, borderBottomColor: C.cardBorder },

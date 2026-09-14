@@ -5,16 +5,27 @@
 // tela (como estava antes), o React desmontaria o player/canal do Supabase
 // junto com a tela e o áudio pararia.
 //
-// Qualquer tela pode ler o estado atual (ouvindo / legendaAtual) e assinar
-// mudanças com `assinar(callback)`. A `TraducaoAoVivoScreen` é quem chama
-// `iniciar()`/`parar()` a partir dos botões — parar só acontece quando o
+// Bilíngue desde 14/09/2026: o translator-service manda os dois idiomas
+// (inglês e espanhol) misturados no mesmo canal, cada trecho marcado com
+// `idioma`. Esse serviço só enfileira/toca o trecho se `idioma` bater com
+// `idiomaSelecionado` — o outro idioma é descartado na hora (não fica
+// guardado esperando, senão ao trocar de idioma tocaria um trecho antigo,
+// fora de sincronia com o que está sendo falado agora).
+//
+// Qualquer tela pode ler o estado atual (ouvindo / legendaAtual /
+// idiomaSelecionado) e assinar mudanças com `assinar(callback)`. A
+// `TraducaoAoVivoScreen` é quem chama `iniciar()`/`parar()`/
+// `selecionarIdioma()` a partir dos botões — parar só acontece quando o
 // usuário volta nessa tela e aperta "Stop", nunca automaticamente ao sair.
 
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { supabase } from './supabase';
 
+export type IdiomaTraducao = 'en' | 'es';
+
 type ChunkTraduzido = {
   seq: number;
+  idioma: IdiomaTraducao;
   texto: string;
   audio: string; // base64
   formato: 'mp3';
@@ -31,6 +42,7 @@ class TraducaoAudioService {
 
   ouvindo = false;
   legendaAtual = '';
+  idiomaSelecionado: IdiomaTraducao = 'en';
 
   private garantirPlayer() {
     if (this.player) return this.player;
@@ -78,7 +90,11 @@ class TraducaoAudioService {
     this.canalAudio = supabase
       .channel('traducao-audio')
       .on('broadcast', { event: 'chunk' }, ({ payload }) => {
-        this.fila.push(payload as ChunkTraduzido);
+        const chunk = payload as ChunkTraduzido;
+        // Descarta na hora qualquer trecho que não seja do idioma
+        // selecionado agora — ver comentário do topo do arquivo.
+        if (chunk.idioma !== this.idiomaSelecionado) return;
+        this.fila.push(chunk);
         this.tocarProximoDaFila();
       })
       .subscribe();
@@ -96,6 +112,20 @@ class TraducaoAudioService {
       this.canalAudio = null;
     }
     this.player?.pause();
+  }
+
+  // Troca o idioma ouvido. Pode ser chamado a qualquer momento (antes ou
+  // durante a escuta) — se já estiver ouvindo, descarta a fila pendente e
+  // qualquer trecho tocando agora do idioma antigo, pra retomar "ao vivo"
+  // no novo idioma em vez de tocar um backlog fora de sincronia.
+  selecionarIdioma(idioma: IdiomaTraducao) {
+    if (idioma === this.idiomaSelecionado) return;
+    this.idiomaSelecionado = idioma;
+    this.fila = [];
+    this.tocando = false;
+    this.legendaAtual = '';
+    this.player?.pause();
+    this.notificar();
   }
 
   // Retorna uma função de "desinscrever" — chame no cleanup de um useEffect.

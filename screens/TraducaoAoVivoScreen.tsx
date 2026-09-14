@@ -1,4 +1,4 @@
-// Tradução ao vivo do culto — tela do app (v2, integrada ao repo real em 24 Ago 2026)
+// Tradução ao vivo do culto — tela do app (v3, bilíngue em 14 Set 2026)
 //
 // Segue o mesmo padrão visual/estrutural de DevocionaisScreen.tsx (também um
 // modal registrado em App.tsx): paleta escura fixa, header com botão de
@@ -12,27 +12,55 @@
 // fechar essa tela (modal) e for olhar a Bíblia, fazer uma oferta, etc. Só
 // para de verdade quando volta aqui e aperta "Stop" — nunca sozinho ao sair
 // da tela. Testado e confirmado funcionando (25/08) — a fila toca em
-// sequência sem travar, com legenda em inglês acompanhando.
+// sequência sem travar, com legenda acompanhando.
 //
-// Textos fixos em inglês de propósito (não usam t()), igual ao botão da Home
-// que abre essa tela: quem procura essa tela é justamente quem não fala
-// português, então precisa ler em inglês mesmo com o app em pt-BR.
+// Bilíngue (14/09/2026): seletor 🇬🇧 English / 🇪🇸 Español no topo da tela —
+// troca o idioma tocado E o idioma de todos os textos da tela juntos. Textos
+// continuam fixos (não usam t() do app, que é pt/en/fr/es de UI) porque quem
+// procura essa tela não fala português, então precisa ler no idioma que
+// escolheu aqui, mesmo com o app em pt-BR.
 //
 // O que essa tela faz:
 // 1. Verifica se existe uma sessão de tradução ativa agora (tabela
 //    traducao_ao_vivo) e assina mudanças em tempo real nela.
-// 2. Quando o usuário toca em "Listen to translation", chama
-//    `traducaoAudioService.iniciar()`, que assina o canal de broadcast
-//    "traducao-audio" e toca cada trecho de áudio traduzido em fila, na
-//    ordem em que chegam. Essa tela só reflete o estado atual do serviço
-//    (ouvindo / legenda) — não é dona do player.
+// 2. Quando o usuário toca em "Listen to translation"/"Escuchar traducción",
+//    chama `traducaoAudioService.iniciar()`, que assina o canal de
+//    broadcast "traducao-audio" e toca cada trecho de áudio traduzido em
+//    fila, na ordem em que chegam, filtrando só o idioma selecionado. Essa
+//    tela só reflete o estado atual do serviço (ouvindo / legenda / idioma)
+//    — não é dona do player.
 
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { traducaoAudioService } from '../lib/traducaoAoVivoAudio';
+import { traducaoAudioService, type IdiomaTraducao } from '../lib/traducaoAoVivoAudio';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// Textos fixos por idioma de destino — ver comentário do topo do arquivo
+// sobre por que não usa o i18n normal do app (t()).
+const TEXTOS: Record<IdiomaTraducao, {
+  headerTitulo: string;
+  semSessao: string;
+  ativa: string;
+  ouvir: string;
+  parar: string;
+}> = {
+  en: {
+    headerTitulo: 'Live Translation',
+    semSessao: 'No live translation right now.',
+    ativa: 'Live translation available now — Portuguese → English',
+    ouvir: 'Listen to translation',
+    parar: 'Stop',
+  },
+  es: {
+    headerTitulo: 'Traducción en vivo',
+    semSessao: 'No hay traducción en vivo en este momento.',
+    ativa: 'Traducción en vivo disponible ahora — Portugués → Español',
+    ouvir: 'Escuchar traducción',
+    parar: 'Detener',
+  },
+};
 
 // ── Waveform decorativa (tipo equalizer de estúdio, espelhada no centro) ──
 // Puramente visual — não reage ao áudio de verdade (não temos acesso fácil
@@ -118,16 +146,42 @@ function DigitalEqualizer() {
   );
 }
 
+// Seletor de idioma — bandeira + rótulo, sempre visível (mesmo sem sessão
+// ativa) pra pessoa já deixar escolhido antes do culto começar.
+function SeletorIdioma({ idioma, onSelecionar }: { idioma: IdiomaTraducao; onSelecionar: (i: IdiomaTraducao) => void }) {
+  return (
+    <View style={styles.seletorLinha}>
+      <TouchableOpacity
+        style={[styles.seletorPill, idioma === 'en' && styles.seletorPillAtiva]}
+        onPress={() => onSelecionar('en')}
+      >
+        <Text style={styles.seletorEmoji}>🇬🇧</Text>
+        <Text style={[styles.seletorTexto, idioma === 'en' && styles.seletorTextoAtivo]}>English</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.seletorPill, idioma === 'es' && styles.seletorPillAtiva]}
+        onPress={() => onSelecionar('es')}
+      >
+        <Text style={styles.seletorEmoji}>🇪🇸</Text>
+        <Text style={[styles.seletorTexto, idioma === 'es' && styles.seletorTextoAtivo]}>Español</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any }) {
   const [sessaoAtiva, setSessaoAtiva] = useState(false);
 
   // Não é state local — reflete o serviço singleton (lib/traducaoAoVivoAudio),
   // que continua tocando mesmo quando essa tela desmonta. `forceUpdate` só
-  // existe pra re-renderizar quando o serviço avisa que algo mudou.
+  // existe pra re-renderizar quando o serviço avisa que algo mudou (áudio
+  // ou troca de idioma).
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   useEffect(() => traducaoAudioService.assinar(forceUpdate), []);
   const ouvindo = traducaoAudioService.ouvindo;
   const legendaAtual = traducaoAudioService.legendaAtual;
+  const idioma = traducaoAudioService.idiomaSelecionado;
+  const t = TEXTOS[idioma];
 
   // Descobre (e acompanha em tempo real) se existe tradução ativa agora.
   useEffect(() => {
@@ -169,6 +223,10 @@ export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any 
     traducaoAudioService.parar();
   }, []);
 
+  const selecionarIdioma = useCallback((novoIdioma: IdiomaTraducao) => {
+    traducaoAudioService.selecionarIdioma(novoIdioma);
+  }, []);
+
   // De propósito: SEM cleanup parando o áudio ao desmontar essa tela. É
   // exatamente isso que deixa a tradução continuar tocando quando a pessoa
   // fecha esse modal e vai olhar outra aba — ver comentário do topo do
@@ -183,7 +241,7 @@ export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any 
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
-          <Text style={styles.headerTitulo}>Live Translation</Text>
+          <Text style={styles.headerTitulo}>{t.headerTitulo}</Text>
         </View>
         {navigation && (
           <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
@@ -192,11 +250,13 @@ export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any 
         )}
       </View>
 
+      <SeletorIdioma idioma={idioma} onSelecionar={selecionarIdioma} />
+
       <View style={styles.body}>
         {!sessaoAtiva && (
           <View style={styles.empty}>
             <Ionicons name="headset-outline" size={40} color="rgba(255,255,255,0.25)" />
-            <Text style={styles.semSessao}>No live translation right now.</Text>
+            <Text style={styles.semSessao}>{t.semSessao}</Text>
           </View>
         )}
 
@@ -204,7 +264,7 @@ export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any 
           <>
             <DigitalEqualizer />
 
-            <Text style={styles.ativa}>Live translation available now — Portuguese → English</Text>
+            <Text style={styles.ativa}>{t.ativa}</Text>
 
             <TouchableOpacity
               style={[styles.botao, ouvindo && styles.botaoAtivo]}
@@ -212,7 +272,7 @@ export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any 
             >
               {ouvindo && <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />}
               <Text style={[styles.botaoTexto, ouvindo && styles.botaoTextoAtivo]}>
-                {ouvindo ? 'Stop' : 'Listen to translation'}
+                {ouvindo ? t.parar : t.ouvir}
               </Text>
             </TouchableOpacity>
 
@@ -234,6 +294,20 @@ const styles = StyleSheet.create({
   },
   headerTitulo: { fontSize: 18, fontWeight: '700', color: '#fff' },
   closeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+  seletorLinha: {
+    flexDirection: 'row', justifyContent: 'center', gap: 10,
+    backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18,
+  },
+  seletorPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+  },
+  seletorPillAtiva: { backgroundColor: '#F5C842', borderColor: '#F5C842' },
+  seletorEmoji: { fontSize: 16 },
+  seletorTexto: { color: 'rgba(255,255,255,0.7)', fontWeight: '600', fontSize: 14 },
+  seletorTextoAtivo: { color: '#1A1740' },
   body: { flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center' },
   empty: { alignItems: 'center', justifyContent: 'center', gap: 12 },
   semSessao: { color: 'rgba(255,255,255,0.5)', fontSize: 14, textAlign: 'center' },

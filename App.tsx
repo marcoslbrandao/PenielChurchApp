@@ -1,5 +1,5 @@
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
@@ -26,6 +26,9 @@ import i18n from 'i18next';
 import { carregarIdiomaSalvo } from './lib/i18n';
 import { ThemeProvider, useTheme } from './lib/theme';
 import { AcessoProvider, useAcesso } from './lib/acesso';
+import * as Notifications from 'expo-notifications';
+import { useAuth } from './lib/useAuth';
+import { destinoDaNotificacao } from './lib/destinoNotificacao';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -156,6 +159,57 @@ function MainTabs() {
   );
 }
 
+// ─── Toque na notificação leva à tela certa ───────────────────────────────────
+// Vive DENTRO do AcessoProvider porque a decisão depende do papel do usuário
+// (ver lib/destinoNotificacao.ts), e o papel chega do servidor depois da
+// primeira renderização.
+//
+// O `getLastNotificationResponseAsync()` é o que faz isto funcionar com o app
+// FECHADO, que é o caso mais comum de todos: quando o toque é o que abre o
+// app, o listener não dispara — a resposta já aconteceu antes de o React
+// montar. Sem essa chamada, o recurso funciona perfeitamente nos testes (app
+// em segundo plano) e nunca na vida real.
+function RoteadorDeNotificacoes({ navPronta }: { navPronta: boolean }) {
+  const { ehMembro, carregando } = useAcesso();
+  const { isLoggedIn } = useAuth();
+  const [pendente, setPendente] = useState<any>(null);
+  const jaTratouInicial = useRef(false);
+
+  useEffect(() => {
+    // App aberto PELO toque (arranque a frio).
+    if (!jaTratouInicial.current) {
+      jaTratouInicial.current = true;
+      Notifications.getLastNotificationResponseAsync().then(resposta => {
+        const dados = resposta?.notification?.request?.content?.data;
+        if (dados) setPendente(dados);
+      });
+    }
+    // App já aberto ou em segundo plano.
+    const sub = Notifications.addNotificationResponseReceivedListener(resposta => {
+      setPendente(resposta?.notification?.request?.content?.data ?? null);
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    // Espera as três coisas: o pedido, a navegação montada e o papel
+    // resolvido. Navegar antes do papel faria todo push de grupo cair no
+    // sininho nos primeiros segundos depois de abrir o app — o mesmo engano
+    // que a guarda de `carregandoPapel` evita nos atalhos da Home.
+    if (!pendente || !navPronta || carregando || !navigationRef.isReady()) return;
+    const destino = destinoDaNotificacao(pendente, { ehMembro, logado: isLoggedIn });
+    setPendente(null);
+    if (!destino) return;
+    // O ref é criado sem tipagem de rotas (`createNavigationContainerRef()`
+    // sem parâmetro), então a sobrecarga de dois argumentos do `navigate`
+    // não aceita `never` no segundo. O cast é na função, não nos valores:
+    // assim `nome` e `params` continuam conferidos aqui dentro.
+    (navigationRef.navigate as (nome: string, params?: any) => void)(destino.nome, destino.params);
+  }, [pendente, navPronta, carregando, ehMembro, isLoggedIn]);
+
+  return null;
+}
+
 export default function App() {
   useEffect(() => { carregarIdiomaSalvo(); }, []);
 
@@ -198,6 +252,7 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AcessoProvider>
+          <RoteadorDeNotificacoes navPronta={navPronta} />
           <NavigationContainer ref={navigationRef} onReady={() => setNavPronta(true)}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="MainTabs" component={MainTabs} />

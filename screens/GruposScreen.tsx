@@ -587,6 +587,17 @@ export default function GruposScreen() {
     if (grupoInicial) setActiveTab(grupoInicial);
   }, [grupoInicial]);
 
+  // Toque na notificação de mensagem do chat abre o chat daquele grupo já
+  // aberto (ver lib/destinoNotificacao.ts). Espera `user` porque o
+  // GrupoChatModal só é montado com sessão; e consome o parâmetro, senão
+  // trocar de aba e voltar reabriria o chat sozinho.
+  useEffect(() => {
+    if (!route.params?.abrirChat || !user) return;
+    navigation.setParams({ abrirChat: undefined });
+    if (grupoInicial) setActiveTab(grupoInicial);
+    setChatModalVisible(true);
+  }, [route.params?.abrirChat, user]);
+
   // Verifica se o usuário é admin, líder de algum grupo, ou membro de algum
   // grupo (adicionado pelo líder) — decide o que mostrar em cada aba.
   useEffect(() => {

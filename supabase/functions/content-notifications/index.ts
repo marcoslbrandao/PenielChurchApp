@@ -158,7 +158,15 @@ Deno.serve(async (req) => {
       title: titulo,
       body: corpo,
       sound: 'default',
-      data: { type: tipo, grupo: grupo ?? null },
+      // `origem` e `id` existem para o toque na notificação saber ONDE abrir:
+      // `origem === 'chat'` é o único caso que abre o chat do grupo em vez do
+      // mural dele. Ver lib/destinoNotificacao.ts no app.
+      data: {
+        type: tipo,
+        grupo: grupo ?? null,
+        origem: record.origem ?? null,
+        id: record.id ?? null,
+      },
     }));
 
     // Expo aceita no máximo 100 mensagens por request — quebra em lotes.

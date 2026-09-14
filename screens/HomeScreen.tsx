@@ -520,7 +520,7 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
   );
 }
 
-export default function HomeScreen({ navigation }: { navigation?: any }) {
+export default function HomeScreen({ navigation, route }: { navigation?: any; route?: any }) {
   const { t, i18n } = useTranslation();
   const { user, isLoggedIn } = useAuth();
   const { ehMembro, carregando: carregandoPapel } = useAcesso();
@@ -839,6 +839,17 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
         marcarComoVistoAgora();
       });
   };
+
+  // Toque numa notificação cujo destino é o mural (aviso geral, ou conteúdo
+  // de grupo para quem já não tem acesso) — ver lib/destinoNotificacao.ts.
+  // O parâmetro é CONSUMIDO na hora: sem isso, qualquer volta para a Home
+  // dentro da mesma sessão reabriria o sininho sozinho, porque o parâmetro
+  // continuaria na rota.
+  useEffect(() => {
+    if (!route?.params?.abrirSininho) return;
+    navigation?.setParams?.({ abrirSininho: undefined });
+    abrirNotificacoes();
+  }, [route?.params?.abrirSininho]);
 
   // dispensarAviso salva no Supabase (por conta, permanente entre
   // reinstalações) quando a pessoa está logada, além de local — ver

@@ -44,6 +44,8 @@
     "proximosEventos": "Próximos eventos",
     "notificacoes": "Notificações",
     "nenhumAvisoAinda": "Nenhum aviso publicado ainda.",
+    "convitePushSemConta": "Crie sua conta para receber os avisos como notificação no celular.",
+    "convitePushBotao": "Criar conta",
     "deslizeRemover": "Deslize um aviso para a esquerda pra remover da lista",
     "buscarPlaceholder": "Buscar na Bíblia, avisos...",
     "lerCapituloInteiro": "Ler capítulo inteiro",

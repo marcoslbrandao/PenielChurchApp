@@ -281,6 +281,20 @@ const sm = StyleSheet.create({
   input: { flex: 1, fontSize: 15, color: '#fff' },
   cancelar: { fontSize: 13, color: '#F5C842', fontWeight: '600', marginLeft: 4 },
   hint: { fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 12 },
+  convitePush: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(245,200,66,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(245,200,66,0.25)',
+  },
+  convitePushTexto: { flex: 1, fontSize: 12, lineHeight: 16, color: 'rgba(255,255,255,0.75)' },
+  convitePushBotao: { fontSize: 12, fontWeight: '700', color: '#F5C842' },
   sectionTitle: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1, marginTop: 16, marginBottom: 8 },
   resultRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, marginBottom: 8 },
   resultText: { flex: 1, fontSize: 14, color: '#fff' },
@@ -1168,6 +1182,21 @@ export default function HomeScreen({ navigation }: { navigation?: any }) {
                 ))}
                 <View style={{ height: 30 }} />
               </ScrollView>
+            )}
+
+            {/* Sem conta o aviso aparece (a policy do banco é pública), mas o
+                push no celular depende de `push_tokens`, que exige user_id.
+                Então o convite fala de NOTIFICAÇÃO, não de ver o aviso. */}
+            {!isLoggedIn && (
+              <TouchableOpacity
+                style={sm.convitePush}
+                activeOpacity={0.85}
+                onPress={() => { setNotifModalVisible(false); navigation?.navigate('Auth'); }}
+              >
+                <Ionicons name="notifications-outline" size={18} color="#F5C842" />
+                <Text style={sm.convitePushTexto}>{t('home.convitePushSemConta')}</Text>
+                <Text style={sm.convitePushBotao}>{t('home.convitePushBotao')}</Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>

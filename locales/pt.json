@@ -69,7 +69,9 @@
     "verTodosDevocionais": "Ver todos os devocionais",
     "verTraducaoAoVivo": "Tradução ao vivo disponível",
     "avisoImportante": "Aviso importante",
-    "videoEmDestaque": "Vídeo em destaque"
+    "videoEmDestaque": "Vídeo em destaque",
+    "erroAbrirLink": "Não foi possível abrir este link.",
+    "abrirLink": "Abrir link"
   },
   "auth": {
     "entrarNaConta": "Entre na sua conta",
@@ -1070,7 +1072,11 @@
     "todaSemana": "🔁 Toda semana",
     "dataUnica": "📅 Data única",
     "naHome": "🏠 Na Home",
-    "aniversariosDoMes": "🎂 Aniversários do Mês"
+    "aniversariosDoMes": "🎂 Aniversários do Mês",
+    "linkDoBotao": "Link do botão (opcional)",
+    "textoDoBotao": "Texto do botão",
+    "exEntrarNoZoom": "Ex: Entrar no Zoom",
+    "botaoAjuda": "Com um link preenchido, o aviso ganha um botão — no sininho e no destaque da Home. Sem link, nada muda."
   },
   "membros": {
     "buscarPeloNome": "Buscar pelo nome...",

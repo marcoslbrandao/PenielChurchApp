@@ -69,7 +69,9 @@
     "verTodosDevocionais": "Voir toutes les dévotions",
     "verTraducaoAoVivo": "Traduction en direct disponible",
     "avisoImportante": "Avis important",
-    "videoEmDestaque": "Vidéo à la une"
+    "videoEmDestaque": "Vidéo à la une",
+    "erroAbrirLink": "Impossible d'ouvrir ce lien.",
+    "abrirLink": "Ouvrir le lien"
   },
   "auth": {
     "entrarNaConta": "Connectez-vous à votre compte",
@@ -1070,7 +1072,11 @@
     "todaSemana": "🔁 Chaque semaine",
     "dataUnica": "📅 Date unique",
     "naHome": "🏠 Sur l'Accueil",
-    "aniversariosDoMes": "🎂 Anniversaires du Mois"
+    "aniversariosDoMes": "🎂 Anniversaires du Mois",
+    "linkDoBotao": "Lien du bouton (facultatif)",
+    "textoDoBotao": "Texte du bouton",
+    "exEntrarNoZoom": "Ex : Rejoindre sur Zoom",
+    "botaoAjuda": "Avec un lien renseigné, l'annonce gagne un bouton — dans la cloche et dans la mise en avant de l'accueil. Sans lien, rien ne change."
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",

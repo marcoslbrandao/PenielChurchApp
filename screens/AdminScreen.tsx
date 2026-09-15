@@ -406,17 +406,24 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
   const [titulo, setTitulo] = useState('');
   const [texto, setTexto] = useState('');
   const [tipo, setTipo] = useState<'geral' | 'evento' | 'urgente'>('geral');
+  const [ctaTexto, setCtaTexto] = useState('');
+  const [ctaUrl, setCtaUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!visible) { setTitulo(''); setTexto(''); setTipo('geral'); }
+    if (!visible) { setTitulo(''); setTexto(''); setTipo('geral'); setCtaTexto(''); setCtaUrl(''); }
   }, [visible]);
 
   const handleSave = async () => {
     if (!titulo.trim() || !texto.trim()) { Alert.alert(t('common.atencao'), t('admin.preenchaOTituloEO')); return; }
     setSaving(true);
+    // O botão é tudo ou nada: sem link não há botão, e com link sem rótulo o
+    // app cai em "Abrir link". Gravar um rótulo órfão só criaria um botão
+    // invisível que ninguém entende depois.
     const { error } = await supabase.from('avisos').insert({
       titulo: titulo.trim(), texto: texto.trim(), tipo, data: new Date().toISOString(), grupo: null,
+      cta_texto: ctaUrl.trim() ? (ctaTexto.trim() || null) : null,
+      cta_url: ctaUrl.trim() || null,
     });
     setSaving(false);
     if (error) { Alert.alert(t('common.erro'), error.message); return; }
@@ -468,6 +475,33 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
                 value={texto} onChangeText={setTexto} multiline
               />
             </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>{t('admin.linkDoBotao')}</Text>
+              <View style={mo.fieldRow}>
+                <TextInput
+                  style={mo.fieldInput} placeholder="https://us02web.zoom.us/j/..."
+                  placeholderTextColor={C.textDim} value={ctaUrl} onChangeText={setCtaUrl}
+                  autoCapitalize="none" keyboardType="url"
+                />
+              </View>
+            </View>
+
+            {!!ctaUrl.trim() && (
+              <View style={mo.fieldWrap}>
+                <Text style={mo.fieldLabel}>{t('admin.textoDoBotao')}</Text>
+                <View style={mo.fieldRow}>
+                  <TextInput
+                    style={mo.fieldInput} placeholder={t('admin.exEntrarNoZoom')}
+                    placeholderTextColor={C.textDim} value={ctaTexto} onChangeText={setCtaTexto}
+                  />
+                </View>
+              </View>
+            )}
+
+            <Text style={[mo.fieldLabel, { textTransform: 'none', fontWeight: '400', marginBottom: 14, marginTop: -4 }]}>
+              {t('admin.botaoAjuda')}
+            </Text>
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (

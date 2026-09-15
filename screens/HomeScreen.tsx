@@ -64,7 +64,8 @@ function resolverLivroDoVersiculo(ref: string): { slug: string; capitulo: number
 }
 
 // ─── Busca ────────────────────────────────────────────────────────────────────
-type AvisoResult = { id: string; titulo: string; texto: string; data: string; tipo: string };
+type AvisoResult = { id: string; titulo: string; texto: string; data: string; tipo: string;
+  cta_texto?: string | null; cta_url?: string | null };
 
 // Linha de resultado de aviso na busca — título traduzido pro idioma do app.
 function AvisoResultRow({ aviso, onPress }: { aviso: AvisoResult; onPress: () => void }) {
@@ -118,6 +119,34 @@ function SwipeParaRemover({ onRemover, children }: { onRemover: () => void; chil
 }
 
 // Card de aviso no modal de notificações — título e texto traduzidos pro idioma do app.
+// Botão do aviso. Só existe quando o admin preencheu o link — sem `cta_url`
+// não aparece nada, e um aviso antigo continua exatamente como era.
+// O rótulo é traduzido como qualquer texto escrito pelo admin (o mesmo
+// `useCampoTraduzido` do título), então "Entrar no Zoom" vira "Join on Zoom"
+// para quem está com o app em inglês.
+function BotaoAviso({ avisoId, texto, url, cor }: {
+  avisoId: string; texto?: string | null; url?: string | null; cor: string;
+}) {
+  const { t } = useTranslation();
+  const rotulo = useCampoTraduzido(texto ?? '', 'avisos', avisoId, 'cta_texto');
+  if (!url) return null;
+  return (
+    <TouchableOpacity
+      style={[ba.botao, { backgroundColor: cor }]}
+      activeOpacity={0.85}
+      onPress={() => Linking.openURL(url).catch(() => Alert.alert(t('common.erro'), t('home.erroAbrirLink')))}
+    >
+      <Ionicons name="open-outline" size={15} color="#fff" />
+      <Text style={ba.botaoTexto}>{rotulo || t('home.abrirLink')}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const ba = StyleSheet.create({
+  botao: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginTop: 10, alignSelf: 'flex-start' },
+  botaoTexto: { fontSize: 13, fontWeight: '700', color: '#fff' },
+});
+
 function NotifAvisoCard({ aviso, onRemover }: { aviso: AvisoResult; onRemover: () => void }) {
   const { i18n } = useTranslation();
   const titulo = useCampoTraduzido(aviso.titulo, 'avisos', aviso.id, 'titulo');
@@ -133,6 +162,7 @@ function NotifAvisoCard({ aviso, onRemover }: { aviso: AvisoResult; onRemover: (
           <Text style={sm.notifTitulo}>{titulo}</Text>
           <Text style={sm.notifTexto} numberOfLines={3}>{texto}</Text>
           <Text style={sm.notifData}>{new Date(aviso.data).toLocaleDateString(locale, { day: '2-digit', month: 'short' })}</Text>
+          <BotaoAviso avisoId={aviso.id} texto={aviso.cta_texto} url={aviso.cta_url} cor="#4A1AA8" />
         </View>
         <TouchableOpacity
           style={sm.notifExcluirBtn}
@@ -322,13 +352,27 @@ function proximaData(diaSemana: number, lang: string = 'pt'): { dia: number; mes
   return { dia: proxima.getDate(), mes: MESES[proxima.getMonth()] };
 }
 
+// Data real (AAAA-MM-DD) no mesmo formato que `proximaData` devolve — usada
+// quando o encontro vem da agenda de verdade em vez do cálculo do dia da semana.
+function diaMesDeISO(iso: string, lang: string = 'pt'): { dia: number; mes: string } {
+  const MESES = MESES_ABREV[lang] ?? MESES_ABREV.pt;
+  const d = new Date(`${iso}T12:00:00`);
+  return { dia: d.getDate(), mes: MESES[d.getMonth()] };
+}
+
 // ─── Eventos recorrentes (0=Dom,1=Seg,...,6=Sáb) ─────────────────────────────
 // "nome"/"local" com sufixo Key são traduzidos via i18n (chaves em home.*);
 // endereços e nomes próprios (Zoom, Abbey Square, Peniel Alive) ficam iguais
 // em qualquer idioma.
 const eventosRecorrentes = [
   { id: 1, nomeKey: 'eventoCultoDominical', diaSemana: 0, horario: '18h', local: 'Abbey Square, Reading', tipo: 'presencial' },
-  { id: 2, nomeKey: 'eventoSalaDeOracao',    diaSemana: 3, horario: '21h', local: 'Zoom',                  tipo: 'online'     },
+  // A Sala de Oração é aberta à igreja inteira, então o link mora aqui mesmo,
+  // visível para qualquer um — inclusive visitante sem conta. O link do Estudo
+  // Bíblico NÃO vem para cá de propósito: ele é do grupo, e fica em
+  // `grupo_eventos`, protegido pela RLS. O card do estudo divulga o horário;
+  // quem entra na sala é quem foi adicionado ao grupo.
+  { id: 2, nomeKey: 'eventoSalaDeOracao',    diaSemana: 3, horario: '21h', local: 'Zoom',                  tipo: 'online',
+    link: 'https://us02web.zoom.us/j/89123221983?pwd=m6qRFHxC1Qaq6mETTzTrrYdwLXnG41.1' },
   { id: 3, nomeKey: 'eventoEstudoBiblico',   diaSemana: 5, horario: '20h', local: 'Zoom',                  tipo: 'online'     },
   { id: 4, nome: 'Peniel Alive',             diaSemana: 6, horario: '19h', localKey: 'localNasCasas',      tipo: 'jovens'     },
 ];
@@ -340,7 +384,8 @@ const eventosRecorrentes = [
 // Cada pessoa pode fechar no X: usa o MESMO mecanismo do sininho
 // (`dispensarAviso`), então fechar aqui também some de lá, e vice-versa —
 // é o mesmo aviso, não faria sentido ter dois estados de "já vi isso".
-type AvisoDestaque = { id: string; titulo: string; texto: string; tipo: string };
+type AvisoDestaque = { id: string; titulo: string; texto: string; tipo: string;
+  cta_texto?: string | null; cta_url?: string | null };
 
 function AvisoDestaqueCard({ aviso, onDispensar }: { aviso: AvisoDestaque; onDispensar: () => void }) {
   const { t } = useTranslation();
@@ -361,6 +406,7 @@ function AvisoDestaqueCard({ aviso, onDispensar }: { aviso: AvisoDestaque; onDis
       </View>
       <Text style={styles.avisoDestaqueTitulo}>{titulo}</Text>
       {!!texto && <Text style={styles.avisoDestaqueTexto}>{texto}</Text>}
+      <BotaoAviso avisoId={aviso.id} texto={aviso.cta_texto} url={aviso.cta_url} cor="#E84B1A" />
     </View>
   );
 }
@@ -723,13 +769,39 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   // fechou esse aviso (aqui ou no sininho), ele não volta.
   const [avisoDestaque, setAvisoDestaque] = useState<AvisoDestaque | null>(null);
 
+  // O Estudo Bíblico deixou de ser data fixa no código: a agenda dele se gera
+  // sozinha em `grupo_eventos` (migração 20260915190000), e o card da Home
+  // passa a mostrar a data e o horário de verdade.
+  //
+  // POR QUE UMA RPC E NÃO UM SELECT: `grupo_eventos` é fechado por
+  // `tem_acesso_grupo`. Lendo direto, o card SUMIRIA para visitante e para
+  // quem ainda não é do grupo — exatamente quem o card existe para alcançar.
+  // A função devolve só data e horário, nada de título nem de link.
+  //
+  // Falhando (sem rede, função ainda não aplicada), `proximoEstudo` fica nulo
+  // e o card cai no valor fixo de sempre. Nunca some da tela.
+  const [proximoEstudo, setProximoEstudo] = useState<{ data: string; horario: string } | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelado = false;
+      supabase.rpc('proximo_encontro_publico', { p_grupo: 'estudo_biblico' })
+        .then(({ data }) => {
+          if (cancelado) return;
+          const linha = (data ?? [])[0] as any;
+          setProximoEstudo(linha ? { data: linha.data, horario: linha.horario } : null);
+        });
+      return () => { cancelado = true; };
+    }, [])
+  );
+
   useFocusEffect(
     useCallback(() => {
       let cancelado = false;
       (async () => {
         const { data } = await supabase
           .from('avisos')
-          .select('id, titulo, texto, tipo')
+          .select('id, titulo, texto, tipo, cta_texto, cta_url')
           .eq('destaque_home', true)
           .limit(1)
           .maybeSingle();
@@ -893,10 +965,22 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   };
 
   // Calcula datas dos próximos eventos
-  const eventos = eventosRecorrentes.map(e => ({
-    ...e, ...proximaData(e.diaSemana, i18n.language),
-    hoje: e.diaSemana === new Date().getDay(),
-  }));
+  const eventos = eventosRecorrentes.map(e => {
+    // Só o Estudo Bíblico (id 3) tem agenda de verdade por enquanto. Os outros
+    // três continuam calculados pelo dia da semana — culto, oração e Alive não
+    // têm onde morar no banco ainda.
+    const real = e.id === 3 && proximoEstudo ? proximoEstudo : null;
+    const quando = real
+      ? diaMesDeISO(real.data, i18n.language)
+      : proximaData(e.diaSemana, i18n.language);
+    const hojeISO = new Date().toISOString().slice(0, 10);
+    return {
+      ...e,
+      ...quando,
+      horario: real ? real.horario : e.horario,
+      hoje: real ? real.data === hojeISO : e.diaSemana === new Date().getDay(),
+    };
+  });
 
   const tagStyle = (tipo: string) => ({
     bg: tipo === 'presencial' ? '#EEEDFE' : tipo === 'online' ? '#E1F5EE' : tipo === 'jovens' ? '#F3E8FF' : '#FEF6DC',
@@ -1134,7 +1218,14 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           {eventos.map((ev, idx) => {
             const tag = tagStyle(ev.tipo);
             return (
-              <View key={ev.id} style={[styles.eventoRow, idx === eventos.length - 1 && { borderBottomWidth: 0 }]}>
+              <TouchableOpacity
+                key={ev.id}
+                style={[styles.eventoRow, idx === eventos.length - 1 && { borderBottomWidth: 0 }]}
+                activeOpacity={(ev as any).link ? 0.7 : 1}
+                disabled={!(ev as any).link}
+                onPress={() => Linking.openURL((ev as any).link)
+                  .catch(() => Alert.alert(t('common.erro'), t('home.erroAbrirLink')))}
+              >
                 <View style={[styles.eventoData, ev.hoje && styles.eventoDataHoje]}>
                   <Text style={[styles.eventoDia, ev.hoje && styles.eventoDiaHoje]}>{ev.dia}</Text>
                   <Text style={[styles.eventoMes, ev.hoje && styles.eventoMesHoje]}>{ev.mes}</Text>
@@ -1153,7 +1244,12 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
                 <View style={[styles.eventoTag, { backgroundColor: tag.bg }]}>
                   <Text style={[styles.eventoTagTexto, { color: tag.text }]}>{tag.label}</Text>
                 </View>
-              </View>
+                {/* A seta só aparece onde há link — sem ela, a linha da oração
+                    parece igual às outras e ninguém descobre que dá para tocar. */}
+                {(ev as any).link && (
+                  <Ionicons name="chevron-forward" size={15} color={C.textMuted} style={{ marginLeft: 6 }} />
+                )}
+              </TouchableOpacity>
             );
           })}
         </View>

@@ -90,6 +90,8 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
   const [avisoTitulo, setAvisoTitulo] = useState('');
   const [avisoTexto, setAvisoTexto] = useState('');
   const [avisoTipo, setAvisoTipo] = useState<'geral' | 'evento' | 'urgente'>('geral');
+  const [avisoCtaTexto, setAvisoCtaTexto] = useState('');
+  const [avisoCtaUrl, setAvisoCtaUrl] = useState('');
 
   const [devTitulo, setDevTitulo] = useState('');
   const [devVersiculo, setDevVersiculo] = useState('');
@@ -125,6 +127,7 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
     if (!visible) {
       setSecao('aviso');
       setAvisoTitulo(''); setAvisoTexto(''); setAvisoTipo('geral');
+      setAvisoCtaTexto(''); setAvisoCtaUrl('');
       setDevTitulo(''); setDevVersiculo(''); setDevReferencia(''); setDevTexto('');
       setShortTitulo(''); setShortUrl(''); setShortPlataforma('youtube');
       setMaterialTitulo(''); setMaterialUrl(''); setMaterialEvento(null);
@@ -170,11 +173,14 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
     setSaving(true);
     const { error } = await supabase.from('avisos').insert({
       titulo: avisoTitulo.trim(), texto: avisoTexto.trim(), tipo: avisoTipo, data: new Date().toISOString(), grupo,
+      // Rótulo sem link não vira botão — ver o mesmo comentário no AdminScreen.
+      cta_texto: avisoCtaUrl.trim() ? (avisoCtaTexto.trim() || null) : null,
+      cta_url: avisoCtaUrl.trim() || null,
     });
     setSaving(false);
     if (error) { Alert.alert('Erro', error.message); return; }
     Alert.alert('Enviado', `Notificação publicada só pro grupo ${grupoNome}.`);
-    setAvisoTitulo(''); setAvisoTexto('');
+    setAvisoTitulo(''); setAvisoTexto(''); setAvisoCtaTexto(''); setAvisoCtaUrl('');
     onSaved?.();
   };
 
@@ -329,7 +335,17 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
                   </View>
                   <Field s={s} C={C} label="Título" value={avisoTitulo} onChangeText={setAvisoTitulo} placeholder="Ex: Encontro de sábado adiado" />
                   <Field s={s} C={C} label="Texto" value={avisoTexto} onChangeText={setAvisoTexto} placeholder="Detalhes do aviso..." multiline height={100} />
-                  <Text style={s.hint}>Quem está no grupo {grupoNome} recebe push na hora. Mais ninguém vê esse aviso.</Text>
+                  <Field
+                    s={s} C={C} label="Link do botão (opcional)" value={avisoCtaUrl} onChangeText={setAvisoCtaUrl}
+                    placeholder="https://us02web.zoom.us/j/..." autoCapitalize="none"
+                  />
+                  {!!avisoCtaUrl.trim() && (
+                    <Field
+                      s={s} C={C} label="Texto do botão" value={avisoCtaTexto} onChangeText={setAvisoCtaTexto}
+                      placeholder="Ex: Entrar no Zoom"
+                    />
+                  )}
+                  <Text style={s.hint}>Quem está no grupo {grupoNome} recebe push na hora. Mais ninguém vê esse aviso. Com um link preenchido, o aviso ganha um botão no sininho.</Text>
                   <SaveBtn s={s} cor={cor} saving={saving} onPress={publicarAviso} label="Enviar aviso ao grupo" icon="megaphone-outline" />
                 </>
               )}

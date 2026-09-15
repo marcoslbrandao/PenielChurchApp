@@ -69,7 +69,9 @@
     "verTodosDevocionais": "See all devotionals",
     "verTraducaoAoVivo": "Live translation available",
     "avisoImportante": "Important notice",
-    "videoEmDestaque": "Featured video"
+    "videoEmDestaque": "Featured video",
+    "erroAbrirLink": "Couldn't open this link.",
+    "abrirLink": "Open link"
   },
   "auth": {
     "entrarNaConta": "Sign in to your account",
@@ -1070,7 +1072,11 @@
     "todaSemana": "🔁 Every week",
     "dataUnica": "📅 One-off date",
     "naHome": "🏠 On Home",
-    "aniversariosDoMes": "🎂 Birthdays This Month"
+    "aniversariosDoMes": "🎂 Birthdays This Month",
+    "linkDoBotao": "Button link (optional)",
+    "textoDoBotao": "Button text",
+    "exEntrarNoZoom": "e.g. Join on Zoom",
+    "botaoAjuda": "With a link filled in, the announcement gets a button — in the bell and in the Home highlight. Without a link, nothing changes."
   },
   "membros": {
     "buscarPeloNome": "Search by name...",

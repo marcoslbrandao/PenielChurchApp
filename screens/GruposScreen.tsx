@@ -15,6 +15,10 @@ import { useAuth } from '../lib/useAuth';
 import GrupoAdminModal from '../components/GrupoAdminModal';
 import GrupoChatModal from '../components/GrupoChatModal';
 import ContatoModal from '../components/ContatoModal';
+import ChamadaModal from '../components/ChamadaModal';
+import FrequenciaModal from '../components/FrequenciaModal';
+import EncontroAulaModal from '../components/EncontroAulaModal';
+import CadernoModal from '../components/CadernoModal';
 import { useTheme } from '../lib/theme';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -54,7 +58,25 @@ type GrupoEvento = {
   horario: string;
   local: string;
   tipo: string;
+  // Aula: link do Zoom, roteiro e o carimbo da chamada. `chamadaFeitaEm` é o
+  // que separa "ninguém faltou" de "o líder ainda não fez a chamada" — e é o
+  // que decide se a aula entra no denominador do relatório de frequência.
+  linkOnline: string | null;
+  horaInicio: string | null;
+  roteiro: string | null;
+  chamadaFeitaEm: string | null;
 };
+
+type ConfigGrupo = { presencaAtiva: boolean; perguntasAtivas: boolean };
+
+/** 1º semestre = Jan–Jun; 2º = Jul–Dez, como a igreja conta o calendário. */
+function semestreCorrente() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  return hoje.getMonth() < 6
+    ? { inicio: `${ano}-01-01`, fim: `${ano}-06-30` }
+    : { inicio: `${ano}-07-01`, fim: `${ano}-12-31` };
+}
 
 type GrupoDevocional = {
   id: string;
@@ -142,11 +164,14 @@ function formatDataDevocional(iso: string, lang: string = 'pt'): string {
 
 // Card de evento do grupo — título e descrição (digitados pelo admin em
 // português) traduzidos automaticamente pro idioma do app.
-function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar }: {
+function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar, onAbrir, podeChamada, onChamada }: {
   evento: GrupoEvento; tag: { bg: string; text: string; label: string };
   podeEditar?: boolean; onEditar?: () => void; onApagar?: () => void;
+  // Tocar no card abre a aula (roteiro, material, perguntas, anotações).
+  // A chamada é só do líder, e só aparece onde a presença está ligada.
+  onAbrir?: () => void; podeChamada?: boolean; onChamada?: () => void;
 }) {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isDark } = useTheme();
   const C = useMemo(() => paleta(isDark), [isDark]);
   const s = useMemo(() => buildS(C), [C]);
@@ -154,7 +179,7 @@ function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar }: {
   const descricao = useCampoTraduzido(evento.descricao, 'grupo_eventos', evento.id, 'descricao');
   const dataLabel = formatDataEvento(evento.dataISO, i18n.language);
   return (
-    <View style={s.eventoCard}>
+    <TouchableOpacity style={s.eventoCard} activeOpacity={onAbrir ? 0.85 : 1} onPress={onAbrir} disabled={!onAbrir}>
       <View style={s.eventoTop}>
         <Text style={s.eventoTitulo}>{titulo}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -190,8 +215,30 @@ function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar }: {
           <Ionicons name="location-outline" size={13} color={C.textMuted} />
           <Text style={s.eventoMetaText}>{evento.local}</Text>
         </View>
+        {evento.linkOnline ? (
+          <View style={s.eventoMetaItem}>
+            <Ionicons name="videocam-outline" size={13} color={C.textMuted} />
+            <Text style={s.eventoMetaText}>{t('grupos.aula.temLink')}</Text>
+          </View>
+        ) : null}
       </View>
-    </View>
+
+      {podeChamada && (
+        <TouchableOpacity
+          style={[s.chamadaBtn, { borderColor: evento.chamadaFeitaEm ? '#0E9F6E' : '#C27803' }]}
+          onPress={onChamada}
+        >
+          <Ionicons
+            name={evento.chamadaFeitaEm ? 'checkmark-circle' : 'clipboard-outline'}
+            size={13}
+            color={evento.chamadaFeitaEm ? '#0E9F6E' : '#C27803'}
+          />
+          <Text style={[s.chamadaBtnTexto, { color: evento.chamadaFeitaEm ? '#0E9F6E' : '#C27803' }]}>
+            {evento.chamadaFeitaEm ? t('grupos.aula.chamadaFeita') : t('grupos.aula.fazerChamada')}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -563,9 +610,29 @@ export default function GruposScreen() {
   const [chatModalVisible, setChatModalVisible] = useState(false);
   const [lideresModalVisible, setLideresModalVisible] = useState(false);
   const [contatoModalVisible, setContatoModalVisible] = useState(false);
+  const [aulasAnteriores, setAulasAnteriores] = useState<GrupoEvento[]>([]);
+  const [cfg, setCfg] = useState<ConfigGrupo>({ presencaAtiva: false, perguntasAtivas: false });
+  const [aulaAberta, setAulaAberta] = useState<GrupoEvento | null>(null);
+  const [chamadaEvento, setChamadaEvento] = useState<GrupoEvento | null>(null);
+  const [frequenciaVisible, setFrequenciaVisible] = useState(false);
+  const [minhaFreq, setMinhaFreq] = useState<{ presentes: number; total: number } | null>(null);
+  const [meuMembroId, setMeuMembroId] = useState<string | null>(null);
+  const [cadernoVisible, setCadernoVisible] = useState(false);
+  const [cadernoTotal, setCadernoTotal] = useState(0);
 
   const grupo = GRUPOS[activeTab];
   const souLiderDesteGrupo = isAdmin || gruposLiderados.includes(activeTab);
+  const hojeISO = new Date().toISOString().slice(0, 10);
+  // O interruptor de `grupo_config` vale para TUDO que é de aula, inclusive
+  // abrir o encontro. Sem isto, o card de "Café da manhã das mulheres" também
+  // viraria uma aula com roteiro e anotações — um conceito que aquele grupo
+  // nunca pediu.
+  const ferramentasAula = cfg.presencaAtiva || cfg.perguntasAtivas;
+  // O caderno é a ÚNICA coisa do app que o admin não enxerga por ser admin —
+  // decisão do Marcos. Por isso a conta aqui é `gruposLiderados` puro, sem o
+  // `|| isAdmin` de `souLiderDesteGrupo`: um botão que abre uma lista sempre
+  // vazia (a RLS recusaria) é pior do que botão nenhum.
+  const lideroEsteGrupo = gruposLiderados.includes(activeTab);
 
   // Uma confirmação só para todo conteúdo de grupo. A RLS já decide quem
   // pode: as policies de `grupo_eventos`, `shorts_videos`, `grupo_arquivos` e
@@ -612,19 +679,24 @@ export default function GruposScreen() {
   // grupo (adicionado pelo líder) — decide o que mostrar em cada aba.
   const carregarPermissoes = useCallback(async () => {
     if (!user) {
-      setIsAdmin(false); setGruposLiderados([]); setMeusGrupos([]); setUserNome('');
+      setIsAdmin(false); setGruposLiderados([]); setMeusGrupos([]); setUserNome(''); setMeuMembroId(null);
       setPermissoesCarregadas(true);
       return;
     }
-    const [{ data: perfil }, { data: liderados }, { data: grupos }] = await Promise.all([
+    const [{ data: perfil }, { data: liderados }, { data: grupos }, { data: minhaFicha }] = await Promise.all([
       supabase.from('profiles').select('role, full_name').eq('id', user.id).single(),
       supabase.from('group_leaders').select('grupo').eq('profile_id', user.id),
       supabase.rpc('meus_grupos'),
+      // A ficha de membro desta conta. É por ela que a presença é registrada
+      // (`grupo_presenca.membro_id -> members`), e sem ela o cartão "sua
+      // frequência" não tem como saber qual das linhas é a da pessoa.
+      supabase.from('members').select('id').eq('profile_id', user.id).maybeSingle(),
     ]);
     setIsAdmin(perfil?.role === 'admin');
     setUserNome(perfil?.full_name ?? 'Membro');
     setGruposLiderados(((liderados ?? []) as { grupo: Tab }[]).map(r => r.grupo));
     setMeusGrupos(((grupos ?? []) as Tab[]));
+    setMeuMembroId((minhaFicha as any)?.id ?? null);
     setPermissoesCarregadas(true);
   }, [user]);
 
@@ -642,23 +714,80 @@ export default function GruposScreen() {
   useFocusEffect(useCallback(() => { carregarPermissoes(); }, [carregarPermissoes]));
 
   const fetchGrupoData = useCallback(async (tab: Tab, temAcesso: boolean, isRefresh = false) => {
-    if (!temAcesso) { setEventos([]); setDevocionais([]); setShorts([]); setArquivos([]); setLoading(false); setRefreshing(false); return; }
+    if (!temAcesso) {
+      setEventos([]); setDevocionais([]); setShorts([]); setArquivos([]);
+      setAulasAnteriores([]); setMinhaFreq(null); setCfg({ presencaAtiva: false, perguntasAtivas: false });
+      setCadernoTotal(0);
+      setLoading(false); setRefreshing(false); return;
+    }
     if (isRefresh) setRefreshing(true); else setLoading(true);
 
     const hoje = new Date().toISOString().slice(0, 10);
-    const [{ data: eventosData }, { data: devData }, { data: shortsData }, { data: arquivosData }] = await Promise.all([
+    const semestre = semestreCorrente();
+    const [
+      { data: eventosData }, { data: devData }, { data: shortsData }, { data: arquivosData },
+      { data: passadosData }, { data: configData }, { count: cadernoCount }, { data: minhasPresencas },
+    ] = await Promise.all([
       supabase.from('grupo_eventos').select('*').eq('grupo', tab).gte('data', hoje).order('data', { ascending: true }),
       // Só o mais recente — vira o "banner" no topo da seção, igual à Home.
       // A lista completa fica na tela Devocionais (botão "Ver todos").
       supabase.from('devocionais').select('*').eq('grupo', tab).order('data', { ascending: false }).limit(1),
       supabase.from('shorts_videos').select('*').eq('grupo', tab).order('created_at', { ascending: false }).limit(12),
+      // Todos os materiais do grupo, inclusive os presos a uma aula. Filtrar
+      // os presos daqui parecia mais limpo e era uma armadilha: o gatilho
+      // `material_grupo_no_mural` manda "Novo material" para o grupo inteiro
+      // sem olhar `evento_id`, e a notificação abre exatamente esta aba. O
+      // material apareceria só dentro do card da aula, e quem tocasse no push
+      // cairia numa tela onde o arquivo anunciado não está.
       supabase.from('grupo_arquivos').select('*').eq('grupo', tab).order('created_at', { ascending: false }).limit(20),
+      // Aulas que já aconteceram — é onde a chamada é feita. O card de um
+      // encontro futuro some da lista de cima quando a data passa, e sem esta
+      // segunda consulta o líder não teria como registrar a presença depois
+      // da aula, que é justamente quando ele sabe quem estava lá.
+      supabase.from('grupo_eventos').select('*').eq('grupo', tab).lt('data', hoje).order('data', { ascending: false }).limit(12),
+      supabase.from('grupo_config').select('presenca_ativa, perguntas_ativas').eq('grupo', tab).maybeSingle(),
+      // Só a contagem, sem baixar linha nenhuma — e para quem não lidera o
+      // grupo a RLS devolve 0, que é exatamente o que deve aparecer.
+      supabase.from('grupo_caderno').select('id', { count: 'exact', head: true }).eq('grupo', tab),
+      // A própria frequência no semestre.
+      //
+      // O FILTRO POR `membro_id` É OBRIGATÓRIO, não é otimização: a RLS de
+      // `grupo_presenca` devolve a própria linha para o participante comum,
+      // MAS devolve a turma inteira para o líder e para o admin (são duas
+      // policies de SELECT, e elas se somam). Sem este `.eq`, o líder abria a
+      // aba e lia "sua frequência: 74 de 90" — a soma do grupo.
+      //
+      // O `!inner` é o que amarra ao grupo: a presença aponta para o
+      // encontro, não para o grupo.
+      meuMembroId
+        ? supabase.from('grupo_presenca')
+            .select('status, grupo_eventos!inner(grupo, data, chamada_feita_em)')
+            .eq('membro_id', meuMembroId)
+            .eq('grupo_eventos.grupo', tab)
+            .gte('grupo_eventos.data', semestre.inicio)
+            .lte('grupo_eventos.data', semestre.fim)
+        : Promise.resolve({ data: [] as any[] }),
     ]);
 
-    setEventos((eventosData ?? []).map((e: any) => ({
+    const paraEvento = (e: any): GrupoEvento => ({
       id: e.id, titulo: e.titulo, descricao: e.descricao ?? '',
       dataISO: e.data, horario: e.horario, local: e.local, tipo: e.tipo,
-    })));
+      linkOnline: e.link_online ?? null, horaInicio: e.hora_inicio ?? null, roteiro: e.roteiro ?? null,
+      chamadaFeitaEm: e.chamada_feita_em ?? null,
+    });
+    setEventos((eventosData ?? []).map(paraEvento));
+    setAulasAnteriores((passadosData ?? []).map(paraEvento));
+    setCfg({
+      presencaAtiva: !!(configData as any)?.presenca_ativa,
+      perguntasAtivas: !!(configData as any)?.perguntas_ativas,
+    });
+    setCadernoTotal(cadernoCount ?? 0);
+
+    const comChamada = (minhasPresencas ?? []).filter((l: any) => l.grupo_eventos?.chamada_feita_em);
+    setMinhaFreq(comChamada.length === 0 ? null : {
+      presentes: comChamada.filter((l: any) => l.status === 'presente').length,
+      total: comChamada.length,
+    });
     setDevocionais((devData ?? []).map((d: any) => ({
       id: d.id, titulo: d.titulo, texto: d.texto, versiculo: d.versiculo,
       referencia: d.referencia, dataISO: d.data,
@@ -668,7 +797,7 @@ export default function GruposScreen() {
 
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [meuMembroId]);
 
   useEffect(() => {
     if (!permissoesCarregadas) return;
@@ -726,6 +855,14 @@ export default function GruposScreen() {
               onPress={() => { setEncontroEditando(null); setAdminModalVisible(true); }}
             >
               <Ionicons name="megaphone-outline" size={16} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {souLiderDesteGrupo && cfg.presencaAtiva && (
+            <TouchableOpacity
+              style={[s.waBtn, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)' }]}
+              onPress={() => setFrequenciaVisible(true)}
+            >
+              <Ionicons name="stats-chart-outline" size={16} color="#fff" />
             </TouchableOpacity>
           )}
           {isAdmin && (
@@ -820,8 +957,77 @@ export default function GruposScreen() {
                   podeEditar={souLiderDesteGrupo}
                   onEditar={() => { setEncontroEditando(evento); setAdminModalVisible(true); }}
                   onApagar={() => confirmarRemocao('grupo_eventos', evento.id, evento.titulo)}
+                  onAbrir={ferramentasAula ? () => setAulaAberta(evento) : undefined}
+                  // A aula de HOJE ainda está nesta lista (o filtro é `>= hoje`),
+                  // e é logo depois dela que o líder faz a chamada. Sem isto ele
+                  // teria de esperar a meia-noite para registrar a presença.
+                  podeChamada={souLiderDesteGrupo && cfg.presencaAtiva && evento.dataISO <= hojeISO}
+                  onChamada={() => setChamadaEvento(evento)}
                 />
               ))
+            )}
+
+            {/* Aulas anteriores — a chamada acontece aqui, depois da aula.
+                Só aparece onde a presença está ligada (`grupo_config`). */}
+            {cfg.presencaAtiva && (
+              <>
+                <Text style={s.sectionLabel}>{t('grupos.aula.aulasAnteriores')}</Text>
+
+                {minhaFreq && (
+                  <View style={[s.minhaFreqCard, { borderLeftColor: grupo.cor }]}>
+                    <Ionicons name="ribbon-outline" size={16} color={grupo.cor} />
+                    <Text style={s.minhaFreqTexto}>
+                      {t('grupos.aula.minhaFrequencia', { presentes: minhaFreq.presentes, total: minhaFreq.total })}
+                    </Text>
+                  </View>
+                )}
+
+                {!loading && aulasAnteriores.length === 0 ? (
+                  <View style={s.emptyWrap}>
+                    <Text style={s.emptyText}>{t('grupos.aula.semAulasAnteriores')}</Text>
+                  </View>
+                ) : aulasAnteriores.map(evento => (
+                  <GrupoEventoCard
+                    key={evento.id}
+                    evento={evento}
+                    tag={tipoTag(evento.tipo)}
+                    podeEditar={souLiderDesteGrupo}
+                    onEditar={() => { setEncontroEditando(evento); setAdminModalVisible(true); }}
+                    onApagar={() => confirmarRemocao('grupo_eventos', evento.id, evento.titulo)}
+                    onAbrir={ferramentasAula ? () => setAulaAberta(evento) : undefined}
+                    podeChamada={souLiderDesteGrupo && cfg.presencaAtiva}
+                    onChamada={() => setChamadaEvento(evento)}
+                  />
+                ))}
+              </>
+            )}
+
+            {/* Caderno do líder — entrada só para quem lidera ESTE grupo.
+                Não passa pelo interruptor de `grupo_config`: um caderno de
+                anotações serve a qualquer grupo, e quem não lidera nenhum
+                nunca vê isto. */}
+            {lideroEsteGrupo && (
+              <>
+                <Text style={s.sectionLabel}>{t('grupos.caderno.titulo')}</Text>
+                <TouchableOpacity
+                  style={[s.cadernoCard, { borderLeftColor: grupo.cor }]}
+                  activeOpacity={0.85}
+                  onPress={() => setCadernoVisible(true)}
+                >
+                  <View style={[s.cadernoIcon, { backgroundColor: grupo.cor + '18' }]}>
+                    <Ionicons name="book-outline" size={18} color={grupo.cor} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cadernoTitulo}>{t('grupos.caderno.abrir')}</Text>
+                    <Text style={s.cadernoSub}>
+                      {cadernoTotal === 0
+                        ? t('grupos.caderno.vazio')
+                        : t('grupos.caderno.contador', { count: cadernoTotal })}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              </>
             )}
 
             {/* Devocionais — só o mais recente aqui (banner), como na Home;
@@ -990,10 +1196,65 @@ export default function GruposScreen() {
           horario: encontroEditando.horario,
           local: encontroEditando.local,
           tipo: encontroEditando.tipo as 'presencial' | 'online' | 'casa',
+          linkOnline: encontroEditando.linkOnline,
+          horaInicio: encontroEditando.horaInicio,
+          roteiro: encontroEditando.roteiro,
         }}
         onClose={() => { setAdminModalVisible(false); setEncontroEditando(null); }}
         onSaved={() => fetchGrupoData(activeTab, temAcessoConteudo)}
       />
+
+      <ChamadaModal
+        visible={!!chamadaEvento}
+        evento={chamadaEvento}
+        grupo={activeTab}
+        cor={grupo.cor}
+        onClose={() => setChamadaEvento(null)}
+        onSaved={() => fetchGrupoData(activeTab, temAcessoConteudo)}
+      />
+
+      {user && (
+        <CadernoModal
+          visible={cadernoVisible}
+          grupo={activeTab}
+          grupoNome={grupo.nome}
+          cor={grupo.cor}
+          userId={user.id}
+          onClose={() => setCadernoVisible(false)}
+          onChanged={() => fetchGrupoData(activeTab, temAcessoConteudo)}
+        />
+      )}
+
+      <FrequenciaModal
+        visible={frequenciaVisible}
+        grupo={activeTab}
+        grupoNome={grupo.nome}
+        cor={grupo.cor}
+        onClose={() => setFrequenciaVisible(false)}
+      />
+
+      {user && (
+        <EncontroAulaModal
+          visible={!!aulaAberta}
+          encontro={aulaAberta && {
+            id: aulaAberta.id,
+            titulo: aulaAberta.titulo,
+            descricao: aulaAberta.descricao,
+            dataISO: aulaAberta.dataISO,
+            horario: aulaAberta.horario,
+            local: aulaAberta.local,
+            tipo: aulaAberta.tipo,
+            linkOnline: aulaAberta.linkOnline,
+            roteiro: aulaAberta.roteiro,
+          }}
+          cor={grupo.cor}
+          userId={user.id}
+          userNome={userNome}
+          podeModerar={souLiderDesteGrupo}
+          mostrarPerguntas={cfg.perguntasAtivas}
+          onClose={() => setAulaAberta(null)}
+        />
+      )}
 
       {user && (
         <GrupoChatModal
@@ -1092,6 +1353,16 @@ function buildS(C: Paleta) { return StyleSheet.create({
   // Contato
   contactBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 14, paddingVertical: 14, marginTop: 16 },
   contactBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  // Caderno do líder
+  cadernoCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border, borderLeftWidth: 3, padding: 12, marginBottom: 10 },
+  cadernoIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  cadernoTitulo: { fontSize: 14, fontWeight: '700', color: C.text },
+  cadernoSub: { fontSize: 11.5, color: C.textMuted, marginTop: 2 },
+  // Aula / chamada
+  chamadaBtn: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 6, marginTop: 10 },
+  chamadaBtnTexto: { fontSize: 11, fontWeight: '700' },
+  minhaFreqCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border, borderLeftWidth: 3, padding: 12, marginBottom: 10 },
+  minhaFreqTexto: { flex: 1, fontSize: 12.5, color: C.text, fontWeight: '600' },
   // Empty
   emptyWrap: { alignItems: 'center', paddingVertical: 24 },
   emptyText: { fontSize: 13, color: C.textMuted },

@@ -58,7 +58,20 @@ function isoParaDataBR(iso: string): string {
 export type EncontroParaEditar = {
   id: string; titulo: string; descricao: string; dataISO: string;
   horario: string; local: string; tipo: 'presencial' | 'online' | 'casa';
+  linkOnline: string | null; horaInicio: string | null; roteiro: string | null;
 };
+
+type EncontroOpcao = { id: string; titulo: string; data: string };
+
+// HH:MM -> 'HH:MM', devolvendo '' quando não é hora de verdade. Vazio é
+// legítimo: sem hora de início o encontro simplesmente fica fora do lembrete.
+function horaValida(txt: string): string {
+  const m = txt.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return '';
+  const h = Number(m[1]), min = Number(m[2]);
+  if (h > 23 || min > 59) return '';
+  return `${String(h).padStart(2, '0')}:${m[2]}`;
+}
 
 export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClose, onSaved, encontroParaEditar }: {
   visible: boolean;
@@ -89,12 +102,17 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
 
   const [materialTitulo, setMaterialTitulo] = useState('');
   const [materialUrl, setMaterialUrl] = useState('');
+  const [materialEvento, setMaterialEvento] = useState<string | null>(null);
+  const [encontrosOpcoes, setEncontrosOpcoes] = useState<EncontroOpcao[]>([]);
 
   const [encTitulo, setEncTitulo] = useState('');
   const [encDescricao, setEncDescricao] = useState('');
   const [encData, setEncData] = useState('');
   const [encHorario, setEncHorario] = useState('');
+  const [encHoraInicio, setEncHoraInicio] = useState('');
   const [encLocal, setEncLocal] = useState('');
+  const [encLink, setEncLink] = useState('');
+  const [encRoteiro, setEncRoteiro] = useState('');
   const [encTipo, setEncTipo] = useState<'presencial' | 'online' | 'casa'>('presencial');
 
   const [saving, setSaving] = useState(false);
@@ -109,10 +127,27 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
       setAvisoTitulo(''); setAvisoTexto(''); setAvisoTipo('geral');
       setDevTitulo(''); setDevVersiculo(''); setDevReferencia(''); setDevTexto('');
       setShortTitulo(''); setShortUrl(''); setShortPlataforma('youtube');
-      setMaterialTitulo(''); setMaterialUrl('');
-      setEncTitulo(''); setEncDescricao(''); setEncData(''); setEncHorario(''); setEncLocal(''); setEncTipo('presencial');
+      setMaterialTitulo(''); setMaterialUrl(''); setMaterialEvento(null);
+      setEncTitulo(''); setEncDescricao(''); setEncData(''); setEncHorario(''); setEncHoraInicio('');
+      setEncLocal(''); setEncLink(''); setEncRoteiro(''); setEncTipo('presencial');
     }
   }, [visible]);
+
+  // Encontros a que o material pode ser preso: os 60 dias anteriores e tudo
+  // o que vier pela frente. Mais que isso é rolagem inútil numa lista de
+  // pílulas — material de aula é sempre da aula da semana.
+  useEffect(() => {
+    if (!visible) { setEncontrosOpcoes([]); return; }
+    const limite = new Date();
+    limite.setDate(limite.getDate() - 60);
+    supabase.from('grupo_eventos')
+      .select('id, titulo, data')
+      .eq('grupo', grupo)
+      .gte('data', limite.toISOString().slice(0, 10))
+      .order('data', { ascending: false })
+      .limit(20)
+      .then(({ data }) => setEncontrosOpcoes((data ?? []) as EncontroOpcao[]));
+  }, [visible, grupo]);
 
   useEffect(() => {
     if (!visible || !encontroParaEditar) return;
@@ -122,7 +157,11 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
     setEncDescricao(e.descricao ?? '');
     setEncData(isoParaDataBR(e.dataISO));
     setEncHorario(e.horario);
+    // Vem do Postgres como HH:MM:SS; o campo só quer HH:MM.
+    setEncHoraInicio(e.horaInicio ? e.horaInicio.slice(0, 5) : '');
     setEncLocal(e.local);
+    setEncLink(e.linkOnline ?? '');
+    setEncRoteiro(e.roteiro ?? '');
     setEncTipo(e.tipo);
   }, [visible, encontroParaEditar?.id]);
 
@@ -173,11 +212,12 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
     setSaving(true);
     const { error } = await supabase.from('grupo_arquivos').insert({
       titulo: materialTitulo.trim(), url: materialUrl.trim(), grupo,
+      evento_id: materialEvento,
     });
     setSaving(false);
     if (error) { Alert.alert('Erro', error.message); return; }
     Alert.alert('Publicado', `Material publicado pro grupo ${grupoNome}.`);
-    setMaterialTitulo(''); setMaterialUrl('');
+    setMaterialTitulo(''); setMaterialUrl(''); setMaterialEvento(null);
     onSaved?.();
   };
 
@@ -194,12 +234,22 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
     const iso = dataBRparaISO(encData);
     if (!iso) { Alert.alert('Atenção', 'A data precisa estar no formato DD/MM/AAAA.'); return; }
 
+    // Hora de início é opcional, mas digitada errado ela some sem avisar e o
+    // lembrete nunca sai — por isso reclama em vez de gravar null calado.
+    const hora = encHoraInicio.trim() ? horaValida(encHoraInicio) : '';
+    if (encHoraInicio.trim() && !hora) {
+      Alert.alert('Atenção', 'A hora de início precisa estar no formato HH:MM (ex: 20:00).'); return;
+    }
+
     const campos = {
       titulo: encTitulo.trim(),
       descricao: encDescricao.trim() || null,
       data: iso,
       horario: encHorario.trim(),
+      hora_inicio: hora || null,
       local: encLocal.trim(),
+      link_online: encLink.trim() || null,
+      roteiro: encRoteiro.trim() || null,
       tipo: encTipo,
       grupo,
     };
@@ -220,7 +270,8 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
         ? 'Encontro atualizado. O grupo não recebe notificação nova por uma correção.'
         : `Encontro publicado pro grupo ${grupoNome}.`,
     );
-    setEncTitulo(''); setEncDescricao(''); setEncData(''); setEncHorario(''); setEncLocal('');
+    setEncTitulo(''); setEncDescricao(''); setEncData(''); setEncHorario(''); setEncHoraInicio('');
+    setEncLocal(''); setEncLink(''); setEncRoteiro('');
     onSaved?.();
     if (encontroParaEditar) onClose();
   };
@@ -301,10 +352,26 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
                   <Field s={s} C={C} label="Data" value={encData} onChangeText={setEncData} placeholder="DD/MM/AAAA" keyboardType="numbers-and-punctuation" />
                   <Field s={s} C={C} label="Horário" value={encHorario} onChangeText={setEncHorario} placeholder="Ex: 10h às 12h" />
                   <Field
+                    s={s} C={C} label="Hora de início (opcional)" value={encHoraInicio} onChangeText={setEncHoraInicio}
+                    placeholder="HH:MM — ex: 20:00" keyboardType="numbers-and-punctuation"
+                  />
+                  <Field
                     s={s} C={C} label="Local" value={encLocal} onChangeText={setEncLocal}
-                    placeholder={encTipo === 'online' ? 'Ex: link do Zoom' : encTipo === 'casa' ? 'Ex: casa da Ana — Reading' : 'Ex: Salão da igreja'}
+                    placeholder={encTipo === 'online' ? 'Ex: Zoom' : encTipo === 'casa' ? 'Ex: casa da Ana — Reading' : 'Ex: Salão da igreja'}
+                  />
+                  <Field
+                    s={s} C={C} label="Link do Zoom (opcional)" value={encLink} onChangeText={setEncLink}
+                    placeholder="https://zoom.us/j/..." autoCapitalize="none"
                   />
                   <Field s={s} C={C} label="Descrição (opcional)" value={encDescricao} onChangeText={setEncDescricao} placeholder="Detalhes, o que levar..." multiline height={90} />
+                  <Field
+                    s={s} C={C} label="Roteiro da aula (opcional)" value={encRoteiro} onChangeText={setEncRoteiro}
+                    placeholder={'Ex:\n1. Leitura de Romanos 8\n2. Perguntas de discussão\n3. Oração final'}
+                    multiline height={120}
+                  />
+                  <Text style={s.hint}>
+                    Com a hora de início preenchida, quem é do grupo recebe um lembrete 30 minutos antes, com o link junto. Sem ela, o encontro continua normal — só não tem lembrete.
+                  </Text>
                   <Text style={s.hint}>
                     {encontroParaEditar
                       ? 'Correção de encontro já publicado: o grupo não recebe notificação de novo.'
@@ -358,7 +425,31 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
                     placeholder="Cole aqui o link do PDF (Google Drive, WeTransfer...)"
                     autoCapitalize="none"
                   />
-                  <Text style={s.hint}>Sobe o arquivo em qualquer lugar (Drive, WeTransfer etc.) e cola o link de acesso aqui. Só quem está no grupo {grupoNome} consegue ver.</Text>
+                  {encontrosOpcoes.length > 0 && (
+                    <View style={s.fieldWrap}>
+                      <Text style={s.fieldLabel}>Prender a uma aula (opcional)</Text>
+                      <View style={s.pillsRow}>
+                        <TouchableOpacity
+                          style={[s.pill, materialEvento === null && { backgroundColor: cor + '22', borderColor: cor }]}
+                          onPress={() => setMaterialEvento(null)}
+                        >
+                          <Text style={[s.pillText, materialEvento === null && { color: cor, fontWeight: '700' }]}>Solto no grupo</Text>
+                        </TouchableOpacity>
+                        {encontrosOpcoes.map(e => (
+                          <TouchableOpacity
+                            key={e.id}
+                            style={[s.pill, materialEvento === e.id && { backgroundColor: cor + '22', borderColor: cor }]}
+                            onPress={() => setMaterialEvento(e.id)}
+                          >
+                            <Text style={[s.pillText, materialEvento === e.id && { color: cor, fontWeight: '700' }]}>
+                              {e.data.slice(8, 10)}/{e.data.slice(5, 7)} · {e.titulo}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                  <Text style={s.hint}>Sobe o arquivo em qualquer lugar (Drive, WeTransfer etc.) e cola o link de acesso aqui. Só quem está no grupo {grupoNome} consegue ver. Preso a uma aula, ele aparece dentro daquela aula em vez de na lista de materiais do grupo.</Text>
                   <SaveBtn s={s} cor={cor} saving={saving} onPress={publicarMaterial} label="Publicar material" icon="document-text-outline" />
                 </>
               )}

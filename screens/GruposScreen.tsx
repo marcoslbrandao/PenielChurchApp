@@ -65,6 +65,10 @@ type GrupoEvento = {
   horaInicio: string | null;
   roteiro: string | null;
   chamadaFeitaEm: string | null;
+  // Criado pelo gerador semanal (`gerar_encontros_recorrentes`). Muda duas
+  // coisas: só o PRÓXIMO gerado aparece na lista, e apagá-lo avisa que aquela
+  // sexta passa a ser pulada de vez.
+  geradoAutomaticamente: boolean;
 };
 
 type ConfigGrupo = { presencaAtiva: boolean; perguntasAtivas: boolean };
@@ -628,6 +632,22 @@ export default function GruposScreen() {
   // viraria uma aula com roteiro e anotações — um conceito que aquele grupo
   // nunca pediu.
   const ferramentasAula = cfg.presencaAtiva || cfg.perguntasAtivas;
+
+  // A agenda do Estudo Bíblico se gera sozinha com nove sextas à frente. Se
+  // todas aparecessem, a aba viraria nove cards "Estudo Bíblico" empilhados e
+  // o devocional, os shorts e o caderno cairiam para fora da primeira tela.
+  // Então dos GERADOS entra só o próximo — a lista já vem ordenada por data.
+  // Os criados à mão continuam todos: uma "Ceia de encerramento" publicada
+  // pelo líder não pode sumir atrás da regra da recorrência.
+  const eventosVisiveis = useMemo(() => {
+    let jaMostrouGerado = false;
+    return eventos.filter(e => {
+      if (!e.geradoAutomaticamente) return true;
+      if (jaMostrouGerado) return false;
+      jaMostrouGerado = true;
+      return true;
+    });
+  }, [eventos]);
   // O caderno é a ÚNICA coisa do app que o admin não enxerga por ser admin —
   // decisão do Marcos. Por isso a conta aqui é `gruposLiderados` puro, sem o
   // `|| isAdmin` de `souLiderDesteGrupo`: um botão que abre uma lista sempre
@@ -638,10 +658,15 @@ export default function GruposScreen() {
   // pode: as policies de `grupo_eventos`, `shorts_videos`, `grupo_arquivos` e
   // `devocionais` liberam o admin e o líder DAQUELE grupo, e mais ninguém —
   // esconder o botão é conveniência, não é a trava.
-  const confirmarRemocao = (tabela: string, id: string, titulo: string) => {
+  const confirmarRemocao = (tabela: string, id: string, titulo: string, geradoAutomaticamente = false) => {
     Alert.alert(
       t('grupos.removerConteudoTitulo'),
-      t('grupos.removerConteudoMsg', { titulo }),
+      // Apagar um encontro gerado é definitivo para AQUELA data: o gatilho
+      // grava a exceção e o gerador nunca mais recria aquela sexta. Sem este
+      // aviso, o líder apagaria achando que volta na semana seguinte.
+      geradoAutomaticamente
+        ? t('grupos.removerEncontroGeradoMsg', { titulo })
+        : t('grupos.removerConteudoMsg', { titulo }),
       [
         { text: t('common.cancelar'), style: 'cancel' },
         { text: t('common.remover'), style: 'destructive', onPress: async () => {
@@ -773,6 +798,7 @@ export default function GruposScreen() {
       id: e.id, titulo: e.titulo, descricao: e.descricao ?? '',
       dataISO: e.data, horario: e.horario, local: e.local, tipo: e.tipo,
       linkOnline: e.link_online ?? null, horaInicio: e.hora_inicio ?? null, roteiro: e.roteiro ?? null,
+      geradoAutomaticamente: !!e.gerado_automaticamente,
       chamadaFeitaEm: e.chamada_feita_em ?? null,
     });
     setEventos((eventosData ?? []).map(paraEvento));
@@ -944,19 +970,19 @@ export default function GruposScreen() {
             <Text style={s.sectionLabel}>{t('grupos.proximosEventos')}</Text>
             {loading ? (
               <ActivityIndicator color={grupo.cor} style={{ marginVertical: 20 }} />
-            ) : eventos.length === 0 ? (
+            ) : eventosVisiveis.length === 0 ? (
               <View style={s.emptyWrap}>
                 <Text style={s.emptyText}>{t('grupos.nenhumEventoAgendado')}</Text>
               </View>
             ) : (
-              eventos.map(evento => (
+              eventosVisiveis.map(evento => (
                 <GrupoEventoCard
                   key={evento.id}
                   evento={evento}
                   tag={tipoTag(evento.tipo)}
                   podeEditar={souLiderDesteGrupo}
                   onEditar={() => { setEncontroEditando(evento); setAdminModalVisible(true); }}
-                  onApagar={() => confirmarRemocao('grupo_eventos', evento.id, evento.titulo)}
+                  onApagar={() => confirmarRemocao('grupo_eventos', evento.id, evento.titulo, evento.geradoAutomaticamente)}
                   onAbrir={ferramentasAula ? () => setAulaAberta(evento) : undefined}
                   // A aula de HOJE ainda está nesta lista (o filtro é `>= hoje`),
                   // e é logo depois dela que o líder faz a chamada. Sem isto ele
@@ -993,7 +1019,7 @@ export default function GruposScreen() {
                     tag={tipoTag(evento.tipo)}
                     podeEditar={souLiderDesteGrupo}
                     onEditar={() => { setEncontroEditando(evento); setAdminModalVisible(true); }}
-                    onApagar={() => confirmarRemocao('grupo_eventos', evento.id, evento.titulo)}
+                    onApagar={() => confirmarRemocao('grupo_eventos', evento.id, evento.titulo, evento.geradoAutomaticamente)}
                     onAbrir={ferramentasAula ? () => setAulaAberta(evento) : undefined}
                     podeChamada={souLiderDesteGrupo && cfg.presencaAtiva}
                     onChamada={() => setChamadaEvento(evento)}

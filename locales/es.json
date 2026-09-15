@@ -265,6 +265,7 @@
     "chat": "Chat",
     "removerConteudoTitulo": "Eliminar",
     "removerConteudoMsg": "¿Eliminar \"{{titulo}}\"? El grupo dejará de verlo.",
+    "removerEncontroGeradoMsg": "¿Quitar \"{{titulo}}\"? Esta fecha pasa a ser omitida — la agenda automática no la volverá a crear.",
     "aula": {
       "temLink": "En línea",
       "fazerChamada": "Pasar lista",

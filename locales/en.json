@@ -265,6 +265,7 @@
     "chat": "Chat",
     "removerConteudoTitulo": "Remove",
     "removerConteudoMsg": "Remove \"{{titulo}}\"? The group will no longer see it.",
+    "removerEncontroGeradoMsg": "Remove \"{{titulo}}\"? This date will be skipped from now on — the automatic schedule won't recreate it.",
     "aula": {
       "temLink": "Online",
       "fazerChamada": "Take attendance",

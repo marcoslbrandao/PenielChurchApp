@@ -16,7 +16,7 @@ export type Papel = 'visitante' | 'membro' | 'lider' | 'admin';
 
 type Acesso = {
   papel: Papel | null;
-  /** membro, líder ou admin — quem enxerga a Área do Membro */
+  /** membro, líder, admin — ou quem lidera algum grupo — quem enxerga a Área do Membro */
   ehMembro: boolean;
   /** administrador da igreja — quem enxerga as abas Admin e Membros */
   ehAdmin: boolean;
@@ -41,13 +41,22 @@ export function AcessoProvider({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [papel, setPapel] = useState<Papel | null>(null);
   const [carregandoPapel, setCarregandoPapel] = useState(false);
+  const [lideraGrupo, setLideraGrupo] = useState(false);
   const userId = user?.id ?? null;
 
   const recarregar = useCallback(async () => {
-    if (!userId) { setPapel(null); return; }
+    if (!userId) { setPapel(null); setLideraGrupo(false); return; }
     setCarregandoPapel(true);
-    const { data } = await supabase.from('profiles').select('role').eq('id', userId).single();
+    // Liderar um grupo entra na conta junto com o papel. Nomear alguém em
+    // `group_leaders` não mexe no `role`, então a pessoa virava líder de um
+    // grupo que ela não conseguia nem abrir — eram dois passos, e esquecer o
+    // segundo falhava em silêncio, sem erro nenhum na tela.
+    const [{ data }, { data: liderancas }] = await Promise.all([
+      supabase.from('profiles').select('role').eq('id', userId).single(),
+      supabase.from('group_leaders').select('grupo').eq('profile_id', userId).limit(1),
+    ]);
     setPapel((data?.role as Papel) ?? 'visitante');
+    setLideraGrupo((liderancas ?? []).length > 0);
     setCarregandoPapel(false);
   }, [userId]);
 
@@ -55,7 +64,7 @@ export function AcessoProvider({ children }: { children: React.ReactNode }) {
   // refresh de token, e usar o objeto refazia essa consulta a cada hora.
   useEffect(() => { recarregar(); }, [recarregar]);
 
-  const ehMembro = papel === 'membro' || papel === 'lider' || papel === 'admin';
+  const ehMembro = papel === 'membro' || papel === 'lider' || papel === 'admin' || lideraGrupo;
   const ehAdmin = papel === 'admin';
 
   return (

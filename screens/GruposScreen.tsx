@@ -5,7 +5,7 @@ import {
   Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
@@ -240,7 +240,12 @@ function GrupoDevocionalCard({ dev, cor, isOpen, onToggle, onApagar }: {
   );
 }
 
-// ─── Gestão de Participantes (só líder do grupo ou admin) ────────────────────
+// ─── Participantes do grupo ──────────────────────────────────────────────────
+// Dois modos na mesma tela. Com `podeGerenciar` (líder DAQUELE grupo ou admin)
+// vêm a busca no diretório e a lixeira; sem ele é só a lista de nomes, que é o
+// que o participante comum pode ver. A trava não é esconder o botão: a RPC
+// `participantes_do_grupo` é security definer, checa a permissão por dentro e
+// devolve só nome e sobrenome, e `grupo_membros` continua fechada na RLS.
 type Participante = { id: string; membro_id: string; nome: string; sobrenome: string };
 // Sem telefone de propósito: o líder de grupo não tem acesso ao diretório da
 // igreja. A busca vem da função `membros_para_grupo` no Supabase, que devolve
@@ -248,8 +253,8 @@ type Participante = { id: string; membro_id: string; nome: string; sobrenome: st
 // de ninguém. A permissão é checada dentro da função, não aqui.
 type MembroBusca = { id: string; nome: string; sobrenome: string };
 
-function GerenciarParticipantesModal({ visible, grupo, grupoNome, cor, onClose }: {
-  visible: boolean; grupo: Tab; grupoNome: string; cor: string; onClose: () => void;
+function ParticipantesModal({ visible, grupo, grupoNome, cor, podeGerenciar, onClose }: {
+  visible: boolean; grupo: Tab; grupoNome: string; cor: string; podeGerenciar: boolean; onClose: () => void;
 }) {
   const { isDark } = useTheme();
   const C = useMemo(() => paleta(isDark), [isDark]);
@@ -277,6 +282,7 @@ function GerenciarParticipantesModal({ visible, grupo, grupoNome, cor, onClose }
   }, [visible, fetchParticipantes]);
 
   useEffect(() => {
+    if (!podeGerenciar) { setResultados([]); return; }
     if (query.trim().length < 2) { setResultados([]); return; }
     setBuscando(true);
     const t = setTimeout(() => {
@@ -288,7 +294,7 @@ function GerenciarParticipantesModal({ visible, grupo, grupoNome, cor, onClose }
         });
     }, 300);
     return () => clearTimeout(t);
-  }, [query, grupo, participantes.length]);
+  }, [query, grupo, participantes.length, podeGerenciar]);
 
   const adicionar = async (membro: MembroBusca) => {
     const { error } = await supabase.from('grupo_membros').insert({ membro_id: membro.id, grupo });
@@ -319,17 +325,19 @@ function GerenciarParticipantesModal({ visible, grupo, grupoNome, cor, onClose }
               </TouchableOpacity>
             </View>
 
-            <View style={gm.searchRow}>
-              <Ionicons name="search-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
-              <TextInput
-                style={gm.searchInput}
-                placeholder="Buscar no diretório pra adicionar..."
-                placeholderTextColor={C.textDim}
-                value={query}
-                onChangeText={setQuery}
-              />
-              {buscando && <ActivityIndicator size="small" color={cor} />}
-            </View>
+            {podeGerenciar && (
+              <View style={gm.searchRow}>
+                <Ionicons name="search-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
+                <TextInput
+                  style={gm.searchInput}
+                  placeholder="Buscar no diretório pra adicionar..."
+                  placeholderTextColor={C.textDim}
+                  value={query}
+                  onChangeText={setQuery}
+                />
+                {buscando && <ActivityIndicator size="small" color={cor} />}
+              </View>
+            )}
 
             {resultados.length > 0 && (
               <View style={gm.resultsBox}>
@@ -354,9 +362,11 @@ function GerenciarParticipantesModal({ visible, grupo, grupoNome, cor, onClose }
                 participantes.map(p => (
                   <View key={p.id} style={gm.participanteRow}>
                     <Text style={gm.participanteNome}>{p.nome} {p.sobrenome}</Text>
-                    <TouchableOpacity onPress={() => remover(p)}>
-                      <Ionicons name="trash-outline" size={18} color={C.danger} />
-                    </TouchableOpacity>
+                    {podeGerenciar && (
+                      <TouchableOpacity onPress={() => remover(p)}>
+                        <Ionicons name="trash-outline" size={18} color={C.danger} />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))
               )}
@@ -600,25 +610,36 @@ export default function GruposScreen() {
 
   // Verifica se o usuário é admin, líder de algum grupo, ou membro de algum
   // grupo (adicionado pelo líder) — decide o que mostrar em cada aba.
-  useEffect(() => {
+  const carregarPermissoes = useCallback(async () => {
     if (!user) {
       setIsAdmin(false); setGruposLiderados([]); setMeusGrupos([]); setUserNome('');
       setPermissoesCarregadas(true);
       return;
     }
-    setPermissoesCarregadas(false);
-    Promise.all([
+    const [{ data: perfil }, { data: liderados }, { data: grupos }] = await Promise.all([
       supabase.from('profiles').select('role, full_name').eq('id', user.id).single(),
       supabase.from('group_leaders').select('grupo').eq('profile_id', user.id),
       supabase.rpc('meus_grupos'),
-    ]).then(([{ data: perfil }, { data: liderados }, { data: grupos }]) => {
-      setIsAdmin(perfil?.role === 'admin');
-      setUserNome(perfil?.full_name ?? 'Membro');
-      setGruposLiderados(((liderados ?? []) as { grupo: Tab }[]).map(r => r.grupo));
-      setMeusGrupos(((grupos ?? []) as Tab[]));
-      setPermissoesCarregadas(true);
-    });
+    ]);
+    setIsAdmin(perfil?.role === 'admin');
+    setUserNome(perfil?.full_name ?? 'Membro');
+    setGruposLiderados(((liderados ?? []) as { grupo: Tab }[]).map(r => r.grupo));
+    setMeusGrupos(((grupos ?? []) as Tab[]));
+    setPermissoesCarregadas(true);
   }, [user]);
+
+  // Troca de conta: zera antes de reler, pra não mostrar por um instante a
+  // permissão de quem estava logado antes.
+  useEffect(() => {
+    setIsAdmin(false); setGruposLiderados([]); setMeusGrupos([]);
+    setPermissoesCarregadas(false);
+  }, [user?.id]);
+
+  // Relê toda vez que a aba ganha o foco, não só na montagem. Sem isto,
+  // nomear alguém líder só passava a valer depois de a pessoa fechar o app
+  // por completo e abrir de novo — e o sintoma era "o botão não apareceu pra
+  // mim", sem erro nenhum pra investigar.
+  useFocusEffect(useCallback(() => { carregarPermissoes(); }, [carregarPermissoes]));
 
   const fetchGrupoData = useCallback(async (tab: Tab, temAcesso: boolean, isRefresh = false) => {
     if (!temAcesso) { setEventos([]); setDevocionais([]); setShorts([]); setArquivos([]); setLoading(false); setRefreshing(false); return; }
@@ -682,14 +703,14 @@ export default function GruposScreen() {
           <Text style={s.headerTitle}>{t('grupos.titulo')}</Text>
           <Text style={s.headerSub}>Peniel Church</Text>
         </View>
-        {/* Ações do grupo. Os três ícones brancos são de gestão e só aparecem
-            pra quem pode usá-los: Participantes e Admin do grupo pro líder
-            DAQUELE grupo, Líderes só pro admin da igreja — só ele nomeia ou
-            remove um líder, nem o próprio líder pode. O Chat ficou no lugar
-            onde estava o botão de Contato, maior e na cor do grupo: é a ação
-            que todo mundo do grupo usa todo dia, não uma ferramenta de gestão. */}
+        {/* Ações do grupo. Participantes aparece pra todo mundo do grupo, mas
+            em leitura: quem não lidera vê a lista de nomes e nada mais. Admin
+            do grupo é só do líder DAQUELE grupo, e Líderes só do admin da
+            igreja — só ele nomeia ou remove um líder, nem o próprio líder
+            pode. O Chat ficou no lugar onde estava o botão de Contato, maior
+            e na cor do grupo: é a ação que todo mundo do grupo usa todo dia. */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {souLiderDesteGrupo && (
+          {temAcessoConteudo && (
             <TouchableOpacity
               style={[s.waBtn, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)' }]}
               onPress={() => setParticipantesModalVisible(true)}
@@ -939,11 +960,12 @@ export default function GruposScreen() {
         onClose={() => setContatoModalVisible(false)}
       />
 
-      <GerenciarParticipantesModal
+      <ParticipantesModal
         visible={participantesModalVisible}
         grupo={activeTab}
         grupoNome={grupo.nome}
         cor={grupo.cor}
+        podeGerenciar={souLiderDesteGrupo}
         onClose={() => setParticipantesModalVisible(false)}
       />
 

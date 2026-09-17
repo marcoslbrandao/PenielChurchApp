@@ -1345,18 +1345,114 @@ function SetlistResumo({ songs, onPlaylist }: { songs: Song[]; onPlaylist: () =>
 // ─── Confirmação de presença ─────────────────────────────────────────────────
 // Cada músico responde por si (a policy do banco garante isso). Tocar de novo
 // no botão já marcado apaga a resposta e volta pra "sem resposta".
-function PresencaBar({ presencas, meuId, escalados, onResponder }: {
+//
+// Os três números do resumo não diziam QUEM — o líder tinha que perguntar no
+// chat. Um toque no resumo abre esta folha com a mesma conta por pessoa. O dado
+// já existia: a policy de SELECT de `banda_presenca` é `is_banda_membro()`, ou
+// seja, a banda inteira já podia ler as respostas de todos.
+function PresencaListaModal({ visible, onClose, presencas, escaladosIds, membros, meuId, titulo }: {
+  visible: boolean; onClose: () => void;
+  presencas: Presenca[]; escaladosIds: string[]; membros: BandaMembro[];
+  meuId?: string; titulo: string;
+}) {
+  const { C, s, nm, ind } = useBandaTema();
+  const { t } = useTranslation();
+
+  // Mesmo fallback do quadro de indisponibilidade: um admin que nunca resgatou
+  // o código da banda não está em `banda_membros`, e nesse caso não há nome
+  // nenhum pra mostrar — mas a resposta dele existe e tem que aparecer.
+  const pessoas = (ids: string[]) => ids
+    .map(id => {
+      const m = membros.find(x => x.profile_id === id) ?? null;
+      const souEu = !!meuId && id === meuId;
+      return {
+        id,
+        nome: m?.nome ?? (souEu ? t('banda.voce') : t('banda.outroMembro')),
+        avatar: m?.avatar_url ?? null,
+        // A etiqueta VOCÊ só faz sentido ao lado de um nome de verdade.
+        tag: souEu && !!m,
+      };
+    })
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+
+  const confirmados = pessoas(presencas.filter(pr => pr.status === 'confirmado').map(pr => pr.profile_id));
+  const ausentes = pessoas(presencas.filter(pr => pr.status === 'ausente').map(pr => pr.profile_id));
+  // Sem resposta = quem está na escala e não tem linha em `banda_presenca` —
+  // a mesma base do contador, então a folha nunca discorda do número. Quem
+  // respondeu sem estar escalado aparece no grupo da resposta dele, que é
+  // justamente o que o líder precisa ver.
+  const respondeu = new Set(presencas.map(pr => pr.profile_id));
+  const pendentes = pessoas(escaladosIds.filter(id => !respondeu.has(id)));
+
+  const grupos = [
+    { chave: 'ok', titulo: t('banda.presencaGrupoOk', { n: confirmados.length }), cor: C.accent, icone: 'checkmark-circle' as const, gente: confirmados },
+    { chave: 'nao', titulo: t('banda.presencaGrupoNao', { n: ausentes.length }), cor: C.danger, icone: 'close-circle' as const, gente: ausentes },
+    { chave: 'pendente', titulo: t('banda.presencaGrupoPendente', { n: pendentes.length }), cor: C.textMuted, icone: 'help-circle' as const, gente: pendentes },
+  ];
+  const vazio = confirmados.length + ausentes.length + pendentes.length === 0;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={nm.overlay}>
+        <View style={[nm.sheet, { maxHeight: '80%' }]}>
+          <View style={nm.header}>
+            <Text style={[nm.title, { flex: 1, marginRight: 12 }]} numberOfLines={1}>
+              {t('banda.presencaTitulo')} · {titulo}
+            </Text>
+            <TouchableOpacity onPress={onClose} hitSlop={6}>
+              <Ionicons name="close" size={22} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
+          {vazio ? (
+            <Text style={ind.vazio}>{t('banda.presencaSemNinguem')}</Text>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {grupos.map(g => g.gente.length === 0 ? null : (
+                <View key={g.chave} style={s.presencaGrupo}>
+                  <View style={s.presencaGrupoHeader}>
+                    <Ionicons name={g.icone} size={14} color={g.cor} />
+                    <Text style={[ind.listaTitulo, { marginBottom: 0 }]}>{g.titulo}</Text>
+                  </View>
+                  {g.gente.map(pes => (
+                    <View key={pes.id} style={s.escalaRow}>
+                      {pes.avatar
+                        ? <Image source={{ uri: pes.avatar }} style={s.escalaAvatar} />
+                        : <Ionicons name="person-circle-outline" size={18} color={C.textMuted} />}
+                      <Text style={s.escalaNome} numberOfLines={1}>{pes.nome}</Text>
+                      {pes.tag && <View style={s.euTag}><Text style={s.euTagText}>{t('banda.voce')}</Text></View>}
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function PresencaBar({ presencas, meuId, escaladosIds, membros, titulo, onResponder }: {
   presencas: Presenca[];
   meuId?: string;
-  escalados: number;
+  escaladosIds: string[];
+  membros: BandaMembro[];
+  titulo: string;
   onResponder: (status: 'confirmado' | 'ausente' | null) => void;
 }) {
   const { C, s } = useBandaTema();
   const { t } = useTranslation();
+  const [lista, setLista] = useState(false);
   const minha = presencas.find(pr => pr.profile_id === meuId)?.status ?? null;
   const confirmados = presencas.filter(pr => pr.status === 'confirmado').length;
   const ausentes = presencas.filter(pr => pr.status === 'ausente').length;
-  const semResposta = Math.max(0, escalados - confirmados - ausentes);
+  const escalados = escaladosIds.length;
+  // Contar por SUBTRAÇÃO (escalados - confirmados - ausentes) errava sempre que
+  // alguém respondia sem estar na escala: um "Eu vou" de fora zerava o "sem
+  // resposta" de quem estava escalado e não tinha respondido. O número sai da
+  // mesma conta da folha de nomes, então os dois nunca discordam.
+  const jaRespondeu = new Set(presencas.map(pr => pr.profile_id));
+  const semResposta = escaladosIds.filter(id => !jaRespondeu.has(id)).length;
 
   return (
     <View style={s.presencaWrap}>
@@ -1380,10 +1476,28 @@ function PresencaBar({ presencas, meuId, escalados, onResponder }: {
           <Text style={[s.presencaBtnText, minha === 'ausente' && s.presencaBtnTextOn]}>{t('banda.naoPosso')}</Text>
         </TouchableOpacity>
       </View>
-      <Text style={s.presencaResumo}>
-        {t('banda.presencaResumo', { ok: confirmados, nao: ausentes })}
-        {escalados > 0 ? t('banda.presencaPendentes', { n: semResposta }) : ''}
-      </Text>
+      <TouchableOpacity
+        style={s.presencaResumoRow}
+        onPress={() => setLista(true)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={t('banda.presencaTitulo')}
+      >
+        <Text style={s.presencaResumo}>
+          {t('banda.presencaResumo', { ok: confirmados, nao: ausentes })}
+          {escalados > 0 ? t('banda.presencaPendentes', { n: semResposta }) : ''}
+        </Text>
+        <Ionicons name="chevron-forward" size={12} color={C.textDim} />
+      </TouchableOpacity>
+      <PresencaListaModal
+        visible={lista}
+        onClose={() => setLista(false)}
+        presencas={presencas}
+        escaladosIds={escaladosIds}
+        membros={membros}
+        meuId={meuId}
+        titulo={titulo}
+      />
     </View>
   );
 }
@@ -3171,11 +3285,11 @@ function BandaMain() {
   // pessoa+instrumento de propósito (a Ana pode estar como Teclado e como
   // Backing Vocal), enquanto a presença é uma resposta por pessoa — contar
   // linhas faria a tela cobrar resposta de gente que já respondeu.
-  const pessoasNaEscala = (escala: EscalaEntry[]) => new Set(
+  const idsNaEscala = (escala: EscalaEntry[]) => [...new Set(
     escala
       .map(e => membros.find(m => m.id === e.membro_id)?.profile_id)
       .filter((id): id is string => !!id),
-  ).size;
+  )];
 
   // ── Indisponibilidade ───────────────────────────────────────────────────────
   // Traz a partir de ontem: dias passados não servem pra nada e a lista
@@ -3617,7 +3731,9 @@ function BandaMain() {
               <PresencaBar
                 presencas={presencasDo('culto', cultoDoDia.id)}
                 meuId={user?.id}
-                escalados={pessoasNaEscala(cultoDoDia.escala)}
+                escaladosIds={idsNaEscala(cultoDoDia.escala)}
+                membros={membros}
+                titulo={cultoDoDia.label}
                 onResponder={st => responderPresenca('culto', cultoDoDia.id, st)}
               />
               <Text style={s.sectionLabel}>{t('banda.setlist')}</Text>
@@ -4018,7 +4134,9 @@ function BandaMain() {
                         <PresencaBar
                           presencas={presencasDo('culto', culto.id)}
                           meuId={user?.id}
-                          escalados={pessoasNaEscala(culto.escala)}
+                          escaladosIds={idsNaEscala(culto.escala)}
+                          membros={membros}
+                          titulo={culto.label}
                           onResponder={st => responderPresenca('culto', culto.id, st)}
                         />
                       </View>
@@ -4201,7 +4319,9 @@ function BandaMain() {
                         <PresencaBar
                           presencas={presencasDo('ensaio', ensaio.id)}
                           meuId={user?.id}
-                          escalados={pessoasNaEscala(ensaio.escala)}
+                          escaladosIds={idsNaEscala(ensaio.escala)}
+                          membros={membros}
+                          titulo={ensaio.label}
                           onResponder={st => responderPresenca('ensaio', ensaio.id, st)}
                         />
                       </View>
@@ -4673,6 +4793,9 @@ const buildS = (C: BandaColors) => StyleSheet.create({
   presencaBtnText: { fontSize: 13, fontWeight: '700', color: C.textMuted },
   presencaBtnTextOn: { color: C.text },
   presencaResumo: { fontSize: 11, color: C.textDim, textAlign: 'center' },
+  presencaResumoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  presencaGrupo: { marginBottom: 18 },
+  presencaGrupoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
 
   chatContent: { padding: 16, paddingBottom: 8, flexGrow: 1 },
   chatDayWrap: { alignItems: 'center', marginVertical: 10 },

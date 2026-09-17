@@ -1118,7 +1118,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           onPress={() => navigation?.navigate('Devocionais')}
         >
           <Text style={styles.verTodosDevocionaisTexto}>{t('home.verTodosDevocionais')}</Text>
-          <Ionicons name="arrow-forward" size={14} color="#F5C842" />
+          <Ionicons name="arrow-forward" size={14} color="#1A1740" />
         </TouchableOpacity>
 
         {/* ── Tradução ao vivo (só aparece com sessão ativa) ─────────────────── */}
@@ -1359,10 +1359,13 @@ function buildStyles(C: PaletaHome) { return StyleSheet.create({
   verTodosDevocionais: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     marginTop: -4, marginBottom: 16, alignSelf: 'center',
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: 'rgba(245,200,66,0.14)', borderWidth: 1, borderColor: 'rgba(245,200,66,0.4)',
+    paddingHorizontal: 18, paddingVertical: 11, borderRadius: 20,
+    // Era dourado a 14% com borda a 40%: sumia no fundo navy e não parecia
+    // clicável. Dourado cheio com texto navy — mesmo padrão do botão sólido da
+    // tradução ao vivo, logo abaixo.
+    backgroundColor: '#F5C842',
   },
-  verTodosDevocionaisTexto: { fontSize: 14, fontWeight: '700', color: '#F5C842' },
+  verTodosDevocionaisTexto: { fontSize: 14, fontWeight: '800', color: '#1A1740' },
   verTraducaoAoVivo: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     marginBottom: 16, alignSelf: 'center',

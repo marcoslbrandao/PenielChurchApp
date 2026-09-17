@@ -1476,18 +1476,32 @@ function PresencaBar({ presencas, meuId, escaladosIds, membros, titulo, onRespon
           <Text style={[s.presencaBtnText, minha === 'ausente' && s.presencaBtnTextOn]}>{t('banda.naoPosso')}</Text>
         </TouchableOpacity>
       </View>
+      {/* O resumo era uma linha de texto cinza e ninguém percebia que abria
+          algo. Agora é botão cheio, na cor primária: os três números com o
+          rótulo embaixo, divisórias entre eles e a seta no fim. */}
       <TouchableOpacity
-        style={s.presencaResumoRow}
+        style={s.presencaBotao}
         onPress={() => setLista(true)}
-        activeOpacity={0.7}
+        activeOpacity={0.85}
         accessibilityRole="button"
         accessibilityLabel={t('banda.presencaTitulo')}
       >
-        <Text style={s.presencaResumo}>
-          {t('banda.presencaResumo', { ok: confirmados, nao: ausentes })}
-          {escalados > 0 ? t('banda.presencaPendentes', { n: semResposta }) : ''}
-        </Text>
-        <Ionicons name="chevron-forward" size={12} color={C.textDim} />
+        {[
+          { chave: 'ok', n: confirmados, rotulo: t('banda.presencaLabelOk') },
+          { chave: 'nao', n: ausentes, rotulo: t('banda.presencaLabelNao') },
+          { chave: 'pendente', n: semResposta, rotulo: t('banda.presencaLabelPendente') },
+        ].map((col, i) => (
+          <React.Fragment key={col.chave}>
+            {i > 0 && <View style={s.presencaBotaoDiv} />}
+            <View style={s.presencaBotaoCol}>
+              <Text style={s.presencaBotaoNum}>{col.n}</Text>
+              {/* Duas linhas em vez de cortar: "Sem resposta" e
+                  "Indisponibles" não cabem numa só em tela estreita. */}
+              <Text style={s.presencaBotaoLabel} numberOfLines={2}>{col.rotulo}</Text>
+            </View>
+          </React.Fragment>
+        ))}
+        <Ionicons name="chevron-forward" size={14} color={C.onPrimary} style={s.presencaBotaoSeta} />
       </TouchableOpacity>
       <PresencaListaModal
         visible={lista}
@@ -4792,8 +4806,12 @@ const buildS = (C: BandaColors) => StyleSheet.create({
   presencaBtnNo: { backgroundColor: C.dangerBg, borderColor: C.danger },
   presencaBtnText: { fontSize: 13, fontWeight: '700', color: C.textMuted },
   presencaBtnTextOn: { color: C.text },
-  presencaResumo: { fontSize: 11, color: C.textDim, textAlign: 'center' },
-  presencaResumoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  presencaBotao: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.primary, borderRadius: 12, paddingVertical: 9, paddingHorizontal: 10, gap: 8 },
+  presencaBotaoCol: { flex: 1, alignItems: 'center' },
+  presencaBotaoNum: { fontSize: 17, fontWeight: '800', color: C.onPrimary },
+  presencaBotaoLabel: { fontSize: 9, fontWeight: '700', color: C.onPrimary, opacity: 0.85, letterSpacing: 0.3, textAlign: 'center', marginTop: 1 },
+  presencaBotaoDiv: { width: 1, height: 28, backgroundColor: C.onPrimary, opacity: 0.25 },
+  presencaBotaoSeta: { marginLeft: 2 },
   presencaGrupo: { marginBottom: 18 },
   presencaGrupoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
 

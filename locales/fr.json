@@ -1226,7 +1226,13 @@
     "criancasContador_one": "{{count}} enfant",
     "criancasContador_other": "{{count}} enfants",
     "removerLevaDependentes_one": "Attention : cela supprime aussi la fiche de {{count}} enfant ({{nomes}}). C'est irréversible.",
-    "removerLevaDependentes_other": "Attention : cela supprime aussi les fiches de {{count}} enfants ({{nomes}}). C'est irréversible."
+    "removerLevaDependentes_other": "Attention : cela supprime aussi les fiches de {{count}} enfants ({{nomes}}). C'est irréversible.",
+    "alergias": "Allergies",
+    "alergiasPlaceholder": "Ex : arachides, produits laitiers, piqûre d'abeille",
+    "necessidadesEspeciais": "Besoins particuliers",
+    "necessidadesPlaceholder": "Soutien, soin ou situation que la salle doit connaître",
+    "infoResponsavel": "Indiqué par le responsable",
+    "infoResponsavelPlaceholder": "Ce que le parent a voulu que l'église sache"
   },
   "meses": {
     "janeiro": "Janvier",
@@ -1265,7 +1271,16 @@
     "erroNome": "Saisissez au moins le prénom.",
     "erroData": "Vérifiez la date de naissance. Utilisez JJ/MM/AAAA et une date déjà passée.",
     "erroSalvar": "Impossible d'enregistrer. Réessayez dans un instant.",
-    "erroRemover": "Impossible de supprimer. Réessayez dans un instant."
+    "erroRemover": "Impossible de supprimer. Réessayez dans un instant.",
+    "blocoSeguranca": "Pour la sécurité en salle",
+    "blocoSegurancaAjuda": "Ces informations ne sont visibles que par vous et par les responsables de l'église — elles n'apparaissent jamais dans la liste des anniversaires ni pour les autres membres.",
+    "alergias": "Allergies et restrictions alimentaires",
+    "alergiasPlaceholder": "Ex : arachides, produits laitiers, piqûre d'abeille",
+    "necessidades": "Besoins particuliers",
+    "necessidadesPlaceholder": "Ex : porte un appareil auditif, a besoin d'aide aux toilettes, est autiste",
+    "infoExtra": "Autre information utile",
+    "infoExtraPlaceholder": "Que souhaitez-vous que nous sachions d'autre à son sujet ?",
+    "tagAlergia": "ALLERGIE"
   },
   "aniversariantes": {
     "titulo": "Anniversaires",

@@ -1226,7 +1226,13 @@
     "criancasContador_one": "{{count}} criança",
     "criancasContador_other": "{{count}} crianças",
     "removerLevaDependentes_one": "Atenção: isto também remove o cadastro de {{count}} criança ({{nomes}}). Não há como desfazer.",
-    "removerLevaDependentes_other": "Atenção: isto também remove o cadastro de {{count}} crianças ({{nomes}}). Não há como desfazer."
+    "removerLevaDependentes_other": "Atenção: isto também remove o cadastro de {{count}} crianças ({{nomes}}). Não há como desfazer.",
+    "alergias": "Alergias",
+    "alergiasPlaceholder": "Ex: amendoim, leite, picada de abelha",
+    "necessidadesEspeciais": "Necessidades especiais",
+    "necessidadesPlaceholder": "Apoio, cuidado ou condição que a sala precisa conhecer",
+    "infoResponsavel": "Informado pelo responsável",
+    "infoResponsavelPlaceholder": "O que o pai ou a mãe quis que a igreja soubesse"
   },
   "meses": {
     "janeiro": "Janeiro",
@@ -1265,7 +1271,16 @@
     "erroNome": "Escreva pelo menos o primeiro nome.",
     "erroData": "Confira a data de nascimento. Use DD/MM/AAAA e uma data que já tenha acontecido.",
     "erroSalvar": "Não foi possível salvar. Tente de novo em instantes.",
-    "erroRemover": "Não foi possível remover. Tente de novo em instantes."
+    "erroRemover": "Não foi possível remover. Tente de novo em instantes.",
+    "blocoSeguranca": "Para a segurança na sala",
+    "blocoSegurancaAjuda": "Estas informações ficam visíveis só para você e para a liderança da igreja — nunca aparecem na lista de aniversariantes nem para os outros membros.",
+    "alergias": "Alergias e restrições alimentares",
+    "alergiasPlaceholder": "Ex: amendoim, leite, picada de abelha",
+    "necessidades": "Necessidades especiais",
+    "necessidadesPlaceholder": "Ex: usa aparelho auditivo, precisa de ajuda no banheiro, é autista",
+    "infoExtra": "Outra informação relevante",
+    "infoExtraPlaceholder": "O que mais você quer que a gente saiba sobre ele(a)?",
+    "tagAlergia": "ALERGIA"
   },
   "aniversariantes": {
     "titulo": "Aniversariantes",

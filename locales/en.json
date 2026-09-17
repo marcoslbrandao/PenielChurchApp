@@ -1226,7 +1226,13 @@
     "criancasContador_one": "{{count}} child",
     "criancasContador_other": "{{count}} children",
     "removerLevaDependentes_one": "Warning: this also deletes the record of {{count}} child ({{nomes}}). This cannot be undone.",
-    "removerLevaDependentes_other": "Warning: this also deletes the records of {{count}} children ({{nomes}}). This cannot be undone."
+    "removerLevaDependentes_other": "Warning: this also deletes the records of {{count}} children ({{nomes}}). This cannot be undone.",
+    "alergias": "Allergies",
+    "alergiasPlaceholder": "e.g. peanuts, dairy, bee sting",
+    "necessidadesEspeciais": "Special needs",
+    "necessidadesPlaceholder": "Support, care or condition the class should know about",
+    "infoResponsavel": "From the parent or guardian",
+    "infoResponsavelPlaceholder": "What the parent wanted the church to know"
   },
   "meses": {
     "janeiro": "January",
@@ -1265,7 +1271,16 @@
     "erroNome": "Please enter at least a first name.",
     "erroData": "Check the date of birth. Use DD/MM/YYYY and a date that has already happened.",
     "erroSalvar": "Couldn't save. Please try again in a moment.",
-    "erroRemover": "Couldn't remove. Please try again in a moment."
+    "erroRemover": "Couldn't remove. Please try again in a moment.",
+    "blocoSeguranca": "For safety in the class",
+    "blocoSegurancaAjuda": "This is visible only to you and to the church leadership — it never appears on the birthday list or to other members.",
+    "alergias": "Allergies and dietary restrictions",
+    "alergiasPlaceholder": "e.g. peanuts, dairy, bee sting",
+    "necessidades": "Special needs",
+    "necessidadesPlaceholder": "e.g. wears a hearing aid, needs help in the toilet, is autistic",
+    "infoExtra": "Anything else we should know",
+    "infoExtraPlaceholder": "What else would you like us to know about them?",
+    "tagAlergia": "ALLERGY"
   },
   "aniversariantes": {
     "titulo": "Birthdays",

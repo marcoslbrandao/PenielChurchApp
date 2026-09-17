@@ -43,6 +43,13 @@ export type Filho = {
   sobrenome: string | null;
   data_nascimento: string | null;
   sexo: string | null;
+  // Ficha de segurança — o que a sala de domingo precisa saber antes do
+  // lanche. `alergias` e `necessidades_especiais` são dado de saúde de um
+  // menor: ficam em `members`, que é fechada, e nenhuma RPC pública os
+  // devolve. Ver a migração 20260918090000.
+  alergias: string | null;
+  necessidades_especiais: string | null;
+  info_responsavel: string | null;
 };
 
 const SEXO_OPCOES: { valor: string; chave: string }[] = [
@@ -118,13 +125,16 @@ export default function FilhosCard({ responsavelId }: { responsavelId: string | 
   const [sobrenome, setSobrenome] = useState('');
   const [nascimento, setNascimento] = useState('');
   const [sexo, setSexo] = useState('');
+  const [alergias, setAlergias] = useState('');
+  const [necessidades, setNecessidades] = useState('');
+  const [infoExtra, setInfoExtra] = useState('');
 
   const carregar = useCallback(async () => {
     if (!responsavelId) { setFilhos([]); return; }
     setCarregando(true);
     const { data } = await supabase
       .from('members')
-      .select('id, nome, sobrenome, data_nascimento, sexo')
+      .select('id, nome, sobrenome, data_nascimento, sexo, alergias, necessidades_especiais, info_responsavel')
       .eq('responsavel_id', responsavelId)
       .order('data_nascimento', { ascending: true });
     setFilhos((data as Filho[]) ?? []);
@@ -133,15 +143,13 @@ export default function FilhosCard({ responsavelId }: { responsavelId: string | 
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const limpar = () => {
+  const zerarCampos = () => {
     setEditandoId(null); setNome(''); setSobrenome(''); setNascimento(''); setSexo('');
-    setFormAberto(false);
+    setAlergias(''); setNecessidades(''); setInfoExtra('');
   };
 
-  const abrirNovo = () => {
-    setEditandoId(null); setNome(''); setSobrenome(''); setNascimento(''); setSexo('');
-    setFormAberto(true);
-  };
+  const limpar = () => { zerarCampos(); setFormAberto(false); };
+  const abrirNovo = () => { zerarCampos(); setFormAberto(true); };
 
   const abrirEdicao = (f: Filho) => {
     setEditandoId(f.id);
@@ -149,6 +157,9 @@ export default function FilhosCard({ responsavelId }: { responsavelId: string | 
     setSobrenome(f.sobrenome ?? '');
     setNascimento(formatDateBR(f.data_nascimento));
     setSexo(f.sexo ?? '');
+    setAlergias(f.alergias ?? '');
+    setNecessidades(f.necessidades_especiais ?? '');
+    setInfoExtra(f.info_responsavel ?? '');
     setFormAberto(true);
   };
 
@@ -177,6 +188,12 @@ export default function FilhosCard({ responsavelId }: { responsavelId: string | 
       sobrenome: sobrenome.trim() || null,
       data_nascimento: parseDateISO(nascimento),
       sexo: sexo || null,
+      // `|| null` e não `|| ''`: campo vazio tem que virar nulo, senão a ficha
+      // do Admin mostraria "Alergias:" seguido de nada, que se lê como "sem
+      // alergia" — a leitura errada mais cara possível nesta tela.
+      alergias: alergias.trim() || null,
+      necessidades_especiais: necessidades.trim() || null,
+      info_responsavel: infoExtra.trim() || null,
     };
 
     // `responsavel_id` só vai no INSERT: o gatilho do banco recusa trocá-lo
@@ -250,7 +267,18 @@ export default function FilhosCard({ responsavelId }: { responsavelId: string | 
                 <Text style={s.avatarTexto}>{(f.nome?.[0] ?? '?').toUpperCase()}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.linhaNome}>{f.nome}{f.sobrenome ? ` ${f.sobrenome}` : ''}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={s.linhaNome}>{f.nome}{f.sobrenome ? ` ${f.sobrenome}` : ''}</Text>
+                  {/* Uma etiqueta vermelha na lista, não só dentro do
+                      formulário: quem confere a ficha no corredor, minutos
+                      antes do lanche, não vai abrir cada cadastro. */}
+                  {!!f.alergias && (
+                    <View style={s.tagAlergia}>
+                      <Ionicons name="warning" size={10} color={C.danger} />
+                      <Text style={s.tagAlergiaTexto}>{t('filhos.tagAlergia')}</Text>
+                    </View>
+                  )}
+                </View>
                 <Text style={s.linhaSub}>
                   {formatDateBR(f.data_nascimento)}
                   {anos !== null ? ` · ${t('filhos.anos', { count: anos })}` : ''}
@@ -306,6 +334,30 @@ export default function FilhosCard({ responsavelId }: { responsavelId: string | 
               </TouchableOpacity>
             ))}
           </View>
+
+          <Text style={s.blocoTitulo}>{t('filhos.blocoSeguranca')}</Text>
+          <Text style={s.blocoAjuda}>{t('filhos.blocoSegurancaAjuda')}</Text>
+
+          <Text style={s.label}>{t('filhos.alergias')}</Text>
+          <TextInput
+            style={[s.input, s.inputMulti]} value={alergias} onChangeText={setAlergias}
+            placeholder={t('filhos.alergiasPlaceholder')} placeholderTextColor={C.textDim}
+            multiline
+          />
+
+          <Text style={s.label}>{t('filhos.necessidades')}</Text>
+          <TextInput
+            style={[s.input, s.inputMulti]} value={necessidades} onChangeText={setNecessidades}
+            placeholder={t('filhos.necessidadesPlaceholder')} placeholderTextColor={C.textDim}
+            multiline
+          />
+
+          <Text style={s.label}>{t('filhos.infoExtra')}</Text>
+          <TextInput
+            style={[s.input, s.inputMulti]} value={infoExtra} onChangeText={setInfoExtra}
+            placeholder={t('filhos.infoExtraPlaceholder')} placeholderTextColor={C.textDim}
+            multiline
+          />
 
           <View style={s.formBotoes}>
             <TouchableOpacity style={s.btnSecundario} onPress={limpar} disabled={salvando}>
@@ -365,6 +417,18 @@ function buildStyles(C: ReturnType<typeof paleta>) {
       borderRadius: 10, paddingHorizontal: 14, height: 46, fontSize: 15,
       color: C.text, marginBottom: 12,
     },
+    inputMulti: { height: 80, textAlignVertical: 'top', paddingTop: 12 },
+    tagAlergia: {
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      backgroundColor: C.danger + '1A', borderRadius: 6,
+      paddingHorizontal: 6, paddingVertical: 2,
+    },
+    tagAlergiaTexto: { fontSize: 9.5, fontWeight: '800', color: C.danger, letterSpacing: 0.3 },
+    blocoTitulo: {
+      fontSize: 12.5, fontWeight: '800', color: C.text,
+      marginTop: 6, marginBottom: 4,
+    },
+    blocoAjuda: { fontSize: 11.5, color: C.textMuted, lineHeight: 16.5, marginBottom: 12 },
     pillRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
     pill: {
       paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,

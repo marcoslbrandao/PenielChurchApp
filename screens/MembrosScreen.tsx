@@ -45,6 +45,11 @@ type Membro = {
   // status continuam corretas sem saber que crianças existem.
   responsavel_id: string | null;
   mostrar_aniversario: boolean;
+  // Ficha de segurança (migração 20260918090000). `alergias` e
+  // `necessidades_especiais` são dado de saúde — de um menor, no caso das
+  // crianças. Vivem aqui porque `members` é fechada; nenhuma RPC pública os
+  // devolve, e nenhuma deve passar a devolver.
+  alergias: string; necessidades_especiais: string; info_responsavel: string;
 };
 
 type ProfileLite = { id: string; full_name: string | null };
@@ -63,6 +68,7 @@ const EMPTY: Omit<Membro, 'id'> = {
   instagram: '', deseja_batizar: false, compartilhar_mais: '',
   conjuge_id: null, pai_id: null, mae_id: null, profile_id: null,
   responsavel_id: null, mostrar_aniversario: true,
+  alergias: '', necessidades_especiais: '', info_responsavel: '',
 };
 
 const ESTADO_CIVIL = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União estável'];
@@ -856,6 +862,9 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
                       das observações, que são notas internas da liderança. */}
                   <Field label={t('membros.oQueAPessoaQuis')} value={form.compartilhar_mais} onChangeText={set('compartilhar_mais')} placeholder={t('membros.preenchidoPeloProprioMembroNo')} multiline />
                   <Field label={t('membros.observacoes')} value={form.observacoes} onChangeText={set('observacoes')} placeholder={t('membros.notasInternas')} />
+                  <Field label={t('membros.alergias')} value={form.alergias} onChangeText={set('alergias')} placeholder={t('membros.alergiasPlaceholder')} multiline />
+                  <Field label={t('membros.necessidadesEspeciais')} value={form.necessidades_especiais} onChangeText={set('necessidades_especiais')} placeholder={t('membros.necessidadesPlaceholder')} multiline />
+                  <Field label={t('membros.infoResponsavel')} value={form.info_responsavel} onChangeText={set('info_responsavel')} placeholder={t('membros.infoResponsavelPlaceholder')} multiline />
                 </View>
               )}
             </ScrollView>
@@ -1000,6 +1009,30 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
                 </View>
               </View>
             </View>
+            {/* Alergia vem ANTES de tudo, em vermelho. Quem abre a ficha de
+                uma criança minutos antes do lanche não pode depender de rolar
+                até o fim da tela para descobrir que ela não pode comer
+                amendoim. É a única informação desta ficha em que chegar tarde
+                tem consequência física. */}
+            {!!membro.alergias && (
+              <View style={dd.alertaCard}>
+                <Ionicons name="warning" size={18} color={C.danger} />
+                <View style={{ flex: 1 }}>
+                  <Text style={dd.alertaTitulo}>{t('membros.alergias')}</Text>
+                  <Text style={dd.alertaTexto}>{membro.alergias}</Text>
+                </View>
+              </View>
+            )}
+            {!!membro.necessidades_especiais && (
+              <View style={[dd.alertaCard, { backgroundColor: C.primary + '12', borderColor: C.primary + '55' }]}>
+                <Ionicons name="accessibility-outline" size={18} color={C.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[dd.alertaTitulo, { color: C.primary }]}>{t('membros.necessidadesEspeciais')}</Text>
+                  <Text style={[dd.alertaTexto, { color: C.text }]}>{membro.necessidades_especiais}</Text>
+                </View>
+              </View>
+            )}
+
             <Text style={dd.sectionTitle}>{t('membros.dadosPessoais')}</Text>
             <View style={dd.card}>
               <Row icon="calendar-outline" label={t('membros.nascimento')} value={`${formatDateBR(membro.data_nascimento)} ${getAge(membro.data_nascimento) ? '· ' + getAge(membro.data_nascimento) : ''}`} />
@@ -1044,6 +1077,7 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
               <Row icon="star-outline" label={t('membros.funcao')} value={membro.funcao} />
               {!!membro.compartilhar_mais && <Row icon="chatbubble-ellipses-outline" label={t('membros.compartilhou')} value={membro.compartilhar_mais} />}
               {!!membro.observacoes && <Row icon="document-text-outline" label={t('membros.obs')} value={membro.observacoes} />}
+              {!!membro.info_responsavel && <Row icon="information-circle-outline" label={t('membros.infoResponsavel')} value={membro.info_responsavel} />}
             </View>
           </ScrollView>
         </View>
@@ -1066,6 +1100,13 @@ const dd = StyleSheet.create({
   badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   badgeText: { fontSize: 12, fontWeight: '600' },
   sectionTitle: { fontSize: 11, fontWeight: '700', color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8, marginTop: 16 },
+  alertaCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: C.danger + '12', borderWidth: 1, borderColor: C.danger + '55',
+    borderRadius: 12, padding: 12, marginTop: 14,
+  },
+  alertaTitulo: { fontSize: 10.5, fontWeight: '800', color: C.danger, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 3 },
+  alertaTexto: { fontSize: 14, color: C.text, lineHeight: 19.5 },
   card: { backgroundColor: C.surfaceAlt, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: C.border },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border },
   rowIcon: { marginTop: 2 },

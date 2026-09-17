@@ -787,6 +787,7 @@ export default function ProfileScreen() {
         { icon: 'bookmark-outline', label: t('perfil.versiculosSalvos'), onPress: () => isLoggedIn ? setSavedVersesVisible(true) : pedirLogin(t('perfil.faceLoginVersiculos')) },
         { icon: 'book-outline', label: t('perfil.historicoDeEstudos'), onPress: () => isLoggedIn ? setReadingHistoryVisible(true) : pedirLogin(t('perfil.faceLoginHistorico')) },
         { icon: 'heart-outline', label: t('perfil.pedidosDeOracao'), onPress: () => isLoggedIn ? setPrayerVisible(true) : pedirLogin(t('perfil.faceLoginOracao')) },
+        { icon: 'gift-outline', label: t('perfil.aniversariantes'), onPress: () => isLoggedIn ? navigation.navigate('Aniversariantes' as never) : pedirLogin(t('perfil.facaLoginAniversariantes')) },
       ],
     },
     {

@@ -23,7 +23,8 @@
     "enviar": "Enviar",
     "tenteNovamente": "Tente novamente.",
     "enviando": "Enviando...",
-    "removerFalhouTitulo": "Não foi possível remover"
+    "removerFalhouTitulo": "Não foi possível remover",
+    "tentarNovamente": "Tentar novamente"
   },
   "home": {
     "bemVindo": "Bem-vindo de volta",
@@ -228,7 +229,9 @@
     "entrarOuCriarConta": "Entrar ou criar conta",
     "entrarOuCriarContaSub": "Salve versículos, receba avisos e acompanhe a agenda",
     "notificacoesFalha": "Não foi possível mudar as notificações agora. Tente de novo.",
-    "statVersiculos": "Versículos"
+    "statVersiculos": "Versículos",
+    "aniversariantes": "Aniversariantes",
+    "facaLoginAniversariantes": "Faça login para ver os aniversariantes da igreja."
   },
   "grupos": {
     "titulo": "Grupos",
@@ -858,7 +861,8 @@
     "dataBatismo": "Data do batismo",
     "estadoRegiao": "Estado / Região",
     "estadoRegiaoPlaceholder": "Ex: Berkshire",
-    "ministerioAtual": "Já serve em algum ministério na Peniel?"
+    "ministerioAtual": "Já serve em algum ministério na Peniel?",
+    "mostrarAniversario": "Aparecer na lista de aniversariantes da igreja"
   },
   "ativarMembro": {
     "titulo": "Área do Membro",
@@ -1211,10 +1215,65 @@
       "voluntario": "Voluntário",
       "pastor": "Pastor",
       "diacono": "Diácono",
-      "visitante": "Visitante"
+      "visitante": "Visitante",
+      "crianca": "Criança"
     },
     "semNome": "Sem nome",
     "aniversarioEmoji": "🎂 Aniversário",
-    "mesEmoji": "🎂 Mês"
+    "mesEmoji": "🎂 Mês",
+    "cadastradosContador_one": "{{count}} cadastrado",
+    "cadastradosContador_other": "{{count}} cadastrados",
+    "criancasContador_one": "{{count}} criança",
+    "criancasContador_other": "{{count}} crianças",
+    "removerLevaDependentes_one": "Atenção: isto também remove o cadastro de {{count}} criança ({{nomes}}). Não há como desfazer.",
+    "removerLevaDependentes_other": "Atenção: isto também remove o cadastro de {{count}} crianças ({{nomes}}). Não há como desfazer."
+  },
+  "meses": {
+    "janeiro": "Janeiro",
+    "fevereiro": "Fevereiro",
+    "marco": "Março",
+    "abril": "Abril",
+    "maio": "Maio",
+    "junho": "Junho",
+    "julho": "Julho",
+    "agosto": "Agosto",
+    "setembro": "Setembro",
+    "outubro": "Outubro",
+    "novembro": "Novembro",
+    "dezembro": "Dezembro"
+  },
+  "filhos": {
+    "secao": "Meus filhos",
+    "explicacao": "Cadastre seus filhos aqui. Como eles não têm e-mail nem conta no app, é por este cadastro que a igreja passa a saber o aniversário deles e a montar a lista da sala do Ministério Infantil.",
+    "nenhum": "Nenhum filho cadastrado ainda.",
+    "salvePrimeiro": "Salve seu cadastro primeiro. Depois disso, esta área abre para você adicionar seus filhos.",
+    "adicionar": "Adicionar filho",
+    "novoTitulo": "Novo filho",
+    "editarTitulo": "Editar",
+    "nome": "Nome",
+    "nomePlaceholder": "Primeiro nome",
+    "sobrenome": "Sobrenome",
+    "sobrenomePlaceholder": "Sobrenome",
+    "nascimento": "Data de nascimento",
+    "sexo": "Sexo",
+    "salvar": "Salvar",
+    "remover": "Remover",
+    "removerTitulo": "Remover cadastro",
+    "removerTexto": "Deseja remover o cadastro de {{nome}}?",
+    "anos_one": "{{count}} ano",
+    "anos_other": "{{count}} anos",
+    "erroNome": "Escreva pelo menos o primeiro nome.",
+    "erroData": "Confira a data de nascimento. Use DD/MM/AAAA e uma data que já tenha acontecido.",
+    "erroSalvar": "Não foi possível salvar. Tente de novo em instantes.",
+    "erroRemover": "Não foi possível remover. Tente de novo em instantes."
+  },
+  "aniversariantes": {
+    "titulo": "Aniversariantes",
+    "ehHoje": "É hoje!",
+    "criancas": "Crianças",
+    "nenhum": "Ninguém faz aniversário neste mês.",
+    "erro": "Não foi possível carregar a lista.",
+    "contador_one": "{{count}} aniversariante em {{mes}}",
+    "contador_other": "{{count}} aniversariantes em {{mes}}"
   }
 }

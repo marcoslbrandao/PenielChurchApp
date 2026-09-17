@@ -32,13 +32,19 @@ type Membro = {
   ministerio_anterior: boolean; ministerio_anterior_qual: string;
   deseja_servir: boolean; deseja_servir_area: string;
   ministerio: string; funcao: string;
-  status: 'membro' | 'visitante' | 'lider';
+  status: 'membro' | 'visitante' | 'lider' | 'crianca';
   observacoes: string;
   // Preenchidos pela própria pessoa em "Meu Cadastro" — existiam no banco desde
   // agosto, mas não apareciam em lugar nenhum do Admin.
   instagram: string; deseja_batizar: boolean; compartilhar_mais: string;
   conjuge_id: string | null; pai_id: string | null; mae_id: string | null;
   profile_id: string | null;
+  // Preenchido quando a pessoa é dependente de outro cadastro — criança
+  // cadastrada pelo pai ou pela mãe em "Meu Cadastro". É este campo, e não o
+  // status, que define se a linha é uma criança: as telas que filtram por
+  // status continuam corretas sem saber que crianças existem.
+  responsavel_id: string | null;
+  mostrar_aniversario: boolean;
 };
 
 type ProfileLite = { id: string; full_name: string | null };
@@ -56,6 +62,7 @@ const EMPTY: Omit<Membro, 'id'> = {
   funcao: '', status: 'membro', observacoes: '',
   instagram: '', deseja_batizar: false, compartilhar_mais: '',
   conjuge_id: null, pai_id: null, mae_id: null, profile_id: null,
+  responsavel_id: null, mostrar_aniversario: true,
 };
 
 const ESTADO_CIVIL = ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)', 'União estável'];
@@ -83,11 +90,13 @@ const OPCAO_CHAVE: Record<string, string> = {
 };
 
 function statusColor(s: Membro['status']) {
+  if (s === 'crianca') return '#7C4DFF';
   return s === 'lider' ? C.accent : s === 'membro' ? C.success : C.textMuted;
 }
 // Devolve a CHAVE — a função vive fora de qualquer componente, onde não há
 // `t`. Quem renderiza traduz.
 function statusChave(s: Membro['status']) {
+  if (s === 'crianca') return 'membros.op.crianca';
   return s === 'lider' ? 'membros.op.lider' : s === 'membro' ? 'membros.op.membro' : 'membros.op.visitante';
 }
 function getAge(dob: string): string {
@@ -98,10 +107,32 @@ function getAge(dob: string): string {
   if (today.getMonth() < date.getMonth() || (today.getMonth() === date.getMonth() && today.getDate() < date.getDate())) age--;
   return `${age} anos`;
 }
-function isBirthdayThisMonth(dob: string): boolean {
-  if (!dob) return false;
-  return new Date(dob).getMonth() === new Date().getMonth();
+// `new Date('1990-05-12')` é interpretado como meia-noite UTC, e `getMonth()`
+// devolve o mês no fuso do APARELHO: com o celular no Brasil (UTC-3), todo
+// aniversário do dia 1º aparecia no mês anterior. A data de nascimento é uma
+// data de calendário, não um instante — ler direto da string é o certo.
+function mesDoNascimento(dob: string): number | null {
+  if (!dob) return null;
+  const mes = Number(String(dob).split('-')[1]);
+  return mes >= 1 && mes <= 12 ? mes : null;
 }
+function diaDoNascimento(dob: string): number | null {
+  if (!dob) return null;
+  const dia = Number(String(dob).split('-')[2]?.slice(0, 2));
+  return dia >= 1 && dia <= 31 ? dia : null;
+}
+/** Mês de hoje em Londres — a igreja é no Reino Unido e o aparelho pode não
+ *  estar. Sem isto, o card "Aniversariantes do mês" mostraria outro mês para
+ *  quem abrisse o app viajando. */
+function mesAtualEmLondres(): number {
+  const partes = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', month: '2-digit' }).formatToParts(new Date());
+  return Number(partes.find(x => x.type === 'month')?.value ?? 1);
+}
+const MESES_CHAVE = [
+  'meses.janeiro', 'meses.fevereiro', 'meses.marco', 'meses.abril',
+  'meses.maio', 'meses.junho', 'meses.julho', 'meses.agosto',
+  'meses.setembro', 'meses.outubro', 'meses.novembro', 'meses.dezembro',
+];
 function formatDateBR(iso: string): string {
   if (!iso) return '';
   const [y, m, d] = iso.split('-');
@@ -563,7 +594,10 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
 
   const handleSave = async () => {
     if (!form.nome.trim()) { Alert.alert(t('common.atencao'), t('membros.nomeEObrigatorio')); return; }
-    if (!form.telefone.trim()) { Alert.alert(t('common.atencao'), t('membros.telefoneEObrigatorio')); return; }
+    // Criança cadastrada pelo responsável não tem telefone próprio — quem a
+    // igreja liga é o pai ou a mãe. Exigir aqui travava a edição de qualquer
+    // dependente sem que a tela explicasse por quê.
+    if (!form.responsavel_id && !form.telefone.trim()) { Alert.alert(t('common.atencao'), t('membros.telefoneEObrigatorio')); return; }
     setSaving(true);
 
     // Tudo dentro de um try/catch/finally de propósito (16ª rodada — bug
@@ -958,7 +992,7 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
                       <Text style={[dd.badgeText, { color: C.primary }]}>{t('membros.batizado')}</Text>
                     </View>
                   )}
-                  {isBirthdayThisMonth(membro.data_nascimento) && (
+                  {mesDoNascimento(membro.data_nascimento) === mesAtualEmLondres() && (
                     <View style={[dd.badge, { backgroundColor: C.accent + '20' }]}>
                       <Text style={[dd.badgeText, { color: C.accent }]}>{t('membros.aniversarioEmoji')}</Text>
                     </View>
@@ -1050,7 +1084,10 @@ export default function MembrosScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<Membro['status'] | 'todos'>('todos');
-  const [filterBirthday, setFilterBirthday] = useState(false);
+  // null = sem filtro de aniversário. Era um booleano "aniversariantes deste
+  // mês"; virou o número do mês para responder "quem faz aniversário em
+  // outubro?" sem esperar outubro chegar.
+  const [filterMes, setFilterMes] = useState<number | null>(null);
   const [formVisible, setFormVisible] = useState(false);
   const [editingMembro, setEditingMembro] = useState<Membro | null>(null);
   const [detailMembro, setDetailMembro] = useState<Membro | null>(null);
@@ -1079,7 +1116,16 @@ export default function MembrosScreen() {
   }, [role, fetchMembros]);
 
   const handleDelete = (id: string) => {
-    Alert.alert(t('membros.removerMembro'), t('membros.desejaRemoverEsteMembro'), [
+    // `members.responsavel_id` é ON DELETE CASCADE (migração 20260917220000):
+    // apagar o cadastro do pai apaga o das crianças dele, e não há lixeira.
+    // Um admin que não souber disso perde os dados da sala infantil inteira
+    // ao arrumar o diretório.
+    const dependentes = membros.filter(m => m.responsavel_id === id);
+    const texto = dependentes.length > 0
+      ? `${t('membros.desejaRemoverEsteMembro')}\n\n${t('membros.removerLevaDependentes', { count: dependentes.length, nomes: dependentes.map(d => d.nome).join(', ') })}`
+      : t('membros.desejaRemoverEsteMembro');
+
+    Alert.alert(t('membros.removerMembro'), texto, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Remover', style: 'destructive',
@@ -1092,15 +1138,33 @@ export default function MembrosScreen() {
     ]);
   };
 
+  // Crianças ficam fora da lista principal: são dependentes cadastrados pelos
+  // pais, não pessoas que a liderança gerencia uma a uma, e numa igreja com
+  // muitas famílias elas dobrariam o diretório. A pílula "Crianças" traz elas
+  // de volta, e o filtro de aniversário sempre mostra todo mundo — que é o
+  // ponto de ter a criança no cadastro.
+  const adultos = membros.filter(m => !m.responsavel_id);
+  const mesAtual = mesAtualEmLondres();
+
   const filtered = membros.filter(m => {
     const q = search.toLowerCase();
     const matchSearch = !q || `${m.nome} ${m.sobrenome}`.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q);
     const matchStatus = filterStatus === 'todos' || m.status === filterStatus;
-    const matchBirthday = !filterBirthday || isBirthdayThisMonth(m.data_nascimento);
-    return matchSearch && matchStatus && matchBirthday;
+    const matchMes = filterMes === null || mesDoNascimento(m.data_nascimento) === filterMes;
+    // Sem filtro explícito de criança nem de aniversário, o dependente não
+    // aparece. Buscar pelo nome dele funciona sempre.
+    const ehDependente = !!m.responsavel_id;
+    const mostraDependente = filterStatus === 'crianca' || filterMes !== null || !!q;
+    return matchSearch && matchStatus && matchMes && (!ehDependente || mostraDependente);
+  }).sort((a, b) => {
+    // Com filtro de mês, a ordem útil é a do calendário — a lista vira a
+    // agenda de quem parabenizar, na ordem em que os dias chegam.
+    if (filterMes === null) return 0;
+    return (diaDoNascimento(a.data_nascimento) ?? 99) - (diaDoNascimento(b.data_nascimento) ?? 99);
   });
 
-  const birthdayCount = membros.filter(m => isBirthdayThisMonth(m.data_nascimento)).length;
+  const birthdayCount = membros.filter(m => mesDoNascimento(m.data_nascimento) === mesAtual).length;
+  const criancasCount = membros.length - adultos.length;
 
   if (loadingRole) {
     return (
@@ -1137,7 +1201,10 @@ export default function MembrosScreen() {
       <View style={s.header}>
         <View>
           <Text style={s.headerTitle}>{t('membros.membros')}</Text>
-          <Text style={s.headerSub}>{membros.length} cadastrados</Text>
+          <Text style={s.headerSub}>
+            {t('membros.cadastradosContador', { count: adultos.length })}
+            {criancasCount > 0 ? ` · ${t('membros.criancasContador', { count: criancasCount })}` : ''}
+          </Text>
         </View>
         <TouchableOpacity style={s.addBtn} onPress={() => { setEditingMembro(null); setFormVisible(true); }}>
           <Ionicons name="person-add-outline" size={18} color={C.primary} />
@@ -1148,13 +1215,15 @@ export default function MembrosScreen() {
       {/* Stats */}
       <View style={s.statsRow}>
         {[
-          { label: 'Membros', value: membros.filter(m => m.status === 'membro').length, color: C.success },
-          { label: t('membros.lideres'), value: membros.filter(m => m.status === 'lider').length, color: C.accent },
-          { label: t('membros.visitantes'), value: membros.filter(m => m.status === 'visitante').length, color: C.textMuted },
+          // Os três primeiros contam ADULTOS: criança entra como 'crianca' e
+          // não deve inflar "quantos membros a igreja tem".
+          { label: 'Membros', value: adultos.filter(m => m.status === 'membro').length, color: C.success },
+          { label: t('membros.lideres'), value: adultos.filter(m => m.status === 'lider').length, color: C.accent },
+          { label: t('membros.visitantes'), value: adultos.filter(m => m.status === 'visitante').length, color: C.textMuted },
           { label: t('membros.anivMes'), value: birthdayCount, color: '#7C4DFF', aniversario: true },
         ].map(stat => (
           <TouchableOpacity key={stat.label} style={s.statCard}
-            onPress={() => stat.aniversario && setFilterBirthday(f => !f)}>
+            onPress={() => stat.aniversario && setFilterMes(m => (m === null ? mesAtual : null))}>
             <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
             <Text style={s.statLabel}>{stat.label}</Text>
           </TouchableOpacity>
@@ -1172,15 +1241,39 @@ export default function MembrosScreen() {
 
       {/* Filters */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRowScroll} contentContainerStyle={s.filterRow}>
-        {(['todos', 'membro', 'lider', 'visitante'] as const).map(f => (
+        {(['todos', 'membro', 'lider', 'visitante', 'crianca'] as const).map(f => (
           <TouchableOpacity key={f} style={[s.filterPill, filterStatus === f && s.filterPillActive]} onPress={() => setFilterStatus(f)}>
             <Text allowFontScaling={false} numberOfLines={1} style={[s.filterPillText, filterStatus === f && s.filterPillTextActive]}>{f === 'todos' ? t('membros.todos') : t(statusChave(f))}</Text>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={[s.filterPill, filterBirthday && { backgroundColor: C.accent + '18', borderColor: C.accent }]} onPress={() => setFilterBirthday(f => !f)}>
-          <Text allowFontScaling={false} numberOfLines={1} style={[s.filterPillText, filterBirthday && { color: C.accent, fontWeight: '700' }]}>{t('membros.mesEmoji')}</Text>
+        <TouchableOpacity
+          style={[s.filterPill, filterMes !== null && { backgroundColor: C.accent + '18', borderColor: C.accent }]}
+          onPress={() => setFilterMes(m => (m === null ? mesAtual : null))}
+        >
+          <Text allowFontScaling={false} numberOfLines={1} style={[s.filterPillText, filterMes !== null && { color: C.accent, fontWeight: '700' }]}>{t('membros.mesEmoji')}</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* A faixa dos doze meses só aparece com o filtro ligado: ocupa uma
+          linha inteira e, desligada, seria ruído em cima de uma tela que já
+          tem busca, estatísticas e filtros. */}
+      {filterMes !== null && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRowScroll} contentContainerStyle={s.filterRow}>
+          {MESES_CHAVE.map((chave, i) => {
+            const numero = i + 1;
+            const ativo = numero === filterMes;
+            return (
+              <TouchableOpacity
+                key={chave}
+                style={[s.filterPill, ativo && { backgroundColor: C.accent + '18', borderColor: C.accent }]}
+                onPress={() => setFilterMes(numero)}
+              >
+                <Text allowFontScaling={false} numberOfLines={1} style={[s.filterPillText, ativo && { color: C.accent, fontWeight: '700' }]}>{t(chave)}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {/* List */}
       {loading ? (
@@ -1207,7 +1300,7 @@ export default function MembrosScreen() {
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Text style={s.memberName}>{m.nome} {m.sobrenome}</Text>
-                    {isBirthdayThisMonth(m.data_nascimento) && <Text style={{ fontSize: 14 }}>🎂</Text>}
+                    {mesDoNascimento(m.data_nascimento) === (filterMes ?? mesAtual) && <Text style={{ fontSize: 14 }}>🎂</Text>}
                   </View>
                   <Text style={s.memberSub}>{m.ministerio ? `${m.ministerio} · ` : ''}{m.telefone}</Text>
                 </View>

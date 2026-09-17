@@ -74,6 +74,12 @@ export function destinoDaNotificacao(
       return abaPrincipal('Inicio');
     case 'escala':
       return podeMembros ? abaMembros('Escalas') : SININHO;
+    case 'birthday':
+      // Rota do Stack (modal), como Devocionais. A lista é servida pela RPC
+      // `aniversariantes_do_mes`, que devolve vazio sem sessão — então quem
+      // tocar num push antigo já deslogado veria uma tela em branco sem
+      // explicação. O sininho é o destino honesto nesse caso.
+      return acesso.logado ? { nome: 'Aniversariantes' } : SININHO;
     default:
       // Tipo novo que o app ainda não conhece (um binário antigo recebendo
       // push de um tipo criado depois): abrir o app e não fazer nada é

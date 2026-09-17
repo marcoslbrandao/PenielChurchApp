@@ -23,7 +23,8 @@
     "enviar": "Envoyer",
     "tenteNovamente": "Veuillez réessayer.",
     "enviando": "Envoi...",
-    "removerFalhouTitulo": "Suppression impossible"
+    "removerFalhouTitulo": "Suppression impossible",
+    "tentarNovamente": "Réessayer"
   },
   "home": {
     "bemVindo": "Bon retour",
@@ -228,7 +229,9 @@
     "entrarOuCriarContaSub": "Enregistrez des versets, recevez les annonces et suivez l’agenda",
     "notificacoesFalha": "Impossible de modifier les notifications pour le moment. Réessayez.",
     "statVersiculos": "Versets",
-    "politicaDePrivacidade": "Politique de confidentialité"
+    "politicaDePrivacidade": "Politique de confidentialité",
+    "aniversariantes": "Anniversaires",
+    "facaLoginAniversariantes": "Connectez-vous pour voir les anniversaires de l'église."
   },
   "grupos": {
     "titulo": "Groupes",
@@ -858,7 +861,8 @@
     "dataBatismo": "Date du baptême",
     "estadoRegiao": "Comté / Région",
     "estadoRegiaoPlaceholder": "Ex : Berkshire",
-    "ministerioAtual": "Servez-vous déjà dans un ministère à Peniel ?"
+    "ministerioAtual": "Servez-vous déjà dans un ministère à Peniel ?",
+    "mostrarAniversario": "Apparaître dans la liste des anniversaires de l'église"
   },
   "ativarMembro": {
     "titulo": "Espace Membres",
@@ -1211,10 +1215,65 @@
       "voluntario": "Bénévole",
       "pastor": "Pasteur",
       "diacono": "Diacre",
-      "visitante": "Visiteur"
+      "visitante": "Visiteur",
+      "crianca": "Enfant"
     },
     "semNome": "Sans nom",
     "aniversarioEmoji": "🎂 Anniversaire",
-    "mesEmoji": "🎂 Mois"
+    "mesEmoji": "🎂 Mois",
+    "cadastradosContador_one": "{{count}} inscrit",
+    "cadastradosContador_other": "{{count}} inscrits",
+    "criancasContador_one": "{{count}} enfant",
+    "criancasContador_other": "{{count}} enfants",
+    "removerLevaDependentes_one": "Attention : cela supprime aussi la fiche de {{count}} enfant ({{nomes}}). C'est irréversible.",
+    "removerLevaDependentes_other": "Attention : cela supprime aussi les fiches de {{count}} enfants ({{nomes}}). C'est irréversible."
+  },
+  "meses": {
+    "janeiro": "Janvier",
+    "fevereiro": "Février",
+    "marco": "Mars",
+    "abril": "Avril",
+    "maio": "Mai",
+    "junho": "Juin",
+    "julho": "Juillet",
+    "agosto": "Août",
+    "setembro": "Septembre",
+    "outubro": "Octobre",
+    "novembro": "Novembre",
+    "dezembro": "Décembre"
+  },
+  "filhos": {
+    "secao": "Mes enfants",
+    "explicacao": "Inscrivez vos enfants ici. Comme ils n'ont ni e-mail ni compte dans l'application, c'est par cette fiche que l'église connaît leur anniversaire et constitue la liste du Ministère des enfants.",
+    "nenhum": "Aucun enfant inscrit pour l'instant.",
+    "salvePrimeiro": "Enregistrez d'abord votre fiche. Ensuite, cette zone s'ouvre pour ajouter vos enfants.",
+    "adicionar": "Ajouter un enfant",
+    "novoTitulo": "Nouvel enfant",
+    "editarTitulo": "Modifier",
+    "nome": "Prénom",
+    "nomePlaceholder": "Prénom",
+    "sobrenome": "Nom",
+    "sobrenomePlaceholder": "Nom",
+    "nascimento": "Date de naissance",
+    "sexo": "Sexe",
+    "salvar": "Enregistrer",
+    "remover": "Supprimer",
+    "removerTitulo": "Supprimer la fiche",
+    "removerTexto": "Supprimer la fiche de {{nome}} ?",
+    "anos_one": "{{count}} an",
+    "anos_other": "{{count}} ans",
+    "erroNome": "Saisissez au moins le prénom.",
+    "erroData": "Vérifiez la date de naissance. Utilisez JJ/MM/AAAA et une date déjà passée.",
+    "erroSalvar": "Impossible d'enregistrer. Réessayez dans un instant.",
+    "erroRemover": "Impossible de supprimer. Réessayez dans un instant."
+  },
+  "aniversariantes": {
+    "titulo": "Anniversaires",
+    "ehHoje": "C'est aujourd'hui !",
+    "criancas": "Enfants",
+    "nenhum": "Aucun anniversaire ce mois-ci.",
+    "erro": "Impossible de charger la liste.",
+    "contador_one": "{{count}} anniversaire en {{mes}}",
+    "contador_other": "{{count}} anniversaires en {{mes}}"
   }
 }

@@ -23,7 +23,8 @@
     "enviar": "Send",
     "tenteNovamente": "Please try again.",
     "enviando": "Sending...",
-    "removerFalhouTitulo": "Couldn't remove"
+    "removerFalhouTitulo": "Couldn't remove",
+    "tentarNovamente": "Try again"
   },
   "home": {
     "bemVindo": "Welcome back",
@@ -228,7 +229,9 @@
     "entrarOuCriarContaSub": "Save verses, get announcements and follow the schedule",
     "notificacoesFalha": "Couldn't change your notification setting right now. Please try again.",
     "statVersiculos": "Verses",
-    "politicaDePrivacidade": "Privacy Policy"
+    "politicaDePrivacidade": "Privacy Policy",
+    "aniversariantes": "Birthdays",
+    "facaLoginAniversariantes": "Sign in to see the church's birthdays."
   },
   "grupos": {
     "titulo": "Groups",
@@ -858,7 +861,8 @@
     "dataBatismo": "Baptism date",
     "estadoRegiao": "County / Region",
     "estadoRegiaoPlaceholder": "e.g. Berkshire",
-    "ministerioAtual": "Do you already serve in a ministry at Peniel?"
+    "ministerioAtual": "Do you already serve in a ministry at Peniel?",
+    "mostrarAniversario": "Show me on the church's birthday list"
   },
   "ativarMembro": {
     "titulo": "Members Area",
@@ -1211,10 +1215,65 @@
       "voluntario": "Volunteer",
       "pastor": "Pastor",
       "diacono": "Deacon",
-      "visitante": "Visitor"
+      "visitante": "Visitor",
+      "crianca": "Child"
     },
     "semNome": "No name",
     "aniversarioEmoji": "🎂 Birthday",
-    "mesEmoji": "🎂 Month"
+    "mesEmoji": "🎂 Month",
+    "cadastradosContador_one": "{{count}} registered",
+    "cadastradosContador_other": "{{count}} registered",
+    "criancasContador_one": "{{count}} child",
+    "criancasContador_other": "{{count}} children",
+    "removerLevaDependentes_one": "Warning: this also deletes the record of {{count}} child ({{nomes}}). This cannot be undone.",
+    "removerLevaDependentes_other": "Warning: this also deletes the records of {{count}} children ({{nomes}}). This cannot be undone."
+  },
+  "meses": {
+    "janeiro": "January",
+    "fevereiro": "February",
+    "marco": "March",
+    "abril": "April",
+    "maio": "May",
+    "junho": "June",
+    "julho": "July",
+    "agosto": "August",
+    "setembro": "September",
+    "outubro": "October",
+    "novembro": "November",
+    "dezembro": "December"
+  },
+  "filhos": {
+    "secao": "My children",
+    "explicacao": "Add your children here. Because they have no email and no account in the app, this is how the church gets to know their birthdays and build the Children's Ministry class list.",
+    "nenhum": "No children added yet.",
+    "salvePrimeiro": "Save your own details first. After that, this area opens up for you to add your children.",
+    "adicionar": "Add a child",
+    "novoTitulo": "New child",
+    "editarTitulo": "Edit",
+    "nome": "First name",
+    "nomePlaceholder": "First name",
+    "sobrenome": "Surname",
+    "sobrenomePlaceholder": "Surname",
+    "nascimento": "Date of birth",
+    "sexo": "Sex",
+    "salvar": "Save",
+    "remover": "Remove",
+    "removerTitulo": "Remove record",
+    "removerTexto": "Remove {{nome}}'s record?",
+    "anos_one": "{{count}} year old",
+    "anos_other": "{{count}} years old",
+    "erroNome": "Please enter at least a first name.",
+    "erroData": "Check the date of birth. Use DD/MM/YYYY and a date that has already happened.",
+    "erroSalvar": "Couldn't save. Please try again in a moment.",
+    "erroRemover": "Couldn't remove. Please try again in a moment."
+  },
+  "aniversariantes": {
+    "titulo": "Birthdays",
+    "ehHoje": "Today!",
+    "criancas": "Children",
+    "nenhum": "No birthdays this month.",
+    "erro": "Couldn't load the list.",
+    "contador_one": "{{count}} birthday in {{mes}}",
+    "contador_other": "{{count}} birthdays in {{mes}}"
   }
 }

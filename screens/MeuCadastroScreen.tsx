@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/useAuth';
 import { useTheme } from '../lib/theme';
+import FilhosCard from '../components/FilhosCard';
 
 // A chave fica embutida no bundle do app (padrão pra chaves de Google Maps/
 // Places — por isso restringimos ela só a essas 2 APIs no Google Cloud).
@@ -62,6 +63,7 @@ type FormState = {
   ministerio: string;
   deseja_servir: boolean; deseja_servir_area: string;
   compartilhar_mais: string;
+  mostrar_aniversario: boolean;
 };
 
 const EMPTY: FormState = {
@@ -77,6 +79,9 @@ const EMPTY: FormState = {
   ministerio: '',
   deseja_servir: false, deseja_servir_area: '',
   compartilhar_mais: '',
+  // Padrão ligado: aparecer na lista de aniversariantes da igreja é o
+  // comportamento esperado por quase todo mundo. Quem não quiser desliga.
+  mostrar_aniversario: true,
 };
 
 // Só as colunas que ESTE formulário edita. Antes era `select('*')`, que
@@ -526,8 +531,13 @@ export default function MeuCadastroScreen() {
               <Field label={t('cadastroMembro.qualArea')} value={form.deseja_servir_area} onChangeText={set('deseja_servir_area')} placeholder={t('cadastroMembro.qualArea')} C={C} s={s} />
             )}
 
+            <ToggleRow label={t('cadastroMembro.mostrarAniversario')} value={form.mostrar_aniversario} onToggle={() => set('mostrar_aniversario')(!form.mostrar_aniversario)} icon={form.mostrar_aniversario ? 'gift' : 'gift-outline'} simTexto={t('cadastroMembro.sim')} naoTexto={t('cadastroMembro.nao')} C={C} s={s} />
+
             <CampoMultilinha label={t('cadastroMembro.compartilharMais')} value={form.compartilhar_mais} onChangeText={set('compartilhar_mais')} placeholder={t('cadastroMembro.compartilharMaisPlaceholder')} C={C} s={s} />
           </View>
+
+          <SectionTitle s={s}>{t('filhos.secao')}</SectionTitle>
+          <FilhosCard responsavelId={existingId} />
 
           <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
             {saving ? <ActivityIndicator color="#fff" /> : (

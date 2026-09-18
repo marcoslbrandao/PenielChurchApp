@@ -843,7 +843,7 @@
     "desejaBatizar": "¿Te gustaría bautizarte?",
     "quandoChegou": "¿Cuándo llegaste a Peniel?",
     "quandoChegouPlaceholder": "MM/AAAA",
-    "jaServiuArea": "¿Ya has servido en alguna área?",
+    "jaServiuArea": "¿Ya serviste en algún ministerio antes (aquí o en otra iglesia)?",
     "qualArea": "¿En cuál área?",
     "desejaServir": "¿Te gustaría servir en Peniel?",
     "compartilharMais": "¿Algo más que te gustaría compartir?",
@@ -863,7 +863,14 @@
     "estadoRegiaoPlaceholder": "Ej: Berkshire",
     "ministerioAtual": "¿Ya sirves en algún ministerio en Peniel?",
     "mostrarAniversario": "Aparecer en la lista de cumpleaños de la iglesia",
-    "filhosNaoSalvos": "Tus datos se guardaron, pero uno de los hijos no"
+    "filhosNaoSalvos": "Tus datos se guardaron, pero uno de los hijos no",
+    "qualAreaServiu": "¿En qué área serviste?",
+    "qualAreaPlaceholder": "Ej: Alabanza, Infantil, Recepción",
+    "serveHoje": "¿Sirves en alguna área en Peniel hoy?",
+    "emQualArea": "¿En qué área sirves?",
+    "desejaServirOutra": "¿Te gustaría servir también en otra área?",
+    "qualAreaGostaria": "¿En qué área te gustaría servir?",
+    "qualOutraArea": "¿En qué otra área?"
   },
   "ativarMembro": {
     "titulo": "Área de Miembros",
@@ -1251,7 +1258,7 @@
   },
   "filhos": {
     "secao": "Mis hijos",
-    "explicacao": "Registra aquí a tus hijos. Como no tienen correo ni cuenta en la app, es por este registro que la iglesia conoce sus cumpleaños y arma la lista del Ministerio Infantil.",
+    "explicacao": "Registra aquí a tus hijos. Como no tienen correo ni cuenta en la app, es por este registro que la iglesia conoce sus cumpleaños y arma la lista del Ministerio Infantil.\n\nTodo lo que escribas sobre ellos es visible solo para ti y para el liderazgo de la iglesia. En la lista de cumpleaños aparece solo el nombre y el día — ni el año, ni ningún otro dato de la ficha.",
     "nenhum": "Todavía no hay hijos registrados.",
     "salvePrimeiro": "Guarda primero tus datos. Después de eso, esta área se abre para que agregues a tus hijos.",
     "adicionar": "Agregar hijo(a)",
@@ -1274,7 +1281,7 @@
     "erroSalvar": "No se pudo guardar. Inténtalo de nuevo en un momento.",
     "erroRemover": "No se pudo eliminar. Inténtalo de nuevo en un momento.",
     "blocoSeguranca": "Para la seguridad en la sala",
-    "blocoSegurancaAjuda": "Esta información es visible solo para ti y para el liderazgo de la iglesia — nunca aparece en la lista de cumpleaños ni para los demás miembros.",
+    "blocoSegurancaAjuda": "Lo que la sala necesita saber para cuidarlo bien el domingo. Queda contigo y con el liderazgo, como el resto de la ficha.",
     "alergias": "Alergias y restricciones alimentarias",
     "alergiasPlaceholder": "Ej: maní, lácteos, picadura de abeja",
     "necessidades": "Necesidades especiales",

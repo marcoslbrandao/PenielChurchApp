@@ -843,7 +843,7 @@
     "desejaBatizar": "Would you like to be baptised?",
     "quandoChegou": "When did you arrive at Peniel?",
     "quandoChegouPlaceholder": "MM/YYYY",
-    "jaServiuArea": "Have you served in an area before?",
+    "jaServiuArea": "Have you served in a ministry before (here or at another church)?",
     "qualArea": "Which area?",
     "desejaServir": "Would you like to serve at Peniel?",
     "compartilharMais": "Anything else you'd like to share?",
@@ -863,7 +863,14 @@
     "estadoRegiaoPlaceholder": "e.g. Berkshire",
     "ministerioAtual": "Do you already serve in a ministry at Peniel?",
     "mostrarAniversario": "Show me on the church's birthday list",
-    "filhosNaoSalvos": "Your details were saved, but one of the children wasn't"
+    "filhosNaoSalvos": "Your details were saved, but one of the children wasn't",
+    "qualAreaServiu": "Which area did you serve in?",
+    "qualAreaPlaceholder": "e.g. Worship, Children, Welcome",
+    "serveHoje": "Do you currently serve in an area at Peniel?",
+    "emQualArea": "Which area do you serve in?",
+    "desejaServirOutra": "Would you like to serve in another area as well?",
+    "qualAreaGostaria": "Which area would you like to serve in?",
+    "qualOutraArea": "Which other area?"
   },
   "ativarMembro": {
     "titulo": "Members Area",
@@ -1251,7 +1258,7 @@
   },
   "filhos": {
     "secao": "My children",
-    "explicacao": "Add your children here. Because they have no email and no account in the app, this is how the church gets to know their birthdays and build the Children's Ministry class list.",
+    "explicacao": "Add your children here. Because they have no email and no account in the app, this is how the church knows their birthdays and builds the Children's Ministry class list.\n\nEverything you write about them is visible only to you and to the church leadership. The birthday list shows their name and the day only — not the year, and nothing else from the record.",
     "nenhum": "No children added yet.",
     "salvePrimeiro": "Save your own details first. After that, this area opens up for you to add your children.",
     "adicionar": "Add a child",
@@ -1274,7 +1281,7 @@
     "erroSalvar": "Couldn't save. Please try again in a moment.",
     "erroRemover": "Couldn't remove. Please try again in a moment.",
     "blocoSeguranca": "For safety in the class",
-    "blocoSegurancaAjuda": "This is visible only to you and to the church leadership — it never appears on the birthday list or to other members.",
+    "blocoSegurancaAjuda": "What the class needs to know to look after them well on Sunday. Stays with you and the leadership, like the rest of the record.",
     "alergias": "Allergies and dietary restrictions",
     "alergiasPlaceholder": "e.g. peanuts, dairy, bee sting",
     "necessidades": "Special needs",

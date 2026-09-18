@@ -843,7 +843,7 @@
     "desejaBatizar": "Souhaitez-vous être baptisé(e) ?",
     "quandoChegou": "Quand êtes-vous arrivé(e) à Peniel ?",
     "quandoChegouPlaceholder": "MM/AAAA",
-    "jaServiuArea": "Avez-vous déjà servi dans un domaine ?",
+    "jaServiuArea": "Avez-vous déjà servi dans un ministère (ici ou dans une autre église) ?",
     "qualArea": "Lequel ?",
     "desejaServir": "Souhaitez-vous servir à Peniel ?",
     "compartilharMais": "Autre chose que vous aimeriez partager ?",
@@ -863,7 +863,14 @@
     "estadoRegiaoPlaceholder": "Ex : Berkshire",
     "ministerioAtual": "Servez-vous déjà dans un ministère à Peniel ?",
     "mostrarAniversario": "Apparaître dans la liste des anniversaires de l'église",
-    "filhosNaoSalvos": "Votre fiche a été enregistrée, mais pas celle d'un des enfants"
+    "filhosNaoSalvos": "Votre fiche a été enregistrée, mais pas celle d'un des enfants",
+    "qualAreaServiu": "Dans quel domaine avez-vous servi ?",
+    "qualAreaPlaceholder": "Ex : Louange, Enfants, Accueil",
+    "serveHoje": "Servez-vous actuellement dans un domaine à Peniel ?",
+    "emQualArea": "Dans quel domaine servez-vous ?",
+    "desejaServirOutra": "Souhaitez-vous servir aussi dans un autre domaine ?",
+    "qualAreaGostaria": "Dans quel domaine souhaitez-vous servir ?",
+    "qualOutraArea": "Dans quel autre domaine ?"
   },
   "ativarMembro": {
     "titulo": "Espace Membres",
@@ -1251,7 +1258,7 @@
   },
   "filhos": {
     "secao": "Mes enfants",
-    "explicacao": "Inscrivez vos enfants ici. Comme ils n'ont ni e-mail ni compte dans l'application, c'est par cette fiche que l'église connaît leur anniversaire et constitue la liste du Ministère des enfants.",
+    "explicacao": "Inscrivez vos enfants ici. Comme ils n'ont ni e-mail ni compte dans l'application, c'est par cette fiche que l'église connaît leur anniversaire et constitue la liste du Ministère des enfants.\n\nTout ce que vous écrivez à leur sujet n'est visible que par vous et par les responsables de l'église. La liste des anniversaires n'affiche que le prénom et le jour — ni l'année, ni aucune autre donnée de la fiche.",
     "nenhum": "Aucun enfant inscrit pour l'instant.",
     "salvePrimeiro": "Enregistrez d'abord votre fiche. Ensuite, cette zone s'ouvre pour ajouter vos enfants.",
     "adicionar": "Ajouter un enfant",
@@ -1274,7 +1281,7 @@
     "erroSalvar": "Impossible d'enregistrer. Réessayez dans un instant.",
     "erroRemover": "Impossible de supprimer. Réessayez dans un instant.",
     "blocoSeguranca": "Pour la sécurité en salle",
-    "blocoSegurancaAjuda": "Ces informations ne sont visibles que par vous et par les responsables de l'église — elles n'apparaissent jamais dans la liste des anniversaires ni pour les autres membres.",
+    "blocoSegurancaAjuda": "Ce que la salle doit savoir pour bien s'occuper de lui ou d'elle le dimanche. Reste entre vous et les responsables, comme le reste de la fiche.",
     "alergias": "Allergies et restrictions alimentaires",
     "alergiasPlaceholder": "Ex : arachides, produits laitiers, piqûre d'abeille",
     "necessidades": "Besoins particuliers",

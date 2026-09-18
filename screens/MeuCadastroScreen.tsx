@@ -63,7 +63,6 @@ type FormState = {
   ministerio: string;
   deseja_servir: boolean; deseja_servir_area: string;
   compartilhar_mais: string;
-  mostrar_aniversario: boolean;
 };
 
 const EMPTY: FormState = {
@@ -79,9 +78,6 @@ const EMPTY: FormState = {
   ministerio: '',
   deseja_servir: false, deseja_servir_area: '',
   compartilhar_mais: '',
-  // Padrão ligado: aparecer na lista de aniversariantes da igreja é o
-  // comportamento esperado por quase todo mundo. Quem não quiser desliga.
-  mostrar_aniversario: true,
 };
 
 // Só as colunas que ESTE formulário edita. Antes era `select('*')`, que
@@ -271,6 +267,11 @@ export default function MeuCadastroScreen() {
   // comentário de cabeçalho do FilhosCard: dois botões "Salvar" na mesma
   // tela fizeram o cadastro de uma criança ser descartado em silêncio.
   const filhosRef = useRef<FilhosCardRef>(null);
+  // "Você serve em alguma área hoje?" não tem coluna própria: a resposta real
+  // é o `ministerio` estar preenchido. Mas a tela precisa do estado, porque a
+  // pessoa responde "sim" antes de escolher a área — e porque a pergunta
+  // seguinte muda de texto conforme esta.
+  const [serveHoje, setServeHoje] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -290,6 +291,7 @@ export default function MeuCadastroScreen() {
           membro_desde: formatMesAnoFromISO((campos.membro_desde as string) ?? ''),
         });
         if (campos.endereco) setEnderecoConfirmado(true);
+        setServeHoje(!!(campos.ministerio as string | undefined)?.trim());
       } else {
         const nomeCompleto = (user.user_metadata?.full_name ?? '').trim();
         const [primeiro, ...resto] = nomeCompleto.split(' ');
@@ -302,6 +304,14 @@ export default function MeuCadastroScreen() {
   const set = (field: keyof FormState) => (val: any) => {
     setForm(prev => ({ ...prev, [field]: val }));
     setErrors(prev => (prev[field] ? { ...prev, [field]: false } : prev));
+  };
+
+  const alternarServeHoje = () => {
+    const proximo = !serveHoje;
+    setServeHoje(proximo);
+    // Sem esta limpeza, responder "sim", escolher Louvor e depois voltar para
+    // "não" deixaria 'Louvor' gravado num campo que a tela não mostra mais.
+    if (!proximo) set('ministerio')('');
   };
 
   const formatDate = (text: string, field: 'data_nascimento' | 'data_batismo') => {
@@ -543,19 +553,43 @@ export default function MeuCadastroScreen() {
 
             <Field label={t('cadastroMembro.quandoChegou')} value={form.membro_desde} onChangeText={formatMesAno} placeholder={t('cadastroMembro.quandoChegouPlaceholder')} keyboardType="numeric" maxLength={7} C={C} s={s} />
 
-            <ToggleRow label={t('cadastroMembro.jaServiuArea')} value={form.ministerio_anterior} onToggle={() => set('ministerio_anterior')(!form.ministerio_anterior)} icon={form.ministerio_anterior ? 'people' : 'people-outline'} simTexto={t('cadastroMembro.sim')} naoTexto={t('cadastroMembro.nao')} C={C} s={s} />
+            {/* SERVIÇO — passado, presente, futuro, nesta ordem.
+                Antes as três perguntas apareciam soltas e a última ignorava as
+                anteriores: quem já servia no Louvor ainda era perguntado
+                "deseja servir na Peniel?", como se não servisse. Agora a
+                pergunta sobre o futuro MUDA conforme a resposta do presente —
+                "gostaria de servir em OUTRA área?" para quem já serve. */}
+
+            {/* Passado — aqui ou em qualquer outra igreja. */}
+            <ToggleRow label={t('cadastroMembro.jaServiuArea')} value={form.ministerio_anterior} onToggle={() => set('ministerio_anterior')(!form.ministerio_anterior)} icon={form.ministerio_anterior ? 'time' : 'time-outline'} simTexto={t('cadastroMembro.sim')} naoTexto={t('cadastroMembro.nao')} C={C} s={s} />
             {form.ministerio_anterior && (
-              <Field label={t('cadastroMembro.qualArea')} value={form.ministerio_anterior_qual} onChangeText={set('ministerio_anterior_qual')} placeholder={t('cadastroMembro.qualArea')} C={C} s={s} />
+              <Field label={t('cadastroMembro.qualAreaServiu')} value={form.ministerio_anterior_qual} onChangeText={set('ministerio_anterior_qual')} placeholder={t('cadastroMembro.qualAreaPlaceholder')} C={C} s={s} />
             )}
 
-            <SelectPill label={t('cadastroMembro.ministerioAtual')} options={MINISTERIOS} value={form.ministerio} onChange={set('ministerio')} s={s} />
+            {/* Presente. O toggle é estado de tela, não coluna: quem responde
+                "sim" precisa de um lugar para dizer isso ANTES de escolher a
+                área, e quem responde "não" tem o ministério limpo — senão uma
+                área escolhida por engano ficaria gravada, invisível. */}
+            <ToggleRow label={t('cadastroMembro.serveHoje')} value={serveHoje} onToggle={alternarServeHoje} icon={serveHoje ? 'people' : 'people-outline'} simTexto={t('cadastroMembro.sim')} naoTexto={t('cadastroMembro.nao')} C={C} s={s} />
+            {serveHoje && (
+              <SelectPill label={t('cadastroMembro.emQualArea')} options={MINISTERIOS} value={form.ministerio} onChange={set('ministerio')} s={s} />
+            )}
 
-            <ToggleRow label={t('cadastroMembro.desejaServir')} value={form.deseja_servir} onToggle={() => set('deseja_servir')(!form.deseja_servir)} icon={form.deseja_servir ? 'hand-right' : 'hand-right-outline'} simTexto={t('cadastroMembro.sim')} naoTexto={t('cadastroMembro.nao')} C={C} s={s} />
+            {/* Futuro — a mesma coluna, duas perguntas diferentes. */}
+            <ToggleRow
+              label={serveHoje ? t('cadastroMembro.desejaServirOutra') : t('cadastroMembro.desejaServir')}
+              value={form.deseja_servir}
+              onToggle={() => set('deseja_servir')(!form.deseja_servir)}
+              icon={form.deseja_servir ? 'hand-right' : 'hand-right-outline'}
+              simTexto={t('cadastroMembro.sim')} naoTexto={t('cadastroMembro.nao')} C={C} s={s}
+            />
             {form.deseja_servir && (
-              <Field label={t('cadastroMembro.qualArea')} value={form.deseja_servir_area} onChangeText={set('deseja_servir_area')} placeholder={t('cadastroMembro.qualArea')} C={C} s={s} />
+              <Field
+                label={serveHoje ? t('cadastroMembro.qualOutraArea') : t('cadastroMembro.qualAreaGostaria')}
+                value={form.deseja_servir_area} onChangeText={set('deseja_servir_area')}
+                placeholder={t('cadastroMembro.qualAreaPlaceholder')} C={C} s={s}
+              />
             )}
-
-            <ToggleRow label={t('cadastroMembro.mostrarAniversario')} value={form.mostrar_aniversario} onToggle={() => set('mostrar_aniversario')(!form.mostrar_aniversario)} icon={form.mostrar_aniversario ? 'gift' : 'gift-outline'} simTexto={t('cadastroMembro.sim')} naoTexto={t('cadastroMembro.nao')} C={C} s={s} />
 
             <CampoMultilinha label={t('cadastroMembro.compartilharMais')} value={form.compartilhar_mais} onChangeText={set('compartilhar_mais')} placeholder={t('cadastroMembro.compartilharMaisPlaceholder')} C={C} s={s} />
           </View>

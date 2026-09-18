@@ -1360,10 +1360,14 @@
     "notaPlaceholder": "O que foi conversado, quando ligar de novo…",
     "situacao": "Situação",
     "salvarNota": "Salvar anotação",
-    "equipeTitulo": "Equipe de acolhimento",
-    "equipeAjuda": "Quem está nesta equipe vê a lista de visitantes com telefone e anotações. Qualquer membro pode registrar um visitante, mas só esta equipe e os administradores leem os contatos.",
+    "equipeAjuda": "O acolhimento vê a lista de visitantes com telefone e anotações, e faz o contato durante a semana.",
     "equipeBuscar": "Buscar pessoa pelo nome",
     "equipeAtual": "Na equipe hoje",
-    "equipeVazia": "Ninguém na equipe ainda. Busque uma pessoa acima para adicionar."
+    "equipeVazia": "Ninguém na equipe ainda. Busque uma pessoa acima para adicionar.",
+    "liderancaContata": "A liderança entra em contato durante a semana para dar as boas-vindas. Você não precisa fazer mais nada.",
+    "equipesTitulo": "Equipes",
+    "equipeAcolhimento": "Acolhimento",
+    "equipeRecepcao": "Recepção",
+    "equipeAjudaRecepcao": "A recepção pode registrar visitantes na porta, mas não vê a lista nem os telefones. Membros, líderes e administradores já podem registrar sem estar nesta equipe."
   }
 }

@@ -1360,10 +1360,14 @@
     "notaPlaceholder": "Ce qui a été dit, quand rappeler…",
     "situacao": "Situation",
     "salvarNota": "Enregistrer la note",
-    "equipeTitulo": "Équipe d'accueil",
-    "equipeAjuda": "Les personnes de cette équipe voient la liste des visiteurs avec téléphone et notes. Tout membre peut enregistrer un visiteur, mais seules cette équipe et les administrateurs lisent les coordonnées.",
+    "equipeAjuda": "L'équipe d'accueil voit la liste des visiteurs avec téléphone et notes, et prend contact dans la semaine.",
     "equipeBuscar": "Rechercher une personne par son nom",
     "equipeAtual": "Dans l'équipe aujourd'hui",
-    "equipeVazia": "Personne dans l'équipe pour l'instant. Recherchez une personne ci-dessus pour l'ajouter."
+    "equipeVazia": "Personne dans l'équipe pour l'instant. Recherchez une personne ci-dessus pour l'ajouter.",
+    "liderancaContata": "Les responsables prendront contact dans la semaine pour souhaiter la bienvenue. Vous n'avez rien d'autre à faire.",
+    "equipesTitulo": "Équipes",
+    "equipeAcolhimento": "Accueil",
+    "equipeRecepcao": "Réception",
+    "equipeAjudaRecepcao": "La réception peut enregistrer des visiteurs à la porte, mais ne voit ni la liste ni les téléphones. Les membres, responsables et administrateurs peuvent déjà enregistrer sans faire partie de cette équipe."
   }
 }

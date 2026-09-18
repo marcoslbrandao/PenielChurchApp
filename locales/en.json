@@ -1360,10 +1360,14 @@
     "notaPlaceholder": "What was discussed, when to call again…",
     "situacao": "Status",
     "salvarNota": "Save note",
-    "equipeTitulo": "Welcome team",
-    "equipeAjuda": "People on this team see the visitor list with phone numbers and notes. Any member can register a visitor, but only this team and the administrators can read their contact details.",
+    "equipeAjuda": "The welcome team sees the visitor list with phone numbers and notes, and makes contact during the week.",
     "equipeBuscar": "Search for a person by name",
     "equipeAtual": "On the team today",
-    "equipeVazia": "Nobody on the team yet. Search for a person above to add them."
+    "equipeVazia": "Nobody on the team yet. Search for a person above to add them.",
+    "liderancaContata": "The leadership will get in touch during the week to welcome them. Nothing else for you to do.",
+    "equipesTitulo": "Teams",
+    "equipeAcolhimento": "Welcome team",
+    "equipeRecepcao": "Front desk",
+    "equipeAjudaRecepcao": "The front desk can register visitors at the door, but doesn't see the list or the phone numbers. Members, leaders and administrators can already register without being on this team."
   }
 }

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bem-vindo à Peniel Church</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1A1740">
+<meta name="description" content="Deixe seu contato e receba as boas-vindas da Peniel Church.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Tokens exatos do app (lib/theme.tsx) — a página tem de parecer a mesma
+     igreja que o cartaz na parede e o app na loja. */
+  :root{
+    --navy:#1A1740; --navy-2:#2D2870; --roxo:#534AB7; --roxo-claro:#7B61FF;
+    --dourado:#F5C842; --dourado-escuro:#C8960A;
+    --bg:#F7F4EE; --surface:#FFFFFF; --surface-alt:#F0EDE8;
+    --texto:#1A1A2E; --texto-suave:#6B7280; --texto-fraco:#9CA3AF;
+    --borda:#E5E0D8; --ok:#27AE60; --erro:#C0392B;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--texto);
+    font-family:'Work Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:16px; line-height:1.5;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .topo{
+    background:linear-gradient(160deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff; padding:36px 22px 30px; text-align:center;
+    border-radius:0 0 26px 26px;
+  }
+  .logo{
+    width:82px;height:82px;border-radius:50%;background:#fff;
+    display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+    box-shadow:0 6px 20px rgba(0,0,0,.28); overflow:hidden;
+  }
+  .logo img{width:100%;height:100%;object-fit:contain}
+  h1{
+    font-family:'Manrope',sans-serif; font-weight:800;
+    font-size:26px; line-height:1.2; margin:0 0 8px; letter-spacing:-.4px;
+  }
+  .sub{font-size:14.5px;color:rgba(255,255,255,.82);margin:0;line-height:1.55}
+  main{max-width:520px;margin:0 auto;padding:22px 18px 40px}
+  .cartao{
+    background:var(--surface);border:1px solid var(--borda);border-radius:16px;
+    padding:20px 18px;box-shadow:0 2px 10px rgba(26,23,64,.05);
+  }
+  label{
+    display:block;font-family:'Manrope',sans-serif;font-weight:700;
+    font-size:11px;letter-spacing:.7px;text-transform:uppercase;
+    color:var(--texto-suave);margin:0 0 7px;
+  }
+  .campo{margin-bottom:18px}
+  input[type=text],input[type=tel],input[type=email],textarea{
+    width:100%;background:var(--surface-alt);border:1px solid var(--borda);
+    border-radius:10px;padding:0 14px;height:52px;font-size:16px;
+    font-family:inherit;color:var(--texto);
+  }
+  textarea{height:88px;padding:13px 14px;resize:vertical;line-height:1.45}
+  input:focus,textarea:focus{outline:none;border-color:var(--roxo);background:#fff}
+  .dica{font-size:12.5px;color:var(--texto-fraco);margin:6px 0 0;line-height:1.45}
+  .pills{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{
+    border:1px solid var(--borda);background:var(--surface-alt);
+    border-radius:22px;padding:9px 15px;font-size:14px;color:var(--texto-suave);
+    cursor:pointer;font-family:inherit;transition:.12s;
+  }
+  .pill[aria-pressed=true]{
+    background:rgba(245,200,66,.2);border-color:var(--dourado-escuro);
+    color:var(--dourado-escuro);font-weight:600;
+  }
+  .simnao{display:flex;gap:8px}
+  .simnao .pill{flex:1;text-align:center}
+  .privacidade{
+    display:flex;gap:10px;align-items:flex-start;
+    background:var(--surface-alt);border-radius:12px;padding:13px 14px;
+    font-size:12.5px;color:var(--texto-suave);line-height:1.5;margin:4px 0 20px;
+  }
+  .privacidade svg{flex:none;margin-top:1px}
+  button.enviar{
+    width:100%;border:none;border-radius:14px;padding:17px;
+    background:var(--navy);color:#fff;font-size:16.5px;font-weight:700;
+    font-family:'Manrope',sans-serif;cursor:pointer;letter-spacing:.2px;
+  }
+  button.enviar:disabled{opacity:.6;cursor:default}
+  .erro{
+    background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.35);
+    color:var(--erro);border-radius:10px;padding:12px 14px;
+    font-size:14px;margin-bottom:16px;line-height:1.45;
+  }
+  /* O honeypot: fora da tela, sem display:none — alguns robôs pulam campos
+     escondidos com display:none, mas preenchem este. Nunca é focável por
+     teclado nem lido por leitor de tela. */
+  .armadilha{
+    position:absolute!important;left:-9999px!important;
+    width:1px;height:1px;overflow:hidden;
+  }
+  /* Sucesso */
+  #ok{display:none;text-align:center;padding:14px 4px}
+  #ok .circulo{
+    width:88px;height:88px;border-radius:50%;background:rgba(39,174,96,.13);
+    display:flex;align-items:center;justify-content:center;margin:8px auto 20px;
+  }
+  #ok h2{font-family:'Manrope',sans-serif;font-size:24px;margin:0 0 12px;font-weight:800}
+  #ok p{color:var(--texto-suave);font-size:15.5px;margin:0 auto 26px;max-width:340px;line-height:1.6}
+  .lojas{display:flex;flex-direction:column;gap:10px;max-width:320px;margin:0 auto}
+  .loja{
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    border:1px solid var(--borda);background:var(--surface);border-radius:13px;
+    padding:14px;text-decoration:none;color:var(--texto);
+    font-weight:600;font-size:15px;
+  }
+  footer{text-align:center;color:var(--texto-fraco);font-size:12.5px;padding:8px 20px 30px;line-height:1.6}
+  footer a{color:var(--texto-suave)}
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0E0B22;--surface:#1C1940;--surface-alt:#241F4D;
+      --texto:#F1EFFA;--texto-suave:#A6A0C7;--texto-fraco:#726A99;--borda:#332D5C;
+      --navy:#100D28;--navy-2:#2D2870;--erro:#FF6B6B;--ok:#4ADE80;
+    }
+    input:focus,textarea:focus{background:var(--surface)}
+  }
+</style>
+</head>
+<body>
+
+<header class="topo">
+  <div class="logo">
+    <img src="https://raw.githubusercontent.com/marcoslbrandao/PenielChurchApp/main/assets/peniel-logo.png" alt="Peniel Church">
+  </div>
+  <h1>Que bom ter você aqui</h1>
+  <p class="sub">Deixe seu contato para a gente dar as boas-vindas durante a semana. Leva menos de um minuto.</p>
+</header>
+
+<main>
+  <form id="form" class="cartao" novalidate>
+    <div id="erro" class="erro" style="display:none"></div>
+
+    <div class="campo">
+      <label for="nome">Seu nome *</label>
+      <input type="text" id="nome" name="nome" autocomplete="name" required>
+    </div>
+
+    <div class="campo">
+      <label for="telefone">WhatsApp</label>
+      <input type="tel" id="telefone" name="telefone" autocomplete="tel" placeholder="07700 900123">
+      <p class="dica">É por aqui que mandamos as boas-vindas. Pode escrever do jeito que você usa.</p>
+    </div>
+
+    <div class="campo">
+      <label>É a sua primeira vez na Peniel?</label>
+      <div class="simnao" id="primeira">
+        <button type="button" class="pill" data-v="sim" aria-pressed="true">Sim</button>
+        <button type="button" class="pill" data-v="nao" aria-pressed="false">Já vim antes</button>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Como você chegou até nós?</label>
+      <div class="pills" id="como">
+        <button type="button" class="pill" aria-pressed="false">Um amigo convidou</button>
+        <button type="button" class="pill" aria-pressed="false">Família</button>
+        <button type="button" class="pill" aria-pressed="false">Internet</button>
+        <button type="button" class="pill" aria-pressed="false">Passando na rua</button>
+        <button type="button" class="pill" aria-pressed="false">Um evento</button>
+        <button type="button" class="pill" aria-pressed="false">Outro</button>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="obs">Quer nos contar mais alguma coisa?</label>
+      <textarea id="obs" name="obs" placeholder="Um pedido de oração, com quem você veio, o que achou…"></textarea>
+    </div>
+
+    <div class="privacidade">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <span>Seus dados ficam só com a liderança da Peniel Church e servem para entrarmos em contato. Não compartilhamos com ninguém, e você pode pedir para removermos quando quiser.</span>
+    </div>
+
+    <!-- Honeypot: invisível para gente, irresistível para robô. -->
+    <div class="armadilha" aria-hidden="true">
+      <label for="website">Deixe este campo em branco</label>
+      <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+
+    <button type="submit" class="enviar" id="botao">Enviar meu contato</button>
+  </form>
+
+  <div id="ok" class="cartao">
+    <div class="circulo">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2 id="okTitulo">Recebemos, obrigado!</h2>
+    <p id="okTexto">A nossa liderança entra em contato durante a semana. Foi uma alegria ter você conosco.</p>
+    <div class="lojas">
+      <a class="loja" href="https://apps.apple.com/gb/app/peniel-church/id6752238758" target="_blank" rel="noopener">Baixar o app no iPhone</a>
+      <a class="loja" href="https://play.google.com/store/apps/details?id=com.penielchurch.app" target="_blank" rel="noopener">Baixar o app no Android</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Peniel Church · Abbey Square, Ashford, Kent<br>
+  <a href="https://penielchurch.org.uk/politica-de-privacidade/" target="_blank" rel="noopener">Política de privacidade</a>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var ENDPOINT = 'https://yudulaqsqhzbbarhxbnr.supabase.co/functions/v1/visitante-publico';
+  var abertoEm = Date.now();
+
+  // Grupo de escolha única. Um <select> nativo abre uma roda no celular e
+  // esconde as opções atrás de um toque; as pílulas mostram tudo de uma vez,
+  // que é o que faz um formulário de rua ser preenchido até o fim.
+  function grupoUnico(container, permiteVazio) {
+    container.addEventListener('click', function (e) {
+      var alvo = e.target.closest('.pill');
+      if (!alvo) return;
+      var jaEstava = alvo.getAttribute('aria-pressed') === 'true';
+      Array.prototype.forEach.call(container.querySelectorAll('.pill'), function (p) {
+        p.setAttribute('aria-pressed', 'false');
+      });
+      alvo.setAttribute('aria-pressed', (permiteVazio && jaEstava) ? 'false' : 'true');
+    });
+  }
+  var elPrimeira = document.getElementById('primeira');
+  var elComo = document.getElementById('como');
+  grupoUnico(elPrimeira, false);
+  grupoUnico(elComo, true);
+
+  function escolhido(container, atributo) {
+    var p = container.querySelector('.pill[aria-pressed=true]');
+    if (!p) return null;
+    return atributo ? p.getAttribute(atributo) : p.textContent.trim();
+  }
+
+  var form = document.getElementById('form');
+  var botao = document.getElementById('botao');
+  var caixaErro = document.getElementById('erro');
+
+  function mostrarErro(msg) {
+    caixaErro.textContent = msg;
+    caixaErro.style.display = 'block';
+    caixaErro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    caixaErro.style.display = 'none';
+
+    var nome = document.getElementById('nome').value.trim();
+    if (!nome) { mostrarErro('Escreva o seu nome para a gente saber quem é você.'); return; }
+
+    botao.disabled = true;
+    botao.textContent = 'Enviando…';
+
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: nome,
+        telefone: document.getElementById('telefone').value.trim(),
+        observacoes: document.getElementById('obs').value.trim(),
+        primeira_vez: escolhido(elPrimeira, 'data-v') === 'sim',
+        como_conheceu: escolhido(elComo, null),
+        website: document.getElementById('website').value,
+        aberto_em: abertoEm
+      })
+    })
+    .then(function (r) { return r.json().then(function (j) { return { status: r.status, corpo: j }; }); })
+    .then(function (res) {
+      if (res.corpo && res.corpo.ok) {
+        if (res.corpo.ja_existia) {
+          document.getElementById('okTitulo').textContent = 'Que bom te ver de novo!';
+          document.getElementById('okTexto').textContent =
+            'Já tínhamos o seu contato — anotamos que você esteve com a gente outra vez.';
+        }
+        form.style.display = 'none';
+        document.getElementById('ok').style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      botao.disabled = false;
+      botao.textContent = 'Enviar meu contato';
+      if (res.status === 429) {
+        mostrarErro('Recebemos muitos envios agora há pouco. Espere um minutinho e tente de novo.');
+      } else {
+        mostrarErro('Não conseguimos enviar agora. Tente de novo, ou fale com alguém da recepção.');
+      }
+    })
+    .catch(function () {
+      botao.disabled = false;
+      botao.textContent = 'Enviar meu contato';
+      mostrarErro('Sem conexão no momento. Verifique a internet e tente de novo.');
+    });
+  });
+})();
+</script>
+</body>
+</html>

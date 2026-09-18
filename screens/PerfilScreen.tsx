@@ -603,10 +603,21 @@ export default function ProfileScreen() {
   // sem explicação. `useAcesso` não serve aqui: acolhimento é um eixo próprio,
   // como `group_leaders` é para liderança de grupo.
   const [ehAcolhimento, setEhAcolhimento] = useState(false);
+  const [podeRegistrarVisitante, setPodeRegistrarVisitante] = useState(false);
   useEffect(() => {
-    if (!isLoggedIn) { setEhAcolhimento(false); return; }
+    if (!isLoggedIn) { setEhAcolhimento(false); setPodeRegistrarVisitante(false); return; }
     let vivo = true;
-    supabase.rpc('eh_acolhimento').then(({ data }) => { if (vivo) setEhAcolhimento(data === true); });
+    // As duas respostas vêm do BANCO, não de uma cópia da regra aqui. É o que
+    // garante que a tela e a policy nunca discordem — e discordar, aqui,
+    // significaria mostrar um botão que devolve erro.
+    Promise.all([
+      supabase.rpc('eh_acolhimento'),
+      supabase.rpc('pode_registrar_visitante'),
+    ]).then(([acolhimento, registrar]) => {
+      if (!vivo) return;
+      setEhAcolhimento(acolhimento.data === true);
+      setPodeRegistrarVisitante(registrar.data === true);
+    });
     return () => { vivo = false; };
   }, [isLoggedIn]);
 
@@ -799,13 +810,18 @@ export default function ProfileScreen() {
         { icon: 'bookmark-outline', label: t('perfil.versiculosSalvos'), onPress: () => isLoggedIn ? setSavedVersesVisible(true) : pedirLogin(t('perfil.faceLoginVersiculos')) },
         { icon: 'book-outline', label: t('perfil.historicoDeEstudos'), onPress: () => isLoggedIn ? setReadingHistoryVisible(true) : pedirLogin(t('perfil.faceLoginHistorico')) },
         { icon: 'heart-outline', label: t('perfil.pedidosDeOracao'), onPress: () => isLoggedIn ? setPrayerVisible(true) : pedirLogin(t('perfil.faceLoginOracao')) },
-        { icon: 'gift-outline', label: t('perfil.aniversariantes'), onPress: () => isLoggedIn ? navigation.navigate('Aniversariantes' as never) : pedirLogin(t('perfil.facaLoginAniversariantes')) },
-        // Registrar visitante fica visível para qualquer membro logado: quem
-        // recebe alguém na porta nem sempre é da escala de Recepção. A LISTA,
-        // essa sim, só aparece para a equipe de acolhimento — a RLS já recusa
-        // os dados, e mostrar uma entrada que abre uma tela vazia é pior que
-        // não mostrar nada.
-        { icon: 'person-add-outline', label: t('perfil.registrarVisitante'), onPress: () => isLoggedIn ? navigation.navigate('RegistrarVisitante' as never) : pedirLogin(t('perfil.facaLoginVisitante')) },
+        // Aniversariantes é do ADMIN. A lista traz o nome e o dia de toda a
+        // igreja, crianças inclusive — e a decisão do Marcos em 18/09 foi que
+        // isso é ferramenta de liderança, não conteúdo de congregação. A RPC
+        // fechou junto (migração 20260918200000): esconder só a entrada seria
+        // segurança por obscuridade.
+        ...(papel === 'admin' ? [{ icon: 'gift-outline' as const, label: t('perfil.aniversariantes'), onPress: () => navigation.navigate('Aniversariantes' as never) }] : []),
+        // Registrar visitante: membro, líder, admin e a equipe da Recepção —
+        // alguém pode servir na porta sem ser membro formal, e é justamente
+        // quem mais registra. A regra de verdade é a policy de insert; isto
+        // aqui só evita oferecer um caminho que terminaria em erro.
+        ...(podeRegistrarVisitante ? [{ icon: 'person-add-outline' as const, label: t('perfil.registrarVisitante'), onPress: () => navigation.navigate('RegistrarVisitante' as never) }] : []),
+        // A LISTA, com telefone e anotações, é do acolhimento e do admin.
         ...(ehAcolhimento ? [{ icon: 'hand-left-outline' as const, label: t('perfil.visitantes'), onPress: () => navigation.navigate('Visitantes' as never) }] : []),
       ],
     },

@@ -26,7 +26,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
-  ActivityIndicator, StatusBar, Alert, Linking, KeyboardAvoidingView, Platform,
+  ActivityIndicator, StatusBar, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -102,15 +102,6 @@ export default function RegistrarVisitanteScreen() {
     setSalvo({ id: r.id, jaExistia: !!r.ja_existia, telefoneWa: r.telefone_wa ?? null, nome: nome.trim() });
   };
 
-  const abrirWhatsApp = async () => {
-    if (!salvo?.telefoneWa) return;
-    const texto = t('visitantes.mensagemBoasVindas', { nome: salvo.nome.split(' ')[0] });
-    const url = `https://wa.me/${salvo.telefoneWa}?text=${encodeURIComponent(texto)}`;
-    const podeAbrir = await Linking.canOpenURL(url);
-    if (!podeAbrir) { Alert.alert(t('common.erro'), t('visitantes.semWhatsApp')); return; }
-    Linking.openURL(url);
-  };
-
   const registrarOutro = () => {
     setSalvo(null);
     setNome(''); setTelefone(''); setPrimeiraVez(true);
@@ -141,17 +132,16 @@ export default function RegistrarVisitanteScreen() {
             </Text>
           </View>
 
-          {/* O passo que transforma um dado num contato. Fica em destaque
-              porque é o que a recepção tem de fazer ANTES de a pessoa sair. */}
-          {!!salvo.telefoneWa && consentiu && (
-            <TouchableOpacity style={s.btnWhats} onPress={abrirWhatsApp} activeOpacity={0.85}>
-              <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-              <Text style={s.btnWhatsTexto}>{t('visitantes.enviarBoasVindas')}</Text>
-            </TouchableOpacity>
-          )}
-          {!!salvo.telefoneWa && !consentiu && (
-            <Text style={s.avisoSemConsentimento}>{t('visitantes.semConsentimentoAviso')}</Text>
-          )}
+          {/* A recepção NÃO manda a mensagem. Quem fala com o visitante é a
+              liderança, na segunda, pela lista do acolhimento — decisão do
+              Marcos em 18/09. O que a tela faz aqui é fechar o ciclo para
+              quem registrou: dizer que o contato vai acontecer, e por quem. */}
+          <View style={s.proximoPasso}>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={C.textMuted} />
+            <Text style={s.proximoPassoTexto}>
+              {consentiu ? t('visitantes.liderancaContata') : t('visitantes.semConsentimentoAviso')}
+            </Text>
+          </View>
 
           <TouchableOpacity style={s.btnSecundario} onPress={registrarOutro}>
             <Ionicons name="person-add-outline" size={18} color={C.text} />
@@ -333,11 +323,12 @@ function buildStyles(C: ReturnType<typeof paleta>) {
     },
     okTitulo: { fontSize: 21, fontWeight: '800', color: C.text, textAlign: 'center' },
     okTexto: { fontSize: 14, color: C.textMuted, textAlign: 'center', lineHeight: 20, paddingHorizontal: 20 },
-    btnWhats: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-      backgroundColor: C.whats, borderRadius: 14, paddingVertical: 16, marginTop: 18,
+    proximoPasso: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 20,
+      backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
+      borderRadius: 12, padding: 14,
     },
-    btnWhatsTexto: { fontSize: 15.5, fontWeight: '800', color: '#fff' },
+    proximoPassoTexto: { flex: 1, fontSize: 13, color: C.textMuted, lineHeight: 18.5 },
     avisoSemConsentimento: {
       fontSize: 12.5, color: C.textMuted, lineHeight: 18, marginTop: 18,
       backgroundColor: C.surfaceAlt, borderRadius: 10, padding: 12,

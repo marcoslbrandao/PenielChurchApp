@@ -106,6 +106,10 @@ export default function VisitantesScreen() {
   const { papel } = useAcesso();
   const ehAdmin = papel === 'admin';
   const [equipeAberta, setEquipeAberta] = useState(false);
+  // Duas equipes com permissões diferentes: acolhimento LÊ a lista e faz o
+  // follow-up; recepção REGISTRA na porta. São pessoas diferentes numa igreja,
+  // e juntar as duas daria à recepção acesso ao telefone de todo mundo.
+  const [qualEquipe, setQualEquipe] = useState<'acolhimento' | 'recepcao'>('acolhimento');
   const [equipe, setEquipe] = useState<PerfilLite[]>([]);
   const [buscaPessoa, setBuscaPessoa] = useState('');
   const [achados, setAchados] = useState<PerfilLite[]>([]);
@@ -113,14 +117,18 @@ export default function VisitantesScreen() {
   const carregarEquipe = useCallback(async () => {
     if (!ehAdmin) return;
     const { data } = await supabase
-      .from('equipe_acolhimento')
-      .select('profile_id, profiles:profile_id (id, full_name)');
+      .from('equipes_membros')
+      .select('profile_id, profiles:profile_id (id, full_name)')
+      .eq('equipe', qualEquipe);
     setEquipe(((data ?? []) as any[])
       .map(l => l.profiles)
       .filter(Boolean) as PerfilLite[]);
-  }, [ehAdmin]);
+  }, [ehAdmin, qualEquipe]);
 
   useEffect(() => { if (equipeAberta) carregarEquipe(); }, [equipeAberta, carregarEquipe]);
+  // Trocar de equipe limpa a busca: os resultados da anterior ficariam na
+  // tela com o botão de adicionar apontando para a equipe nova.
+  useEffect(() => { setBuscaPessoa(''); setAchados([]); }, [qualEquipe]);
 
   useEffect(() => {
     const termo = buscaPessoa.trim();
@@ -137,14 +145,19 @@ export default function VisitantesScreen() {
   }, [buscaPessoa]);
 
   const adicionarNaEquipe = async (p: PerfilLite) => {
-    const { error } = await supabase.from('equipe_acolhimento').insert({ profile_id: p.id });
+    const { error } = await supabase
+      .from('equipes_membros').insert({ profile_id: p.id, equipe: qualEquipe });
+    // 23505 = já está na equipe. Adicionar duas vezes não é erro do ponto de
+    // vista de quem tocou no botão; é o resultado que ela queria.
     if (error && error.code !== '23505') { Alert.alert(t('common.erro'), error.message); return; }
     setBuscaPessoa(''); setAchados([]);
     carregarEquipe();
   };
 
   const tirarDaEquipe = async (p: PerfilLite) => {
-    const { error } = await supabase.from('equipe_acolhimento').delete().eq('profile_id', p.id);
+    const { error } = await supabase
+      .from('equipes_membros').delete()
+      .eq('profile_id', p.id).eq('equipe', qualEquipe);
     if (error) { Alert.alert(t('common.erro'), error.message); return; }
     carregarEquipe();
   };
@@ -417,13 +430,29 @@ export default function VisitantesScreen() {
         <View style={s.modalFundo}>
           <View style={s.modalCartao}>
             <View style={s.modalTopo}>
-              <Text style={s.modalTitulo}>{t('visitantes.equipeTitulo')}</Text>
+              <Text style={s.modalTitulo}>{t('visitantes.equipesTitulo')}</Text>
               <TouchableOpacity onPress={() => setEquipeAberta(false)} hitSlop={10}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <Text style={s.equipeAjuda}>{t('visitantes.equipeAjuda')}</Text>
+            <View style={s.equipeTabs}>
+              {(['acolhimento', 'recepcao'] as const).map(e => (
+                <TouchableOpacity
+                  key={e}
+                  style={[s.equipeTab, qualEquipe === e && s.equipeTabAtiva]}
+                  onPress={() => setQualEquipe(e)}
+                >
+                  <Text style={[s.equipeTabTexto, qualEquipe === e && s.equipeTabTextoAtivo]}>
+                    {t(e === 'acolhimento' ? 'visitantes.equipeAcolhimento' : 'visitantes.equipeRecepcao')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={s.equipeAjuda}>
+              {t(qualEquipe === 'acolhimento' ? 'visitantes.equipeAjuda' : 'visitantes.equipeAjudaRecepcao')}
+            </Text>
 
             <View style={s.buscaWrap}>
               <Ionicons name="search-outline" size={16} color={C.textMuted} />
@@ -569,6 +598,14 @@ function buildStyles(C: ReturnType<typeof paleta>) {
     },
     btnSalvarTexto: { fontSize: 14, fontWeight: '800', color: '#fff' },
     equipeAjuda: { fontSize: 13, color: C.textMuted, lineHeight: 18.5, marginBottom: 14 },
+    equipeTabs: {
+      flexDirection: 'row', gap: 8, marginBottom: 14,
+      backgroundColor: C.surfaceAlt, borderRadius: 12, padding: 4,
+    },
+    equipeTab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 9 },
+    equipeTabAtiva: { backgroundColor: C.surface },
+    equipeTabTexto: { fontSize: 13.5, color: C.textMuted, fontWeight: '600' },
+    equipeTabTextoAtivo: { color: C.text, fontWeight: '800' },
     equipeVazia: { fontSize: 13, color: C.textMuted, paddingVertical: 14, textAlign: 'center' },
     pessoaLinha: {
       flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12,

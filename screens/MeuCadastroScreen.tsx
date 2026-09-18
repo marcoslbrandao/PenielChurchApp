@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/useAuth';
 import { useTheme } from '../lib/theme';
-import FilhosCard from '../components/FilhosCard';
+import FilhosCard, { FilhosCardRef } from '../components/FilhosCard';
 
 // A chave fica embutida no bundle do app (padrão pra chaves de Google Maps/
 // Places — por isso restringimos ela só a essas 2 APIs no Google Cloud).
@@ -267,6 +267,10 @@ export default function MeuCadastroScreen() {
   const [enderecoConfirmado, setEnderecoConfirmado] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, boolean>>>({});
   const cepDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Os filhos são gravados por este ref, dentro do mesmo Salvar. Ver o
+  // comentário de cabeçalho do FilhosCard: dois botões "Salvar" na mesma
+  // tela fizeram o cadastro de uma criança ser descartado em silêncio.
+  const filhosRef = useRef<FilhosCardRef>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -391,21 +395,41 @@ export default function MeuCadastroScreen() {
     };
 
     let error;
+    let idDoCadastro = existingId;
     if (existingId) {
       ({ error } = await supabase.from('members').update(payload).eq('id', existingId));
     } else {
       const r = await supabase.from('members').insert(payload).select('id').single();
       error = r.error;
-      if (!error) setExistingId(r.data?.id ?? null);
+      if (!error && r.data?.id) { idDoCadastro = r.data.id; setExistingId(r.data.id); }
+    }
+
+    if (error) {
+      setSaving(false);
+      // A mensagem do Supabase vai junto. Antes era só "não foi possível
+      // salvar", e quando um insert de filho começou a falhar não havia como
+      // saber por quê — nem no aparelho, nem depois.
+      Alert.alert(t('common.erro'), `${t('cadastroMembro.erroSalvar')}\n\n${error.message ?? ''}`);
+      return;
+    }
+
+    // Os filhos só podem ser gravados DEPOIS, porque `responsavel_id` aponta
+    // para a linha que acabou de ser criada. É o que permite preencher o
+    // próprio cadastro e os filhos de uma vez, na primeira visita.
+    if (idDoCadastro) {
+      const r = await filhosRef.current?.salvar(idDoCadastro);
+      if (r && !r.ok) {
+        setSaving(false);
+        // Não fecha a tela: o cadastro foi salvo, mas algum filho não, e
+        // sair agora esconderia o que falta corrigir.
+        Alert.alert(t('cadastroMembro.filhosNaoSalvos'), r.erro ?? '');
+        return;
+      }
     }
 
     setSaving(false);
-    if (error) {
-      Alert.alert(t('common.erro'), t('cadastroMembro.erroSalvar'));
-    } else {
-      Alert.alert(t('cadastroMembro.salvo'));
-      navigation.goBack();
-    }
+    Alert.alert(t('cadastroMembro.salvo'));
+    navigation.goBack();
   };
 
   if (loading) {
@@ -537,7 +561,7 @@ export default function MeuCadastroScreen() {
           </View>
 
           <SectionTitle s={s}>{t('filhos.secao')}</SectionTitle>
-          <FilhosCard responsavelId={existingId} />
+          <FilhosCard ref={filhosRef} responsavelId={existingId} />
 
           <TouchableOpacity style={s.saveBtn} onPress={handleSave} disabled={saving}>
             {saving ? <ActivityIndicator color="#fff" /> : (

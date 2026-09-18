@@ -862,7 +862,8 @@
     "estadoRegiao": "Estado / Región",
     "estadoRegiaoPlaceholder": "Ej: Berkshire",
     "ministerioAtual": "¿Ya sirves en algún ministerio en Peniel?",
-    "mostrarAniversario": "Aparecer en la lista de cumpleaños de la iglesia"
+    "mostrarAniversario": "Aparecer en la lista de cumpleaños de la iglesia",
+    "filhosNaoSalvos": "Tus datos se guardaron, pero uno de los hijos no"
   },
   "ativarMembro": {
     "titulo": "Área de Miembros",
@@ -1280,7 +1281,11 @@
     "necessidadesPlaceholder": "Ej: usa audífono, necesita ayuda en el baño, es autista",
     "infoExtra": "Otra información relevante",
     "infoExtraPlaceholder": "¿Qué más quieres que sepamos sobre él o ella?",
-    "tagAlergia": "ALERGIA"
+    "tagAlergia": "ALERGIA",
+    "primeiroSalvar": "Aún no guardaste tus datos. Puedes agregar a tus hijos ahora — se guardarán juntos, con el botón Guardar de abajo.",
+    "salvoComOCadastro": "Los hijos se guardan junto con tus datos, con el botón Guardar de abajo.",
+    "semNome": "este hijo",
+    "erroDataDe": "Revisa la fecha de nacimiento de {{nome}}. Usa DD/MM/AAAA y una fecha que ya haya pasado."
   },
   "aniversariantes": {
     "titulo": "Cumpleaños",

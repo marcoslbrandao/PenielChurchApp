@@ -862,7 +862,8 @@
     "estadoRegiao": "County / Region",
     "estadoRegiaoPlaceholder": "e.g. Berkshire",
     "ministerioAtual": "Do you already serve in a ministry at Peniel?",
-    "mostrarAniversario": "Show me on the church's birthday list"
+    "mostrarAniversario": "Show me on the church's birthday list",
+    "filhosNaoSalvos": "Your details were saved, but one of the children wasn't"
   },
   "ativarMembro": {
     "titulo": "Members Area",
@@ -1280,7 +1281,11 @@
     "necessidadesPlaceholder": "e.g. wears a hearing aid, needs help in the toilet, is autistic",
     "infoExtra": "Anything else we should know",
     "infoExtraPlaceholder": "What else would you like us to know about them?",
-    "tagAlergia": "ALLERGY"
+    "tagAlergia": "ALLERGY",
+    "primeiroSalvar": "You haven't saved your own details yet. Go ahead and add your children now — they'll be saved together, with the Save button below.",
+    "salvoComOCadastro": "Children are saved together with your own details, using the Save button below.",
+    "semNome": "this child",
+    "erroDataDe": "Check {{nome}}'s date of birth. Use DD/MM/YYYY and a date that has already happened."
   },
   "aniversariantes": {
     "titulo": "Birthdays",

@@ -1190,13 +1190,22 @@ export default function MembrosScreen() {
   const filtered = membros.filter(m => {
     const q = search.toLowerCase();
     const matchSearch = !q || `${m.nome} ${m.sobrenome}`.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q);
-    const matchStatus = filterStatus === 'todos' || m.status === filterStatus;
+    const ehDependenteLinha = !!m.responsavel_id;
+    // 'crianca' é o único filtro que NÃO olha o status: o discriminador é o
+    // `responsavel_id`, como toda a arquitetura desta feature. O status é uma
+    // etiqueta e o gatilho só a força para quem não é admin — um admin que
+    // cadastre o próprio filho gravaria a linha com o status padrão, e o
+    // filtro por status a perderia.
+    const matchStatus = filterStatus === 'todos'
+      ? true
+      : filterStatus === 'crianca'
+        ? ehDependenteLinha
+        : m.status === filterStatus && !ehDependenteLinha;
     const matchMes = filterMes === null || mesDoNascimento(m.data_nascimento) === filterMes;
     // Sem filtro explícito de criança nem de aniversário, o dependente não
     // aparece. Buscar pelo nome dele funciona sempre.
-    const ehDependente = !!m.responsavel_id;
     const mostraDependente = filterStatus === 'crianca' || filterMes !== null || !!q;
-    return matchSearch && matchStatus && matchMes && (!ehDependente || mostraDependente);
+    return matchSearch && matchStatus && matchMes && (!ehDependenteLinha || mostraDependente);
   }).sort((a, b) => {
     // Com filtro de mês, a ordem útil é a do calendário — a lista vira a
     // agenda de quem parabenizar, na ordem em que os dias chegam.
@@ -1346,8 +1355,10 @@ export default function MembrosScreen() {
                   <Text style={s.memberSub}>{m.ministerio ? `${m.ministerio} · ` : ''}{m.telefone}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                  <View style={[s.statusBadge, { backgroundColor: statusColor(m.status) + '18' }]}>
-                    <Text style={[s.statusBadgeText, { color: statusColor(m.status) }]}>{t(statusChave(m.status))}</Text>
+                  <View style={[s.statusBadge, { backgroundColor: statusColor(m.responsavel_id ? 'crianca' : m.status) + '18' }]}>
+                    <Text style={[s.statusBadgeText, { color: statusColor(m.responsavel_id ? 'crianca' : m.status) }]}>
+                      {t(statusChave(m.responsavel_id ? 'crianca' : m.status))}
+                    </Text>
                   </View>
                   {m.batizado && <Ionicons name="water-outline" size={13} color={C.primary} />}
                 </View>

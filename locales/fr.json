@@ -862,7 +862,8 @@
     "estadoRegiao": "Comté / Région",
     "estadoRegiaoPlaceholder": "Ex : Berkshire",
     "ministerioAtual": "Servez-vous déjà dans un ministère à Peniel ?",
-    "mostrarAniversario": "Apparaître dans la liste des anniversaires de l'église"
+    "mostrarAniversario": "Apparaître dans la liste des anniversaires de l'église",
+    "filhosNaoSalvos": "Votre fiche a été enregistrée, mais pas celle d'un des enfants"
   },
   "ativarMembro": {
     "titulo": "Espace Membres",
@@ -1280,7 +1281,11 @@
     "necessidadesPlaceholder": "Ex : porte un appareil auditif, a besoin d'aide aux toilettes, est autiste",
     "infoExtra": "Autre information utile",
     "infoExtraPlaceholder": "Que souhaitez-vous que nous sachions d'autre à son sujet ?",
-    "tagAlergia": "ALLERGIE"
+    "tagAlergia": "ALLERGIE",
+    "primeiroSalvar": "Vous n'avez pas encore enregistré votre fiche. Vous pouvez ajouter vos enfants maintenant — ils seront enregistrés en même temps, avec le bouton Enregistrer plus bas.",
+    "salvoComOCadastro": "Les enfants sont enregistrés en même temps que votre fiche, avec le bouton Enregistrer ci-dessous.",
+    "semNome": "cet enfant",
+    "erroDataDe": "Vérifiez la date de naissance de {{nome}}. Utilisez JJ/MM/AAAA et une date déjà passée."
   },
   "aniversariantes": {
     "titulo": "Anniversaires",

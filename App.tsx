@@ -17,6 +17,8 @@ import OfertaScreen from './screens/OfertaScreen';
 import NovaSenhaScreen from './screens/NovaSenhaScreen';
 import MeuCadastroScreen from './screens/MeuCadastroScreen';
 import AniversariantesScreen from './screens/AniversariantesScreen';
+import RegistrarVisitanteScreen from './screens/RegistrarVisitanteScreen';
+import VisitantesScreen from './screens/VisitantesScreen';
 import DevocionaisScreen from './screens/DevocionaisScreen';
 import TraducaoAoVivoScreen from './screens/TraducaoAoVivoScreen';
 import AuthScreen from './screens/AuthScreen';
@@ -270,6 +272,16 @@ export default function App() {
               <Stack.Screen
                 name="Aniversariantes"
                 component={AniversariantesScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="RegistrarVisitante"
+                component={RegistrarVisitanteScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="Visitantes"
+                component={VisitantesScreen}
                 options={{ presentation: 'modal' }}
               />
               <Stack.Screen

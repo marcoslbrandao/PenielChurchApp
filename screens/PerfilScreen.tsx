@@ -598,6 +598,18 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [salvandoNotificacoes, setSalvandoNotificacoes] = useState(false);
 
+  // A entrada "Visitantes" só aparece para quem pode de fato lê-los. A RLS é a
+  // proteção real; isto evita oferecer um caminho que termina numa lista vazia
+  // sem explicação. `useAcesso` não serve aqui: acolhimento é um eixo próprio,
+  // como `group_leaders` é para liderança de grupo.
+  const [ehAcolhimento, setEhAcolhimento] = useState(false);
+  useEffect(() => {
+    if (!isLoggedIn) { setEhAcolhimento(false); return; }
+    let vivo = true;
+    supabase.rpc('eh_acolhimento').then(({ data }) => { if (vivo) setEhAcolhimento(data === true); });
+    return () => { vivo = false; };
+  }, [isLoggedIn]);
+
   useEffect(() => { pushEstaAtivo().then(setNotificationsEnabled); }, []);
 
   const alternarNotificacoes = async (ativo: boolean) => {
@@ -788,6 +800,13 @@ export default function ProfileScreen() {
         { icon: 'book-outline', label: t('perfil.historicoDeEstudos'), onPress: () => isLoggedIn ? setReadingHistoryVisible(true) : pedirLogin(t('perfil.faceLoginHistorico')) },
         { icon: 'heart-outline', label: t('perfil.pedidosDeOracao'), onPress: () => isLoggedIn ? setPrayerVisible(true) : pedirLogin(t('perfil.faceLoginOracao')) },
         { icon: 'gift-outline', label: t('perfil.aniversariantes'), onPress: () => isLoggedIn ? navigation.navigate('Aniversariantes' as never) : pedirLogin(t('perfil.facaLoginAniversariantes')) },
+        // Registrar visitante fica visível para qualquer membro logado: quem
+        // recebe alguém na porta nem sempre é da escala de Recepção. A LISTA,
+        // essa sim, só aparece para a equipe de acolhimento — a RLS já recusa
+        // os dados, e mostrar uma entrada que abre uma tela vazia é pior que
+        // não mostrar nada.
+        { icon: 'person-add-outline', label: t('perfil.registrarVisitante'), onPress: () => isLoggedIn ? navigation.navigate('RegistrarVisitante' as never) : pedirLogin(t('perfil.facaLoginVisitante')) },
+        ...(ehAcolhimento ? [{ icon: 'hand-left-outline' as const, label: t('perfil.visitantes'), onPress: () => navigation.navigate('Visitantes' as never) }] : []),
       ],
     },
     {

@@ -779,7 +779,11 @@
     "todasAsFuncoes": "ALL ROLES",
     "outraFuncao": "Other",
     "avisoForaDaFuncao": "This isn't one of {{nome}}'s roles. You can still schedule it.",
-    "equipeVaziaTitulo": "No one in the band yet"
+    "equipeVaziaTitulo": "No one in the band yet",
+    "ministro": "Worship leader",
+    "ministroVoce": "You're leading worship at this service",
+    "ministroNinguem": "Nobody set",
+    "ministroDefinir": "Tap to set"
   },
   "jovens": {
     "eventos": "events",
@@ -1243,7 +1247,10 @@
     "necessidadesEspeciais": "Special needs",
     "necessidadesPlaceholder": "Support, care or condition the class should know about",
     "infoResponsavel": "From the parent or guardian",
-    "infoResponsavelPlaceholder": "What the parent wanted the church to know"
+    "infoResponsavelPlaceholder": "What the parent wanted the church to know",
+    "filhosCadastrados": "Children",
+    "responsavel": "Parent or guardian",
+    "ministro": "Worship leader"
   },
   "meses": {
     "janeiro": "January",

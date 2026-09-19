@@ -99,6 +99,10 @@ type RoadmapItem = {
 
 type Culto = {
   id: string; label: string; date: string;
+  // Quem conduz o louvor neste culto. Preenchido sozinho por quem monta o
+  // setlist (gatilho da migração 20260919150000) e trocável na tela — é um
+  // palpite bom, não um dado que a pessoa declarou.
+  ministro_id: string | null;
   // false = rascunho: escondido de quem não é admin enquanto a escala não
   // está pronta. É filtro de interface, não barreira de segurança.
   publicado: boolean;
@@ -1706,6 +1710,85 @@ function EditarSetlistModal({ alvo, songs, versoes, onClose, onSalvo }: {
 // Usado tanto em Cultos quanto em Ensaios (props `tipo`/`eventoId` decidem a
 // tabela certa) — escolhe uma pessoa do diretório da banda e o instrumento
 // que ela vai tocar naquele culto/ensaio específico.
+// ─── Ministro(a) de louvor ─────────────────────────────────────────────────────
+// O gatilho do banco já elege quem monta o setlist. Este modal existe porque
+// um palpite sem correção vira dado errado permanente — e este em particular
+// apareceria com o nome de alguém na frente da banda inteira. Um admin que
+// monte o culto de outra pessoa conserta aqui em dois toques.
+function MinistroModal({ visible, onClose, onSalvo, cultoId, ministroAtual, membros }: {
+  visible: boolean; onClose: () => void; onSalvo: () => void;
+  cultoId: string; ministroAtual: string | null; membros: BandaMembro[];
+}) {
+  const { C, md } = useBandaTema();
+  const { t } = useTranslation();
+  const [salvando, setSalvando] = useState(false);
+
+  const escolher = async (membroId: string | null) => {
+    setSalvando(true);
+    const { error } = await supabase.from('cultos')
+      .update({ ministro_id: membroId }).eq('id', cultoId);
+    setSalvando(false);
+    // O erro real, e não um "não foi possível salvar": a policy de `cultos`
+    // deixa a banda editar, então uma falha aqui é informação, não ruído.
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
+    onSalvo(); onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={md.overlay}>
+        <View style={md.sheet}>
+          <View style={md.header}>
+            <Text style={md.title}>{t('banda.ministro')}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={22} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
+          {salvando ? (
+            <View style={{ paddingVertical: 28 }}><ActivityIndicator color={C.primary} /></View>
+          ) : (
+            <ScrollView style={{ maxHeight: 380 }}>
+              {membros.map(m => {
+                const ativo = m.id === ministroAtual;
+                return (
+                  <TouchableOpacity
+                    key={m.id}
+                    onPress={() => escolher(m.id)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 10,
+                      paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: C.border,
+                    }}
+                  >
+                    <Ionicons
+                      name={ativo ? 'radio-button-on' : 'radio-button-off'}
+                      size={19} color={ativo ? C.primary : C.textDim}
+                    />
+                    <Text style={{ flex: 1, fontSize: 15, fontWeight: ativo ? '700' : '500', color: C.text }}>
+                      {m.nome}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                onPress={() => escolher(null)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13 }}
+              >
+                <Ionicons
+                  name={ministroAtual ? 'radio-button-off' : 'radio-button-on'}
+                  size={19} color={ministroAtual ? C.textDim : C.primary}
+                />
+                <Text style={{ flex: 1, fontSize: 15, color: C.textMuted }}>
+                  {t('banda.ministroNinguem')}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function EscalaModal({ visible, onClose, onSaved, membros, tipo, eventoId, times, escalaAtual, indisponiveis, onTimesMudaram, funcoes, membroFuncoes }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
   membros: BandaMembro[]; tipo: 'culto' | 'ensaio'; eventoId: string;
@@ -3196,8 +3279,25 @@ function BandaMain() {
   // Música sendo editada no modal — null significa "cadastrando uma nova".
   const [editSong, setEditSong] = useState<Song | null>(null);
   const [escalaModal, setEscalaModal] = useState<{ tipo: 'culto' | 'ensaio'; eventoId: string } | null>(null);
+  const [ministroModal, setMinistroModal] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const today = todayISO();
+
+  // Meu id NA BANDA. `user.id` é o perfil; a escala, a presença e agora o
+  // ministro falam em `banda_membros.id`. Quem não está em `banda_membros`
+  // fica com null e simplesmente nunca é "eu" em nenhuma comparação.
+  const meuMembroId = useMemo(
+    () => membros.find(m => m.profile_id === user?.id)?.id ?? null,
+    [membros, user?.id],
+  );
+  const nomeDoMinistro = useCallback(
+    (ministroId: string | null) => membros.find(m => m.id === ministroId)?.nome ?? '',
+    [membros],
+  );
+  const souOMinistro = useCallback(
+    (ministroId: string | null) => !!ministroId && ministroId === meuMembroId,
+    [meuMembroId],
+  );
 
   // ── Fetch songs ──────────────────────────────────────────────────────────────
   const fetchSongs = useCallback(async () => {
@@ -3421,6 +3521,7 @@ function BandaMain() {
         return {
           id: culto.id, label: culto.label, date: culto.date,
           publicado: culto.publicado !== false,
+          ministro_id: culto.ministro_id ?? null,
           roadmap: (roadmapData ?? []).map((r: any) => ({
             id: r.id, titulo: r.titulo, descricao: r.descricao,
             duracao_segundos: r.duracao_segundos, order_index: r.order_index,
@@ -3735,6 +3836,21 @@ function BandaMain() {
                   <View>
                     <Text style={s.hojeBannerLabel}>{cultoDoDia.date === today ? t('banda.cultoDeHoje') : t('banda.proximoCulto')}</Text>
                     <Text style={s.hojeBannerDate}>{cultoDoDia.label}</Text>
+                    {/* Quem conduz, na linha em que a banda já olha. Para o
+                        próprio ministro a frase é na segunda pessoa: é ele que
+                        vai ser procurado pelo tom e pela ordem, e ver isso ao
+                        abrir o app é diferente de ler o próprio nome numa
+                        lista. */}
+                    {!!cultoDoDia.ministro_id && (
+                      <View style={s.ministroLinha}>
+                        <Ionicons name="mic-outline" size={12} color={souOMinistro(cultoDoDia.ministro_id) ? C.primary : C.textMuted} />
+                        <Text style={[s.ministroTexto, souOMinistro(cultoDoDia.ministro_id) && s.ministroTextoEu]}>
+                          {souOMinistro(cultoDoDia.ministro_id)
+                            ? t('banda.ministroVoce')
+                            : `${t('banda.ministro')}: ${nomeDoMinistro(cultoDoDia.ministro_id)}`}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
                 <View style={s.hojeSongCount}>
@@ -4137,6 +4253,25 @@ function BandaMain() {
                             </View>
                           );
                         })()}
+
+                        <View style={s.escalaHeader}>
+                          <Text style={s.cultoColLabel}>{t('banda.ministro').toUpperCase()}</Text>
+                          <TouchableOpacity onPress={() => setMinistroModal(culto.id)} hitSlop={6}>
+                            <Ionicons name="pencil-outline" size={15} color={C.primary} />
+                          </TouchableOpacity>
+                        </View>
+                        <TouchableOpacity onPress={() => setMinistroModal(culto.id)} activeOpacity={0.7}>
+                          <Text style={[
+                            s.ministroTexto,
+                            { fontSize: 14 },
+                            souOMinistro(culto.ministro_id) && s.ministroTextoEu,
+                            !culto.ministro_id && { color: C.textDim, fontStyle: 'italic' },
+                          ]}>
+                            {culto.ministro_id
+                              ? nomeDoMinistro(culto.ministro_id) + (souOMinistro(culto.ministro_id) ? ` · ${t('banda.voce')}` : '')
+                              : t('banda.ministroDefinir')}
+                          </Text>
+                        </TouchableOpacity>
 
                         <View style={s.escalaHeader}>
                           <Text style={s.cultoColLabel}>{t('banda.escala').toUpperCase()}</Text>
@@ -4596,6 +4731,17 @@ function BandaMain() {
         onSalvo={() => { fetchCultos(); fetchEnsaios(); }}
       />
 
+      {!!ministroModal && (
+        <MinistroModal
+          visible={!!ministroModal}
+          onClose={() => setMinistroModal(null)}
+          onSalvo={fetchCultos}
+          cultoId={ministroModal}
+          ministroAtual={cultos.find(c => c.id === ministroModal)?.ministro_id ?? null}
+          membros={membros}
+        />
+      )}
+
       {!!escalaModal && (
         <EscalaModal
           visible={!!escalaModal}
@@ -4651,6 +4797,9 @@ const buildS = (C: BandaColors) => StyleSheet.create({
   hojeBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hojeBannerLabel: { fontSize: 11, color: C.gold, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 },
   hojeBannerDate: { fontSize: 16, fontWeight: '800', color: C.text, marginTop: 2 },
+  ministroLinha: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
+  ministroTexto: { fontSize: 12.5, color: C.textMuted, fontWeight: '600' },
+  ministroTextoEu: { color: C.primary, fontWeight: '800' },
   hojeSongCount: { alignItems: 'center', backgroundColor: C.surfaceHigh, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
   hojeSongCountNum: { fontSize: 22, fontWeight: '800', color: C.primary },
   hojeSongCountLabel: { fontSize: 10, color: C.textMuted },

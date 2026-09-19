@@ -779,7 +779,11 @@
     "todasAsFuncoes": "TOUS LES RÔLES",
     "outraFuncao": "Autre",
     "avisoForaDaFuncao": "Ce rôle ne fait pas partie de ceux de {{nome}}. Vous pouvez quand même le programmer.",
-    "equipeVaziaTitulo": "Personne dans le groupe pour l’instant"
+    "equipeVaziaTitulo": "Personne dans le groupe pour l’instant",
+    "ministro": "Ministre de louange",
+    "ministroVoce": "C'est vous qui conduisez la louange à ce culte",
+    "ministroNinguem": "Personne de défini",
+    "ministroDefinir": "Touchez pour définir"
   },
   "jovens": {
     "eventos": "événements",
@@ -1243,7 +1247,10 @@
     "necessidadesEspeciais": "Besoins particuliers",
     "necessidadesPlaceholder": "Soutien, soin ou situation que la salle doit connaître",
     "infoResponsavel": "Indiqué par le responsable",
-    "infoResponsavelPlaceholder": "Ce que le parent a voulu que l'église sache"
+    "infoResponsavelPlaceholder": "Ce que le parent a voulu que l'église sache",
+    "filhosCadastrados": "Enfants enregistrés",
+    "responsavel": "Responsable",
+    "ministro": "Ministre de louange"
   },
   "meses": {
     "janeiro": "Janvier",

@@ -949,6 +949,11 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
     const m = membros.find(x => x.id === id);
     return m ? `${m.nome} ${m.sobrenome}` : '';
   };
+  // Da mais nova para a mais velha não: por data de nascimento crescente, que
+  // é como o pai pensa nos filhos — o mais velho primeiro.
+  const filhos = membros
+    .filter(m => m.responsavel_id === membro.id)
+    .sort((a, b) => (a.data_nascimento ?? '').localeCompare(b.data_nascimento ?? ''));
   const sexoChave = SEXO_OPCOES.find(o => o.valor === membro.sexo)?.chave;
   const sexoLabel = sexoChave ? t(sexoChave) : '';
   // Label em cima e valor embaixo (em vez de lado a lado numa coluna de
@@ -1056,6 +1061,53 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
               <Row icon="map-outline" label={t('membros.cep')} value={membro.cep} />
               <Row icon="earth-outline" label={t('membros.pais')} value={membro.pais} />
             </View>
+            {/* OS FILHOS, e o caminho de volta.
+                As crianças existem em `members` como linhas com
+                `responsavel_id` — e ficam fora da lista principal justamente
+                por isso (o filtro `!m.responsavel_id` na tela de listagem).
+                O efeito colateral era que, abrindo o cadastro de um pai, não
+                havia sinal nenhum de que ele tinha filhos: para conferir era
+                preciso saber de cor o nome da criança e caçá-la na aba
+                Crianças. A lista `membros` já está aqui, então isto é uma
+                relação que já existia e não estava sendo mostrada. */}
+            {filhos.length > 0 && (
+              <>
+                <Text style={dd.sectionTitle}>{t('membros.filhosCadastrados')}</Text>
+                <View style={dd.card}>
+                  {filhos.map(f => (
+                    <View key={f.id} style={dd.row}>
+                      <Ionicons name="happy-outline" size={16} color={C.textMuted} style={dd.rowIcon} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={dd.rowLabel}>
+                          {`${formatDateBR(f.data_nascimento)}${getAge(f.data_nascimento) ? ' · ' + getAge(f.data_nascimento) : ''}`}
+                        </Text>
+                        <Text style={dd.rowValue}>{f.nome} {f.sobrenome}</Text>
+                        {/* A alergia aparece aqui também, e não só na ficha da
+                            criança: quem abre o cadastro do pai para conferir
+                            a família não deveria precisar de mais um toque
+                            para encontrar a única informação desta tela em
+                            que chegar tarde tem consequência física. */}
+                        {!!f.alergias && (
+                          <Text style={dd.filhoAlergia}>
+                            {t('membros.alergias')}: {f.alergias}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+            {/* E o caminho inverso: abrindo a ficha de uma criança, quem
+                responde por ela. */}
+            {!!membro.responsavel_id && (
+              <>
+                <Text style={dd.sectionTitle}>{t('membros.responsavel')}</Text>
+                <View style={dd.card}>
+                  <Row icon="people-outline" label={t('membros.responsavel')} value={nomeDe(membro.responsavel_id)} />
+                </View>
+              </>
+            )}
             {(membro.conjuge_id || membro.pai_id || membro.mae_id) && (
               <>
                 <Text style={dd.sectionTitle}>{t('membros.familia')}</Text>
@@ -1087,6 +1139,7 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
 }
 
 const dd = StyleSheet.create({
+  filhoAlergia: { fontSize: 12.5, color: C.danger, marginTop: 3, fontWeight: '600' },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },

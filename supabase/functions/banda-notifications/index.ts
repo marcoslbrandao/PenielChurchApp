@@ -33,9 +33,10 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const FUSO = 'Europe/London';
 
-/** Janela de silêncio do chat, em minutos. Mexer aqui não exige publicar a
- *  função: a decisão em si mora em `banda_chat_deve_notificar`. */
-const JANELA_CHAT_MIN = 20;
+/* A janela de silêncio do chat NÃO mora mais aqui. Ela é uma decisão de
+ * produto que vale igual para os grupos e para a banda, e desde a migração
+ * 20260919140000 vive num lugar só: `chat_janela_silencio()`, no banco.
+ * Mexer nela é um UPDATE, não um deploy. */
 
 type Corpo = {
   type?: string;
@@ -127,21 +128,28 @@ Deno.serve(async (req) => {
 
     // ── CHAT ─────────────────────────────────────────────────────────────
     } else if (tabela === 'banda_chat_mensagens') {
+      // A pergunta leva o ID DESTA mensagem, e não uma janela em minutos: a
+      // função ancora a conta no `created_at` dela. Sem isso, o atraso do
+      // webhook — ou duas mensagens em sequência rápida — decidiam o
+      // resultado, e a mensagem que abria a conversa podia ficar muda.
       const { data: deve, error: erroJanela } = await supabase
-        .rpc('banda_chat_deve_notificar', { p_janela_min: JANELA_CHAT_MIN });
+        .rpc('banda_chat_deve_notificar', { p_mensagem_id: String(r.id ?? '') });
       if (erroJanela) throw erroJanela;
 
       if (deve !== true) {
-        return ok({ message: `chat dentro da janela de ${JANELA_CHAT_MIN} min — nada enviado` });
+        return ok({ message: 'chat: conversa já em andamento — nada enviado' });
       }
 
       tipo = 'chat';
       referencia = String(r.id ?? '');
       excluir = (r.autor_id as string) ?? null;
       const autor = String(r.autor_nome ?? 'Alguém').split(' ')[0];
-      const msg = String(r.texto ?? '').slice(0, 120);
       titulo = `💬 ${autor} no chat da Banda`;
-      texto = msg;
+      // Texto genérico, igual ao chat dos grupos desde 20260909010000: o
+      // conteúdo da conversa não vai para a tela de bloqueio de ninguém.
+      // Quem quiser ler abre o app — é um toque a mais e uma indiscrição a
+      // menos.
+      texto = 'Há mensagens novas no chat da Banda.';
       dados = { type: 'banda', origem: 'chat' };
 
     } else {

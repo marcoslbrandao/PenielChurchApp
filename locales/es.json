@@ -779,7 +779,11 @@
     "todasAsFuncoes": "TODAS LAS FUNCIONES",
     "outraFuncao": "Otra",
     "avisoForaDaFuncao": "Esta función no está entre las de {{nome}}. Puedes asignarla igual.",
-    "equipeVaziaTitulo": "Todavía no hay nadie en la banda"
+    "equipeVaziaTitulo": "Todavía no hay nadie en la banda",
+    "ministro": "Ministro(a) de alabanza",
+    "ministroVoce": "Tú dirigís la alabanza en este culto",
+    "ministroNinguem": "Nadie definido",
+    "ministroDefinir": "Toca para definir"
   },
   "jovens": {
     "eventos": "eventos",
@@ -1243,7 +1247,10 @@
     "necessidadesEspeciais": "Necesidades especiales",
     "necessidadesPlaceholder": "Apoyo, cuidado o condición que la sala debe conocer",
     "infoResponsavel": "Informado por el responsable",
-    "infoResponsavelPlaceholder": "Lo que el padre o la madre quiso que la iglesia supiera"
+    "infoResponsavelPlaceholder": "Lo que el padre o la madre quiso que la iglesia supiera",
+    "filhosCadastrados": "Hijos registrados",
+    "responsavel": "Responsable",
+    "ministro": "Ministro(a) de alabanza"
   },
   "meses": {
     "janeiro": "Enero",

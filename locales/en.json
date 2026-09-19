@@ -1369,5 +1369,31 @@
     "equipeAcolhimento": "Welcome team",
     "equipeRecepcao": "Front desk",
     "equipeAjudaRecepcao": "The front desk can register visitors at the door, but doesn't see the list or the phone numbers. Members, leaders and administrators can already register without being on this team."
+  },
+  "kids": {
+    "titulo": "Peniel Kids",
+    "semFilhos": "You haven't added any children yet. Add them to your profile to receive the weekly material.",
+    "irAoCadastro": "Go to my profile",
+    "semLicao": "The material for the next lesson hasn't been published yet.",
+    "erroKit": "We couldn't load this week's material.",
+    "licaoN": "Lesson {{n}}",
+    "trilhaJardim": "Garden · ages 4 to 6",
+    "trilhaExploradores": "Explorers · ages 7 to 10",
+    "aulaDe": "Lesson of {{data}}",
+    "carimbada": "Stamped",
+    "versiculo": "Verse",
+    "historia": "The story",
+    "video": "This week's video",
+    "musica": "To sing",
+    "atividade": "Printable activity",
+    "devocional": "To talk about at home",
+    "anos": "{{n}} years old",
+    "alergias": "Allergies",
+    "necessidades": "Special needs",
+    "infoResponsavel": "Told us by the parent",
+    "fichaTitulo": "Classroom sheet",
+    "fichaVazia": "No children in the kids group yet.",
+    "fichaAviso": "What the classroom needs to know about each child this Sunday.",
+    "fichaTrava": "Phone, address and the leadership's internal notes don't appear here — the classroom sees what the classroom needs."
   }
 }

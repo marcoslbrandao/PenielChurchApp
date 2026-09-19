@@ -1369,5 +1369,31 @@
     "equipeAcolhimento": "Acolhimento",
     "equipeRecepcao": "Recepção",
     "equipeAjudaRecepcao": "A recepção pode registrar visitantes na porta, mas não vê a lista nem os telefones. Membros, líderes e administradores já podem registrar sem estar nesta equipe."
+  },
+  "kids": {
+    "titulo": "Peniel Kids",
+    "semFilhos": "Você ainda não cadastrou nenhum filho. Adicione no seu cadastro para receber o material da semana.",
+    "irAoCadastro": "Ir ao meu cadastro",
+    "semLicao": "O material da próxima aula ainda não foi publicado.",
+    "erroKit": "Não foi possível carregar o material desta semana.",
+    "licaoN": "Lição {{n}}",
+    "trilhaJardim": "Jardim · 4 a 6 anos",
+    "trilhaExploradores": "Exploradores · 7 a 10 anos",
+    "aulaDe": "Aula de {{data}}",
+    "carimbada": "Carimbada",
+    "versiculo": "Versículo",
+    "historia": "A história",
+    "video": "O vídeo da semana",
+    "musica": "Para cantar",
+    "atividade": "Atividade para imprimir",
+    "devocional": "Para conversar em casa",
+    "anos": "{{n}} anos",
+    "alergias": "Alergias",
+    "necessidades": "Necessidades especiais",
+    "infoResponsavel": "Informado pelo responsável",
+    "fichaTitulo": "Ficha da sala",
+    "fichaVazia": "Nenhuma criança no grupo infantil ainda.",
+    "fichaAviso": "O que a sala precisa saber sobre cada criança neste domingo.",
+    "fichaTrava": "Telefone, endereço e as observações internas da liderança não aparecem aqui — a sala vê o que a sala precisa."
   }
 }

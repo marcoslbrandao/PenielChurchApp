@@ -604,8 +604,13 @@ export default function ProfileScreen() {
   // como `group_leaders` é para liderança de grupo.
   const [ehAcolhimento, setEhAcolhimento] = useState(false);
   const [podeRegistrarVisitante, setPodeRegistrarVisitante] = useState(false);
+  // Peniel Kids: pai com filho cadastrado, quem lidera a sala, e o admin.
+  const [temAcessoKids, setTemAcessoKids] = useState(false);
   useEffect(() => {
-    if (!isLoggedIn) { setEhAcolhimento(false); setPodeRegistrarVisitante(false); return; }
+    if (!isLoggedIn) {
+      setEhAcolhimento(false); setPodeRegistrarVisitante(false); setTemAcessoKids(false);
+      return;
+    }
     let vivo = true;
     // As duas respostas vêm do BANCO, não de uma cópia da regra aqui. É o que
     // garante que a tela e a policy nunca discordem — e discordar, aqui,
@@ -613,10 +618,12 @@ export default function ProfileScreen() {
     Promise.all([
       supabase.rpc('eh_acolhimento'),
       supabase.rpc('pode_registrar_visitante'),
-    ]).then(([acolhimento, registrar]) => {
+      supabase.rpc('tenho_acesso_kids'),
+    ]).then(([acolhimento, registrar, kids]) => {
       if (!vivo) return;
       setEhAcolhimento(acolhimento.data === true);
       setPodeRegistrarVisitante(registrar.data === true);
+      setTemAcessoKids(kids.data === true);
     });
     return () => { vivo = false; };
   }, [isLoggedIn]);
@@ -810,6 +817,10 @@ export default function ProfileScreen() {
         { icon: 'bookmark-outline', label: t('perfil.versiculosSalvos'), onPress: () => isLoggedIn ? setSavedVersesVisible(true) : pedirLogin(t('perfil.faceLoginVersiculos')) },
         { icon: 'book-outline', label: t('perfil.historicoDeEstudos'), onPress: () => isLoggedIn ? setReadingHistoryVisible(true) : pedirLogin(t('perfil.faceLoginHistorico')) },
         { icon: 'heart-outline', label: t('perfil.pedidosDeOracao'), onPress: () => isLoggedIn ? setPrayerVisible(true) : pedirLogin(t('perfil.faceLoginOracao')) },
+        // Peniel Kids fica no topo das ferramentas porque, para quem tem
+        // filho, é a entrada mais usada da tela — e para quem não tem, não
+        // existe. `tenho_acesso_kids()` decide no banco.
+        ...(temAcessoKids ? [{ icon: 'color-palette-outline' as const, label: t('kids.titulo'), onPress: () => navigation.navigate('PenielKids' as never) }] : []),
         // Aniversariantes é do ADMIN. A lista traz o nome e o dia de toda a
         // igreja, crianças inclusive — e a decisão do Marcos em 18/09 foi que
         // isso é ferramenta de liderança, não conteúdo de congregação. A RPC

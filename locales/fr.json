@@ -905,6 +905,17 @@
     "explorar": "Découvrir l’app"
   },
   "admin": {
+    "traducaoAoVivoTitulo": "Traduction en direct du culte",
+    "traducaoStatusAtiva": "En direct maintenant",
+    "traducaoStatusParada": "Arrêtée",
+    "traducaoIniciarBotao": "Démarrer la traduction",
+    "traducaoPararBotao": "Arrêter la traduction",
+    "traducaoIniciarConfirmarTitulo": "Démarrer la traduction en direct ?",
+    "traducaoIniciarConfirmarTexto": "Assurez-vous que le service de traduction fonctionne déjà sur le Mac mini avant de démarrer.",
+    "traducaoPararConfirmarTitulo": "Arrêter la traduction en direct ?",
+    "traducaoPararConfirmarTexto": "Les personnes à l'écoute cesseront de recevoir l'audio.",
+    "traducaoErroAoAtualizar": "Impossible de mettre à jour. Veuillez réessayer.",
+    "traducaoIdiomas": "Portugais → Anglais + Espagnol",
     "novoConvite": "Nouvelle Invitation",
     "tipoDeConvite": "Type d'invitation",
     "codigoGeradoAutomaticamente": "Code généré automatiquement",

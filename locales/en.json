@@ -905,6 +905,17 @@
     "explorar": "Explore the app"
   },
   "admin": {
+    "traducaoAoVivoTitulo": "Live service translation",
+    "traducaoStatusAtiva": "Live now",
+    "traducaoStatusParada": "Stopped",
+    "traducaoIniciarBotao": "Start translation",
+    "traducaoPararBotao": "Stop translation",
+    "traducaoIniciarConfirmarTitulo": "Start live translation?",
+    "traducaoIniciarConfirmarTexto": "Make sure the translation service is already running on the Mac mini before starting.",
+    "traducaoPararConfirmarTitulo": "Stop live translation?",
+    "traducaoPararConfirmarTexto": "Anyone currently listening will stop receiving audio.",
+    "traducaoErroAoAtualizar": "Couldn't update. Please try again.",
+    "traducaoIdiomas": "Portuguese → English + Spanish",
     "novoConvite": "New Invite",
     "tipoDeConvite": "Invite type",
     "codigoGeradoAutomaticamente": "Code generated automatically",

@@ -1461,6 +1461,149 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
   );
 }
 
+// ─── Tradução ao vivo (Admin) ──────────────────────────────────────────────
+// Controla remotamente o serviço `translator-service` que roda sempre ligado
+// (via pm2) no Mac mini da igreja: estes botões só escrevem o campo `ativa`
+// na tabela `traducao_ao_vivo` (permitido pra admin via RLS) — quem liga/
+// desliga a captura de áudio de verdade é o próprio serviço no Mac mini, que
+// escuta essa mudança por Realtime (não precisa mais abrir Terminal/SSH
+// pra iniciar/parar a tradução em cada culto). Ver `translator-service/
+// index.js` e a seção "Mac mini" de `claude/site-novo-design-system-e-
+// escopo.md` pro resto da arquitetura.
+type TraducaoStatus = { ativa: boolean; atualizado_em: string | null };
+
+function TraducaoAoVivoAdminPanel() {
+  const { t } = useTranslation();
+  const [status, setStatus] = useState<TraducaoStatus | null>(null);
+  const [carregando, setCarregando] = useState(true);
+  const [atualizando, setAtualizando] = useState(false);
+
+  useEffect(() => {
+    let ativoNoAr = true;
+
+    supabase
+      .from('traducao_ao_vivo')
+      .select('ativa, atualizado_em')
+      .eq('id', 1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!ativoNoAr) return;
+        setStatus((data as TraducaoStatus) ?? { ativa: false, atualizado_em: null });
+        setCarregando(false);
+      });
+
+    // Mantém o badge sincronizado se o próprio serviço no Mac mini mudar o
+    // estado sozinho (ex. foi encerrado na mão, caiu a internet, etc.).
+    const canal = supabase
+      .channel('traducao-ao-vivo-admin')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'traducao_ao_vivo', filter: 'id=eq.1' },
+        (payload) => {
+          if (!ativoNoAr) return;
+          setStatus(payload.new as TraducaoStatus);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      ativoNoAr = false;
+      supabase.removeChannel(canal);
+    };
+  }, []);
+
+  const enviarComando = useCallback(async (novaAtiva: boolean) => {
+    setAtualizando(true);
+    const agora = new Date().toISOString();
+    const { error } = await supabase
+      .from('traducao_ao_vivo')
+      .update({ ativa: novaAtiva, atualizado_em: agora })
+      .eq('id', 1);
+    setAtualizando(false);
+    if (error) {
+      Alert.alert(t('admin.traducaoErroAoAtualizar'), error.message);
+      return;
+    }
+    setStatus({ ativa: novaAtiva, atualizado_em: agora });
+  }, [t]);
+
+  const confirmarIniciar = () => {
+    Alert.alert(
+      t('admin.traducaoIniciarConfirmarTitulo'),
+      t('admin.traducaoIniciarConfirmarTexto'),
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: t('admin.traducaoIniciarBotao'), onPress: () => enviarComando(true) },
+      ]
+    );
+  };
+
+  const confirmarParar = () => {
+    Alert.alert(
+      t('admin.traducaoPararConfirmarTitulo'),
+      t('admin.traducaoPararConfirmarTexto'),
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: t('admin.traducaoPararBotao'), style: 'destructive', onPress: () => enviarComando(false) },
+      ]
+    );
+  };
+
+  const ativa = status?.ativa ?? false;
+
+  return (
+    <View style={s.traducaoCard}>
+      <View style={s.traducaoHeaderRow}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="headset-outline" size={20} color={C.primary} />
+          <Text style={s.traducaoTitulo}>{t('admin.traducaoAoVivoTitulo')}</Text>
+        </View>
+        {!carregando && (
+          <View style={[s.traducaoStatusBadge, { backgroundColor: (ativa ? C.success : C.textMuted) + '18' }]}>
+            <View style={[s.traducaoStatusDot, { backgroundColor: ativa ? C.success : C.textMuted }]} />
+            <Text style={[s.traducaoStatusBadgeText, { color: ativa ? C.success : C.textMuted }]}>
+              {ativa ? t('admin.traducaoStatusAtiva') : t('admin.traducaoStatusParada')}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <Text style={s.traducaoIdiomasTexto}>{t('admin.traducaoIdiomas')}</Text>
+
+      {carregando ? (
+        <ActivityIndicator color={C.primary} style={{ marginTop: 12 }} />
+      ) : (
+        <View style={s.traducaoBotoesRow}>
+          <TouchableOpacity
+            style={[s.traducaoBotao, s.traducaoBotaoIniciar, (ativa || atualizando) && s.traducaoBotaoDisabled]}
+            disabled={ativa || atualizando}
+            onPress={confirmarIniciar}
+          >
+            {atualizando && !ativa ? <ActivityIndicator color="#fff" size="small" /> : (
+              <>
+                <Ionicons name="play" size={16} color="#fff" />
+                <Text style={s.traducaoBotaoTexto}>{t('admin.traducaoIniciarBotao')}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.traducaoBotao, s.traducaoBotaoParar, (!ativa || atualizando) && s.traducaoBotaoDisabled]}
+            disabled={!ativa || atualizando}
+            onPress={confirmarParar}
+          >
+            {atualizando && ativa ? <ActivityIndicator color="#fff" size="small" /> : (
+              <>
+                <Ionicons name="stop" size={16} color="#fff" />
+                <Text style={s.traducaoBotaoTexto}>{t('admin.traducaoPararBotao')}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function AdminScreen() {
   const { t } = useTranslation();
@@ -2397,6 +2540,7 @@ export default function AdminScreen() {
           {/* ══ ESTATÍSTICAS ══════════════════════════════════════════════════ */}
           {abaAtual === 'stats' && (
             <>
+              <TraducaoAoVivoAdminPanel />
               <Text style={s.sectionLabel}>{t('admin.usuariosDoApp')}</Text>
               <View style={s.statsGrid}>
                 {[
@@ -2591,6 +2735,20 @@ const s = StyleSheet.create({
   conversionLabel: { fontSize: 12, color: C.purple, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 },
   conversionValue: { fontSize: 48, fontWeight: '800', color: C.purple, marginVertical: 4 },
   conversionSub: { fontSize: 13, color: C.textMuted },
+  // Tradução ao vivo (painel do Admin — botões Iniciar/Parar)
+  traducaoCard: { backgroundColor: C.surface, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: C.border, marginBottom: 24 },
+  traducaoHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  traducaoTitulo: { fontSize: 15, fontWeight: '700', color: C.text },
+  traducaoStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
+  traducaoStatusDot: { width: 7, height: 7, borderRadius: 4 },
+  traducaoStatusBadgeText: { fontSize: 11.5, fontWeight: '700' },
+  traducaoIdiomasTexto: { fontSize: 12.5, color: C.textMuted, marginTop: 6 },
+  traducaoBotoesRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  traducaoBotao: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
+  traducaoBotaoIniciar: { backgroundColor: C.success },
+  traducaoBotaoParar: { backgroundColor: C.danger },
+  traducaoBotaoDisabled: { opacity: 0.4 },
+  traducaoBotaoTexto: { fontSize: 13.5, fontWeight: '700', color: '#fff' },
   // Empty
   empty: { alignItems: 'center', paddingVertical: 48, gap: 12 },
   emptyText: { fontSize: 14, color: C.textMuted },

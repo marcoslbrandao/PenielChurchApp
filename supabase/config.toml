@@ -435,3 +435,9 @@ enabled = true
 # conferida dentro da função com STRIPE_WEBHOOK_SECRET.
 verify_jwt = false
 entrypoint = "./functions/stripe-webhook/index.ts"
+
+# Chamada só pelo cron `limpar-audios-chat`; o portão é a hook-auth.ts.
+[functions.limpar-audios-chat]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/limpar-audios-chat/index.ts"

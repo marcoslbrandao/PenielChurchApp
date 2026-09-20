@@ -3,7 +3,7 @@
     "name": "Peniel Church",
     "slug": "PenielChurchApp",
     "scheme": "penielchurch",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "runtimeVersion": "1.4.0",
     "updates": {
       "url": "https://u.expo.dev/f53e9e07-9556-4ea8-80e0-da4487b38e56",
@@ -26,6 +26,7 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Usado para atualizar sua foto de perfil.",
+        "NSMicrophoneUsageDescription": "Usado para gravar mensagens de voz no chat dos grupos.",
         "NSPhotoLibraryUsageDescription": "Usado para selecionar sua foto de perfil.",
         "NSUserNotificationsUsageDescription": "Receba notificações de aniversários e avisos da igreja.",
         "ITSAppUsesNonExemptEncryption": false
@@ -44,6 +45,8 @@
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
         "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
       ]
@@ -71,8 +74,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": false,
-          "recordAudioAndroid": false
+          "microphonePermission": "Usado para gravar mensagens de voz no chat dos grupos.",
+          "recordAudioAndroid": true
         }
       ],
       "expo-asset"

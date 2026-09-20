@@ -55,6 +55,8 @@
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>Usado para atualizar sua foto de perfil.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Usado para gravar mensagens de voz no chat dos grupos.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Usado para selecionar sua foto de perfil.</string>
     <key>NSUserNotificationsUsageDescription</key>

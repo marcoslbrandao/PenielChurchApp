@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { useTheme } from '../lib/theme';
+import TextoComLinks from '../components/TextoComLinks';
 import { paletaBanda, type BandaColors } from '../lib/temaBanda';
 import MetronomoModal from '../components/MetronomoModal';
 
@@ -4649,7 +4650,11 @@ function BandaMain() {
                       style={[s.bubble, mine && s.bubbleMine]}
                     >
                       {!mine && <Text style={s.bubbleAuthor}>{m.autor_nome}</Text>}
-                      <Text style={[s.bubbleText, mine && s.bubbleTextMine]}>{m.texto}</Text>
+                      <TextoComLinks
+                        texto={m.texto}
+                        style={[s.bubbleText, mine && s.bubbleTextMine]}
+                        onLongPress={() => apagarMensagem(m)}
+                      />
                       <Text style={[s.bubbleTime, mine && s.bubbleTimeMine]}>{horaDaMensagem(m.created_at)}</Text>
                     </TouchableOpacity>
                   </View>

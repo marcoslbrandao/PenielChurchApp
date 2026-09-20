@@ -8,6 +8,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
 import { useTheme } from '../lib/theme';
+import TextoComLinks from './TextoComLinks';
+import AudioMensagem from './AudioMensagem';
+import GravadorAudio from './GravadorAudio';
+import { binarioPodeGravarAudio } from '../lib/recursosNativos';
+import { enviarAudio, apagarAudio, TEXTO_DO_AUDIO } from '../lib/chatAudio';
 
 function paletaChat(isDark: boolean) {
   return isDark ? {
@@ -42,6 +47,10 @@ type Mensagem = {
   autor_id: string;
   autor_nome: string;
   texto: string;
+  // Mensagem de voz: caminho no bucket `chat-audio`. Nesses casos `texto`
+  // é só o rótulo TEXTO_DO_AUDIO, para versões antigas do app.
+  audio_path?: string | null;
+  audio_duracao_ms?: number | null;
   created_at: string;
 };
 
@@ -65,6 +74,11 @@ export default function GrupoChatModal({
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const listRef = useRef<FlatList>(null);
+  // Um áudio tocando por vez na conversa inteira.
+  const [audioAtivo, setAudioAtivo] = useState<string | null>(null);
+  const [gravando, setGravando] = useState(false);
+  const [enviandoAudio, setEnviandoAudio] = useState(false);
+  const podeGravar = useMemo(() => binarioPodeGravarAudio(), []);
 
   const { isDark } = useTheme();
   // Dentro de um <Modal> do React Native, o <SafeAreaView> mede a view NATIVA
@@ -150,6 +164,25 @@ export default function GrupoChatModal({
     setTexto('');
   };
 
+  const enviarGravacao = async (uri: string, duracaoMs: number) => {
+    setEnviandoAudio(true);
+    try {
+      const caminho = await enviarAudio(uri, grupo, userId);
+      const { error } = await supabase.from('grupo_chat_mensagens').insert({
+        grupo, autor_id: userId, autor_nome: userNome, texto: TEXTO_DO_AUDIO,
+        audio_path: caminho, audio_duracao_ms: duracaoMs,
+      });
+      if (error) { apagarAudio(caminho); throw error; }
+    } catch (e: any) {
+      Alert.alert('Não foi possível enviar o áudio', e?.message ?? 'Verifique a internet e tente de novo.');
+    } finally {
+      setEnviandoAudio(false);
+    }
+  };
+
+  // Fechar o chat para o áudio que estiver tocando.
+  useEffect(() => { if (!visible) setAudioAtivo(null); }, [visible]);
+
   const apagar = (msg: Mensagem) => {
     if (msg.autor_id !== userId && !podeModerar) return;
     Alert.alert('Apagar mensagem', 'Remover esta mensagem do chat?', [
@@ -158,6 +191,7 @@ export default function GrupoChatModal({
         text: 'Apagar', style: 'destructive', onPress: async () => {
           setMensagens(prev => prev.filter(m => m.id !== msg.id));
           await apagarLinha('grupo_chat_mensagens', msg.id);
+          if (msg.audio_path) apagarAudio(msg.audio_path);
         },
       },
     ]);
@@ -209,7 +243,26 @@ export default function GrupoChatModal({
                   >
                     <View style={[cs.bubble, minha ? { backgroundColor: cor } : cs.bubbleOther]}>
                       {!minha && <Text style={[cs.autorNome, { color: cor }]}>{item.autor_nome}</Text>}
-                      <Text style={[cs.bubbleText, minha && { color: '#fff' }]}>{item.texto}</Text>
+                      {item.audio_path ? (
+                        <AudioMensagem
+                          caminho={item.audio_path}
+                          duracaoMs={item.audio_duracao_ms ?? null}
+                          ativo={audioAtivo === item.id}
+                          onAtivar={() => setAudioAtivo(item.id)}
+                          onTerminar={() => setAudioAtivo(a => (a === item.id ? null : a))}
+                          corTexto={minha ? '#fff' : C.text}
+                          corTrilho={minha ? 'rgba(255,255,255,0.35)' : C.bubbleOtherBorder}
+                          corProgresso={minha ? '#fff' : cor}
+                          onLongPress={podeApagar ? () => apagar(item) : undefined}
+                        />
+                      ) : (
+                        <TextoComLinks
+                          texto={item.texto}
+                          style={[cs.bubbleText, minha && { color: '#fff' }]}
+                          corLink={minha ? '#fff' : cor}
+                          onLongPress={podeApagar ? () => apagar(item) : undefined}
+                        />
+                      )}
                     </View>
                   </TouchableOpacity>
                 );
@@ -218,6 +271,7 @@ export default function GrupoChatModal({
           )}
 
           <View style={[cs.inputRow, { paddingBottom: 10 + padBottom }]}>
+            {!gravando && (
             <TextInput
               style={cs.input}
               placeholder="Escreva uma mensagem..."
@@ -227,13 +281,30 @@ export default function GrupoChatModal({
               multiline
               maxLength={1000}
             />
-            <TouchableOpacity
-              style={[cs.sendBtn, { backgroundColor: cor, opacity: texto.trim() && !enviando ? 1 : 0.5 }]}
-              onPress={enviar}
-              disabled={!texto.trim() || enviando}
-            >
-              {enviando ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={17} color="#fff" />}
-            </TouchableOpacity>
+            )}
+            {enviandoAudio ? (
+              <View style={[cs.sendBtn, { backgroundColor: cor, opacity: 0.6 }]}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            ) : podeGravar && (gravando || !texto.trim()) ? (
+              // Campo vazio: o botão vira microfone, como no WhatsApp.
+              <GravadorAudio
+                cor={cor}
+                corTexto={C.text}
+                corFundo={C.inputBg}
+                onComecar={() => { setAudioAtivo(null); Keyboard.dismiss(); }}
+                onGravado={enviarGravacao}
+                onGravandoMudou={setGravando}
+              />
+            ) : (
+              <TouchableOpacity
+                style={[cs.sendBtn, { backgroundColor: cor, opacity: texto.trim() && !enviando ? 1 : 0.5 }]}
+                onPress={enviar}
+                disabled={!texto.trim() || enviando}
+              >
+                {enviando ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={17} color="#fff" />}
+              </TouchableOpacity>
+            )}
           </View>
         </KeyboardAvoidingView>
       </View>

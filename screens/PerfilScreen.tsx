@@ -12,6 +12,7 @@ import { decode } from 'base64-arraybuffer';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import Constants from 'expo-constants';
+import { versaoDoBinario } from '../lib/recursosNativos';
 import * as Updates from 'expo-updates';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
@@ -24,7 +25,9 @@ import { pushEstaAtivo, definirPush, removerTokenDesteAparelho } from '../lib/us
 // Versão real do app.json (não mais um texto fixo desatualizado), + info de
 // qual atualização OTA (EAS Update) está rodando agora — útil pra confirmar
 // se uma atualização remota já chegou nesse aparelho ou não.
-const APP_VERSION = Constants.expoConfig?.version ?? '—';
+// Versão do app instalado da loja — ver `versaoDoBinario()`. A do OTA
+// (`Constants.expoConfig.version`) mostrava 1.4.1 em quem ainda tinha a 1.4.0.
+const APP_VERSION = versaoDoBinario() ?? Constants.expoConfig?.version ?? '—';
 function infoAtualizacaoOTA(): string {
   if (Updates.isEmbeddedLaunch || !Updates.createdAt) {
     return 'Sem atualização remota aplicada (versão instalada da loja)';

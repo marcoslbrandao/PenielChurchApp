@@ -1416,5 +1416,14 @@
     "fichaVazia": "Nenhuma criança no grupo infantil ainda.",
     "fichaAviso": "O que a sala precisa saber sobre cada criança neste domingo.",
     "fichaTrava": "Telefone, endereço e as observações internas da liderança não aparecem aqui — a sala vê o que a sala precisa."
+  },
+  "atualizacao": {
+    "novaTitulo": "Nova versão disponível",
+    "novaTexto": "A versão {{nova}} do Peniel Church já está na loja. Você está com a {{instalada}}. Atualize para ter as novidades.",
+    "atualizar": "Atualizar agora",
+    "agoraNao": "Agora não",
+    "obrigatoriaTitulo": "Atualize para continuar",
+    "obrigatoriaTexto": "Esta versão do app ({{instalada}}) não é mais compatível. Instale a versão {{minima}} ou mais nova pela loja para continuar usando o Peniel Church.",
+    "erroLoja": "Não foi possível abrir a loja. Procure por \"Peniel Church\" na App Store ou no Google Play."
   }
 }

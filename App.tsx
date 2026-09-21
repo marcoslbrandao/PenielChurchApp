@@ -33,6 +33,7 @@ import { AcessoProvider, useAcesso } from './lib/acesso';
 import * as Notifications from 'expo-notifications';
 import { useAuth } from './lib/useAuth';
 import { destinoDaNotificacao } from './lib/destinoNotificacao';
+import AvisoDeAtualizacao from './components/AvisoDeAtualizacao';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -257,6 +258,7 @@ export default function App() {
         <ThemeProvider>
           <AcessoProvider>
           <RoteadorDeNotificacoes navPronta={navPronta} />
+          <AvisoDeAtualizacao />
           <NavigationContainer ref={navigationRef} onReady={() => setNavPronta(true)}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="MainTabs" component={MainTabs} />

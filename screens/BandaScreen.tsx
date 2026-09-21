@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, FlatList, Linking, Alert, KeyboardAvoidingView, Image,
-  Platform, StatusBar, Animated, Modal, ActivityIndicator, RefreshControl,
+  Platform, StatusBar, Animated, Modal, ActivityIndicator, RefreshControl, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,10 @@ import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { useTheme } from '../lib/theme';
 import TextoComLinks from '../components/TextoComLinks';
+import AudioMensagem from '../components/AudioMensagem';
+import GravadorAudio from '../components/GravadorAudio';
+import { binarioPodeGravarAudio } from '../lib/recursosNativos';
+import { enviarAudio, apagarAudio, TEXTO_DO_AUDIO } from '../lib/chatAudio';
 import { paletaBanda, type BandaColors } from '../lib/temaBanda';
 import MetronomoModal from '../components/MetronomoModal';
 
@@ -159,7 +163,12 @@ type BandaTime = {
 // Uma linha de `banda_chat_mensagens`. `autor_nome` vem duplicado do banco de
 // propósito: a policy de SELECT de `profiles` só libera cada um ver a própria
 // linha, então não há como descobrir por join quem mandou a mensagem.
-type ChatMsg = { id: string; autor_id: string; autor_nome: string; texto: string; created_at: string };
+type ChatMsg = {
+  id: string; autor_id: string; autor_nome: string; texto: string; created_at: string;
+  // Mensagem de voz: caminho `banda/<autor>/<uuid>.m4a` no bucket `chat-audio`.
+  // `texto` leva o rótulo TEXTO_DO_AUDIO, para versões antigas do app.
+  audio_path?: string | null; audio_duracao_ms?: number | null;
+};
 type Tab = 'hoje' | 'repertorio' | 'cultos' | 'ensaios' | 'equipe' | 'chat';
 
 // ─── Link helpers ───────────────────────────────────────────────────
@@ -3315,6 +3324,12 @@ function BandaMain() {
   const [buscaRepertorio, setBuscaRepertorio] = useState('');
   const [chatMsg, setChatMsg] = useState('');
   const [messages, setMessages] = useState<ChatMsg[]>([]);
+  // Mensagens de voz — mesma mecânica do chat dos grupos. Um áudio tocando
+  // por vez; o microfone só aparece se o binário tem a permissão (1.4.1+).
+  const [audioAtivo, setAudioAtivo] = useState<string | null>(null);
+  const [gravando, setGravando] = useState(false);
+  const [enviandoAudio, setEnviandoAudio] = useState(false);
+  const podeGravar = useMemo(() => binarioPodeGravarAudio(), []);
   const [loadingChat, setLoadingChat] = useState(true);
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [indisponibilidades, setIndisponibilidades] = useState<Indisponibilidade[]>([]);
@@ -3772,6 +3787,29 @@ function BandaMain() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
+  const enviarGravacao = async (uri: string, duracaoMs: number) => {
+    if (!user?.id) { Alert.alert(t('common.erro'), t('banda.chatPrecisaLogin')); return; }
+    setEnviandoAudio(true);
+    try {
+      const caminho = await enviarAudio(uri, 'banda', user.id);
+      const { data, error } = await supabase
+        .from('banda_chat_mensagens')
+        .insert({ autor_id: user.id, autor_nome: meuNome, texto: TEXTO_DO_AUDIO, audio_path: caminho, audio_duracao_ms: duracaoMs })
+        .select()
+        .single();
+      if (error) { apagarAudio(caminho); throw error; }
+      if (data) setMessages(prev => (prev.some(m => m.id === (data as ChatMsg).id) ? prev : [...prev, data as ChatMsg]));
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (e: any) {
+      Alert.alert('Não foi possível enviar o áudio', e?.message ?? 'Verifique a internet e tente de novo.');
+    } finally {
+      setEnviandoAudio(false);
+    }
+  };
+
+  // Sair da aba do chat para o áudio que estiver tocando.
+  useEffect(() => { if (activeTab !== 'chat') setAudioAtivo(null); }, [activeTab]);
+
   // Segurar a própria mensagem apaga. A policy do banco só deixa apagar a
   // própria (ou qualquer uma, se for admin).
   const apagarMensagem = (msg: ChatMsg) => {
@@ -3784,6 +3822,7 @@ function BandaMain() {
       { text: t('common.remover'), style: 'destructive', onPress: async () => {
         setMessages(prev => prev.filter(m => m.id !== msg.id));
         await apagarLinha('banda_chat_mensagens', msg.id);
+        if (msg.audio_path) apagarAudio(msg.audio_path);
       }},
     ]);
   };
@@ -4730,11 +4769,25 @@ function BandaMain() {
                       style={[s.bubble, mine && s.bubbleMine]}
                     >
                       {!mine && <Text style={s.bubbleAuthor}>{m.autor_nome}</Text>}
-                      <TextoComLinks
-                        texto={m.texto}
-                        style={[s.bubbleText, mine && s.bubbleTextMine]}
-                        onLongPress={() => apagarMensagem(m)}
-                      />
+                      {m.audio_path ? (
+                        <AudioMensagem
+                          caminho={m.audio_path}
+                          duracaoMs={m.audio_duracao_ms ?? null}
+                          ativo={audioAtivo === m.id}
+                          onAtivar={() => setAudioAtivo(m.id)}
+                          onTerminar={() => setAudioAtivo(a => (a === m.id ? null : a))}
+                          corTexto={mine ? C.onPrimaryDim : C.text}
+                          corTrilho={C.border}
+                          corProgresso={C.primary}
+                          onLongPress={() => apagarMensagem(m)}
+                        />
+                      ) : (
+                        <TextoComLinks
+                          texto={m.texto}
+                          style={[s.bubbleText, mine && s.bubbleTextMine]}
+                          onLongPress={() => apagarMensagem(m)}
+                        />
+                      )}
                       <Text style={[s.bubbleTime, mine && s.bubbleTimeMine]}>{horaDaMensagem(m.created_at)}</Text>
                     </TouchableOpacity>
                   </View>
@@ -4743,10 +4796,30 @@ function BandaMain() {
             </ScrollView>
           )}
           <View style={s.chatInput}>
-            <TextInput style={s.chatField} placeholder={t('banda.mensagemPlaceholder')} placeholderTextColor={C.textDim} value={chatMsg} onChangeText={setChatMsg} returnKeyType="send" onSubmitEditing={sendMessage} maxLength={1000} />
-            <TouchableOpacity style={[s.sendBtn, (!chatMsg.trim() || enviandoChat || !nomePronto) && { opacity: 0.45 }]} onPress={sendMessage} disabled={!chatMsg.trim() || enviandoChat || !nomePronto}>
-              {enviandoChat ? <ActivityIndicator color={C.onPrimary} size="small" /> : <Ionicons name="send" size={18} color={C.onPrimary} />}
-            </TouchableOpacity>
+            {!gravando && (
+              <TextInput style={s.chatField} placeholder={t('banda.mensagemPlaceholder')} placeholderTextColor={C.textDim} value={chatMsg} onChangeText={setChatMsg} returnKeyType="send" onSubmitEditing={sendMessage} maxLength={1000} />
+            )}
+            {enviandoAudio ? (
+              <View style={[s.sendBtn, { opacity: 0.6 }]}>
+                <ActivityIndicator color={C.onPrimary} size="small" />
+              </View>
+            ) : podeGravar && nomePronto && (gravando || !chatMsg.trim()) ? (
+              // Campo vazio: o botão vira microfone, como no chat dos grupos.
+              <GravadorAudio
+                cor={C.primary}
+                corIcone={C.onPrimary}
+                corTexto={C.text}
+                corFundo={C.surfaceHigh}
+                tamanho={42}
+                onComecar={() => { setAudioAtivo(null); Keyboard.dismiss(); }}
+                onGravado={enviarGravacao}
+                onGravandoMudou={setGravando}
+              />
+            ) : (
+              <TouchableOpacity style={[s.sendBtn, (!chatMsg.trim() || enviandoChat || !nomePronto) && { opacity: 0.45 }]} onPress={sendMessage} disabled={!chatMsg.trim() || enviandoChat || !nomePronto}>
+                {enviandoChat ? <ActivityIndicator color={C.onPrimary} size="small" /> : <Ionicons name="send" size={18} color={C.onPrimary} />}
+              </TouchableOpacity>
+            )}
           </View>
         </KeyboardAvoidingView>
       )}

@@ -13,7 +13,10 @@
 // os dois são mudados juntos (ver claude/chat-audio-e-links.md).
 import { requireOptionalNativeModule } from 'expo';
 
-type AppConfigEmbutido = { plugins?: (string | [string, Record<string, unknown>])[] };
+type AppConfigEmbutido = {
+  version?: string;
+  plugins?: (string | [string, Record<string, unknown>])[];
+};
 
 function configEmbutida(): AppConfigEmbutido | null {
   try {
@@ -38,4 +41,18 @@ export function binarioPodeGravarAudio(): boolean {
   const mic = audio?.[1]?.microphonePermission;
   cache = typeof mic === 'string' && mic.length > 0;
   return cache;
+}
+
+/**
+ * Versão do app INSTALADO da loja (ex.: "1.4.0"), não a do OTA.
+ *
+ * `Constants.expoConfig.version` vem do update baixado: um OTA publicado do
+ * app.json 1.4.1 mostra "1.4.1" até num binário 1.4.0 — foi o que enganou no
+ * Perfil. O `expo-constants` do SDK 54 não tem mais `nativeAppVersion` (foi
+ * para o `expo-application`, que é nativo e não está no binário), então a
+ * fonte é a mesma config embutida que decide o microfone.
+ */
+export function versaoDoBinario(): string | null {
+  const v = configEmbutida()?.version;
+  return typeof v === 'string' && v.length > 0 ? v : null;
 }

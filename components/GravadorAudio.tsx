@@ -17,9 +17,13 @@ import { OPCOES_GRAVACAO, AUDIO_MAX_SEGUNDOS, formatarTempo } from '../lib/chatA
 // SÓ MONTAR QUANDO `binarioPodeGravarAudio()`: o hook cria o gravador nativo
 // na montagem, e o pedido de microfone num binário sem a permissão fecha o app.
 export default function GravadorAudio({
-  cor, corTexto, corFundo, onComecar, onGravado, onGravandoMudou,
+  cor, corIcone = '#fff', corTexto, corFundo, tamanho = 38, onComecar, onGravado, onGravandoMudou,
 }: {
   cor: string;
+  /** Cor do ícone sobre `cor`. Branco nos grupos; a Banda usa `onPrimary`. */
+  corIcone?: string;
+  /** Diâmetro dos botões redondos — para casar com o botão de enviar da tela. */
+  tamanho?: number;
   corTexto: string;
   corFundo: string;
   onComecar: () => void;
@@ -103,15 +107,17 @@ export default function GravadorAudio({
     }
   }, []);
 
+  const redondo = { width: tamanho, height: tamanho, borderRadius: tamanho / 2 };
+
   if (!gravando) {
     return (
       <TouchableOpacity
-        style={[st.botaoRedondo, { backgroundColor: cor }]}
+        style={[st.botaoRedondo, redondo, { backgroundColor: cor }]}
         onPress={comecar}
         accessibilityRole="button"
         accessibilityLabel="Gravar mensagem de voz"
       >
-        <Ionicons name="mic" size={19} color="#fff" />
+        <Ionicons name="mic" size={19} color={corIcone} />
       </TouchableOpacity>
     );
   }
@@ -129,11 +135,11 @@ export default function GravadorAudio({
         </Text>
       </View>
       <TouchableOpacity
-        style={[st.botaoRedondo, { backgroundColor: cor }]}
+        style={[st.botaoRedondo, redondo, { backgroundColor: cor }]}
         onPress={() => terminar(true)}
         accessibilityLabel="Enviar gravação"
       >
-        <Ionicons name="send" size={17} color="#fff" />
+        <Ionicons name="send" size={17} color={corIcone} />
       </TouchableOpacity>
     </View>
   );
@@ -141,7 +147,7 @@ export default function GravadorAudio({
 
 const st = StyleSheet.create({
   botaoRedondo: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  barra: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 19, paddingLeft: 14 },
+  barra: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 999, paddingLeft: 14 },
   meio: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   ponto: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#E53935' },
   tempo: { fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },

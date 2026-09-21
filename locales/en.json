@@ -1416,5 +1416,14 @@
     "fichaVazia": "No children in the kids group yet.",
     "fichaAviso": "What the classroom needs to know about each child this Sunday.",
     "fichaTrava": "Phone, address and the leadership's internal notes don't appear here — the classroom sees what the classroom needs."
+  },
+  "atualizacao": {
+    "novaTitulo": "New version available",
+    "novaTexto": "Version {{nova}} of Peniel Church is now in the store. You have {{instalada}}. Update to get the latest features.",
+    "atualizar": "Update now",
+    "agoraNao": "Not now",
+    "obrigatoriaTitulo": "Update to continue",
+    "obrigatoriaTexto": "This version of the app ({{instalada}}) is no longer supported. Install version {{minima}} or newer from the store to keep using Peniel Church.",
+    "erroLoja": "Couldn't open the store. Search for \"Peniel Church\" on the App Store or Google Play."
   }
 }

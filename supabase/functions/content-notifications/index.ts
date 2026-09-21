@@ -45,8 +45,10 @@ async function campoTraduzido(supabase: any, record: any, campo: string, lang: s
   const { data: res, error } = await supabase.functions.invoke('translate-content', {
     body: { table: 'devocionais', rowId: String(record.id), field: campo, text: original, lang },
   });
-  if (error || !res?.translated) return original;
-  return res.translated;
+  let corpo: any = res;
+  if (typeof corpo === 'string') { try { corpo = JSON.parse(corpo); } catch { corpo = null; } }
+  if (error || !corpo?.translated) return original;
+  return corpo.translated;
 }
 
 async function devocionalTraduzido(supabase: any, record: any, lang: string) {

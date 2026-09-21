@@ -27,6 +27,13 @@ const MYMEMORY_URL = 'https://api.mymemory.translated.net/get';
 const IDIOMAS_VALIDOS = ['en', 'es', 'fr'];
 const CONTATO_MYMEMORY = 'info@penielchurch.org.uk';
 
+// SEM ESTE CABEÇALHO A TRADUÇÃO NUNCA APARECIA NO APP. O `supabase.functions
+// .invoke` decide como ler a resposta pelo Content-Type: sem ele (o padrão do
+// Deno para string é text/plain), `data` chega como TEXTO, `data.translated`
+// é undefined e o hook `useCampoTraduzido` fica mostrando o português —
+// mesmo com a tradução certinha no cache. Toda resposta daqui sai como JSON.
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
 function quebrarEmPedacos(texto: string, tamanhoMax = 450): string[] {
   if (texto.length <= tamanhoMax) return [texto];
   const pedacos: string[] = [];
@@ -65,11 +72,11 @@ Deno.serve(async (req) => {
     const { table, rowId, field, text, lang } = await req.json();
 
     if (!table || !rowId || !field || typeof text !== 'string') {
-      return new Response(JSON.stringify({ error: 'Parâmetros obrigatórios: table, rowId, field, text.' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'Parâmetros obrigatórios: table, rowId, field, text.' }), { status: 400, headers: JSON_HEADERS });
     }
     if (!text.trim() || !IDIOMAS_VALIDOS.includes(lang)) {
       // Português (idioma original) ou texto vazio — nada a traduzir.
-      return new Response(JSON.stringify({ translated: text }), { status: 200 });
+      return new Response(JSON.stringify({ translated: text }), { status: 200, headers: JSON_HEADERS });
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -84,7 +91,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (cacheHit && cacheHit.original_text === text) {
-      return new Response(JSON.stringify({ translated: cacheHit.translated_text, cached: true }), { status: 200 });
+      return new Response(JSON.stringify({ translated: cacheHit.translated_text, cached: true }), { status: 200, headers: JSON_HEADERS });
     }
 
     let translated: string;
@@ -93,7 +100,7 @@ Deno.serve(async (req) => {
     } catch (apiError) {
       // Se a API externa falhar, devolve o texto original em vez de quebrar a tela.
       console.error('Erro ao traduzir via MyMemory:', apiError);
-      return new Response(JSON.stringify({ translated: text, fallback: true }), { status: 200 });
+      return new Response(JSON.stringify({ translated: text, fallback: true }), { status: 200, headers: JSON_HEADERS });
     }
 
     await supabase.from('content_translations').upsert({
@@ -101,8 +108,8 @@ Deno.serve(async (req) => {
       original_text: text, translated_text: translated,
     }, { onConflict: 'table_name,row_id,field_name,lang' });
 
-    return new Response(JSON.stringify({ translated }), { status: 200 });
+    return new Response(JSON.stringify({ translated }), { status: 200, headers: JSON_HEADERS });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: JSON_HEADERS });
   }
 });

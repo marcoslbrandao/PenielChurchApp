@@ -55,9 +55,18 @@ export function useCampoTraduzido(
     supabase.functions
       .invoke('translate-content', { body: { table, rowId: String(rowId), field, text: texto, lang } })
       .then(({ data, error }) => {
-        if (cancelado || error || !data?.translated) return;
-        memCache.set(chave, data.translated);
-        if (ultimoTextoRef.current === texto) setTraduzido(data.translated);
+        if (cancelado || error) return;
+        // A função pode responder sem Content-Type JSON (versões antigas da
+        // translate-content): aí o supabase-js entrega `data` como texto.
+        // Sem este parse, a tradução chegava e era descartada em silêncio.
+        let corpo: any = data;
+        if (typeof corpo === 'string') {
+          try { corpo = JSON.parse(corpo); } catch { return; }
+        }
+        const traducao = corpo?.translated;
+        if (!traducao) return;
+        memCache.set(chave, traducao);
+        if (ultimoTextoRef.current === texto) setTraduzido(traducao);
       })
       .catch(() => { /* mantém o texto original em caso de erro de rede */ });
 

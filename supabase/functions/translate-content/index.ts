@@ -25,6 +25,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const MYMEMORY_URL = 'https://api.mymemory.translated.net/get';
 const IDIOMAS_VALIDOS = ['en', 'es', 'fr'];
+const CONTATO_MYMEMORY = 'info@penielchurch.org.uk';
 
 function quebrarEmPedacos(texto: string, tamanhoMax = 450): string[] {
   if (texto.length <= tamanhoMax) return [texto];
@@ -45,7 +46,10 @@ async function traduzirComMyMemory(texto: string, idiomaDestino: string): Promis
   const pedacos = quebrarEmPedacos(texto);
   const traduzidos: string[] = [];
   for (const pedaco of pedacos) {
-    const url = `${MYMEMORY_URL}?q=${encodeURIComponent(pedaco)}&langpair=pt|${idiomaDestino}`;
+    // `de` (e-mail de contato) sobe a cota gratuita da MyMemory de ~5 mil para
+    // ~50 mil caracteres por dia. Sem ele, um devocional longo em 3 idiomas já
+    // gasta a cota do dia e o resto volta em português, sem erro visível.
+    const url = `${MYMEMORY_URL}?q=${encodeURIComponent(pedaco)}&langpair=pt|${idiomaDestino}&de=${encodeURIComponent(CONTATO_MYMEMORY)}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`MyMemory respondeu ${res.status}`);
     const data = await res.json();

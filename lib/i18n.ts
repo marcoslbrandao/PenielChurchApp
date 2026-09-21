@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from './supabase';
 
 import pt from '../locales/pt.json';
 import en from '../locales/en.json';
@@ -55,6 +56,18 @@ export async function trocarIdioma(codigo: string) {
     await AsyncStorage.setItem(STORAGE_KEY, codigo);
   } catch {
     // não bloqueia a troca de idioma se o storage falhar
+  }
+  // As notificações (devocional, versículo do dia) saem no idioma gravado em
+  // push_tokens.idioma. Antes isso só era gravado ao registrar o token, na
+  // abertura do app — quem trocava de idioma continuava recebendo push na
+  // língua antiga até fechar e abrir o app.
+  try {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      await supabase.from('push_tokens').update({ idioma: codigo }).eq('user_id', data.user.id);
+    }
+  } catch {
+    // sem rede: o idioma é regravado no próximo registro do token
   }
 }
 

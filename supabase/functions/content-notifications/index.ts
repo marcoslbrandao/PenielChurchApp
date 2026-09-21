@@ -28,6 +28,34 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
+const NOVO_DEVOCIONAL: Record<string, string> = {
+  pt: 'Novo devocional', en: 'New devotional', es: 'Nuevo devocional', fr: 'Nouvelle dévotion',
+};
+
+async function campoTraduzido(supabase: any, record: any, campo: string, lang: string): Promise<string> {
+  const original = String(record[campo] ?? '');
+  if (!original) return original;
+  const { data } = await supabase
+    .from('content_translations')
+    .select('original_text, translated_text')
+    .eq('table_name', 'devocionais').eq('row_id', String(record.id))
+    .eq('field_name', campo).eq('lang', lang)
+    .maybeSingle();
+  if (data && data.original_text === original) return data.translated_text;
+  const { data: res, error } = await supabase.functions.invoke('translate-content', {
+    body: { table: 'devocionais', rowId: String(record.id), field: campo, text: original, lang },
+  });
+  if (error || !res?.translated) return original;
+  return res.translated;
+}
+
+async function devocionalTraduzido(supabase: any, record: any, lang: string) {
+  const [t, v, r] = await Promise.all(
+    ['titulo', 'versiculo', 'referencia'].map((c) => campoTraduzido(supabase, record, c, lang)),
+  );
+  return { title: `📖 ${NOVO_DEVOCIONAL[lang] ?? NOVO_DEVOCIONAL.pt}: ${t}`, body: `"${v}" — ${r}` };
+}
+
 Deno.serve(async (req) => {
   // Só o próprio Supabase (Database Webhook ou cron) chama esta função. Sem
   // este portão, qualquer um com a chave anônima do app disparava push para a
@@ -87,7 +115,7 @@ Deno.serve(async (req) => {
     const grupo = record.grupo as string | null | undefined;
     const apenasMembros = table === 'avisos' && record.apenas_membros === true;
 
-    let tokens: { token: string }[] | null = null;
+    let tokens: { token: string; idioma?: string | null }[] | null = null;
 
     if (grupo) {
       // Só quem foi adicionado a esse grupo (pelo líder) recebe, e só se a
@@ -119,7 +147,7 @@ Deno.serve(async (req) => {
       }
 
       const { data: tokensData, error: tokensError } = await supabase
-        .from('push_tokens').select('token').in('user_id', memberProfileIds);
+        .from('push_tokens').select('token, idioma').in('user_id', memberProfileIds);
       if (tokensError) throw tokensError;
       tokens = tokensData;
     } else if (apenasMembros) {
@@ -135,11 +163,11 @@ Deno.serve(async (req) => {
       }
 
       const { data: tokensData, error: tokensError } = await supabase
-        .from('push_tokens').select('token').in('user_id', memberIds);
+        .from('push_tokens').select('token, idioma').in('user_id', memberIds);
       if (tokensError) throw tokensError;
       tokens = tokensData;
     } else {
-      const { data: tokensData, error: tokensError } = await supabase.from('push_tokens').select('token');
+      const { data: tokensData, error: tokensError } = await supabase.from('push_tokens').select('token, idioma');
       if (tokensError) throw tokensError;
       tokens = tokensData;
     }
@@ -153,10 +181,32 @@ Deno.serve(async (req) => {
     // manda 2 pushes pro mesmo token numa única chamada.
     const tokensUnicos = [...new Set(tokens.map((t: any) => t.token))];
 
+    // Idioma de cada aparelho (gravado pelo app em push_tokens.idioma). Só o
+    // devocional sai traduzido por enquanto: título, versículo e referência
+    // vêm de `content_translations` — o mesmo cache que o app usa na tela —,
+    // e o que faltar é traduzido agora pela `translate-content` (que já grava
+    // no cache). Qualquer falha cai no português, nunca deixa de enviar.
+    const idiomaDoToken = new Map<string, string>();
+    for (const t of tokens as any[]) {
+      const l = t.idioma === 'en' || t.idioma === 'es' || t.idioma === 'fr' ? t.idioma : 'pt';
+      idiomaDoToken.set(t.token, l);
+    }
+    const textoPorIdioma: Record<string, { title: string; body: string }> = { pt: { title: titulo, body: corpo } };
+    if (table === 'devocionais' && record.id) {
+      const idiomas = [...new Set([...idiomaDoToken.values()])].filter((l) => l !== 'pt');
+      for (const l of idiomas) {
+        try {
+          textoPorIdioma[l] = await devocionalTraduzido(supabase, record, l);
+        } catch (e) {
+          console.error(`Tradução do push (${l}) falhou, vai em português:`, e);
+        }
+      }
+    }
+
     const mensagens = tokensUnicos.map((token: string) => ({
       to: token,
-      title: titulo,
-      body: corpo,
+      title: (textoPorIdioma[idiomaDoToken.get(token) ?? 'pt'] ?? textoPorIdioma.pt).title,
+      body: (textoPorIdioma[idiomaDoToken.get(token) ?? 'pt'] ?? textoPorIdioma.pt).body,
       sound: 'default',
       // `origem` e `id` existem para o toque na notificação saber ONDE abrir:
       // `origem === 'chat'` é o único caso que abre o chat do grupo em vez do

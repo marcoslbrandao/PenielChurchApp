@@ -192,6 +192,27 @@ function letraSearchUrl(s: Pick<Song, 'title' | 'artist'>) { return `https://www
 function youtubeSearchUrl(s: Pick<Song, 'title' | 'artist'>) { return `https://www.youtube.com/results?search_query=${searchTerms(s)}`; }
 function spotifySearchUrl(s: Pick<Song, 'title' | 'artist'>) { return `https://open.spotify.com/search/${searchTerms(s)}`; }
 
+// ─── Busca no repertório ─────────────────────────────────────────────────────
+// Ignora acento e maiúscula: quem digita "grande e o senhor" tem que achar
+// "Grande É o Senhor". Cada palavra digitada precisa aparecer no título ou no
+// artista, em qualquer ordem — "senhor grande" acha a mesma música.
+// Tabela à mão em vez de `normalize('NFD')`: nada no app usa `normalize` hoje,
+// e não vale descobrir em produção se o Hermes de algum Android antigo tem.
+const SEM_ACENTO: Record<string, string> = {
+  á: 'a', à: 'a', â: 'a', ã: 'a', ä: 'a', é: 'e', è: 'e', ê: 'e', ë: 'e',
+  í: 'i', ì: 'i', î: 'i', ï: 'i', ó: 'o', ò: 'o', ô: 'o', õ: 'o', ö: 'o',
+  ú: 'u', ù: 'u', û: 'u', ü: 'u', ç: 'c', ñ: 'n',
+};
+function paraBusca(txt: string): string {
+  return txt.toLowerCase().replace(/[áàâãäéèêëíìîïóòôõöúùûüçñ]/g, ch => SEM_ACENTO[ch] ?? ch);
+}
+function casaBusca(song: Pick<Song, 'title' | 'artist'>, termo: string): boolean {
+  const palavras = paraBusca(termo).split(/\s+/).filter(Boolean);
+  if (palavras.length === 0) return true;
+  const alvo = paraBusca(`${song.title ?? ''} ${song.artist ?? ''}`);
+  return palavras.every(pal => alvo.includes(pal));
+}
+
 // Um resolvedor por serviço. Todos devolvem uma URL que ABRE — nunca uma
 // montada na mão que possa dar 404.
 function cifraTarget(s: Song): LinkTarget {
@@ -950,6 +971,35 @@ const buildNm = (C: BandaColors) => StyleSheet.create({
 // pra subir, descer e remover; embaixo o repertório que ainda não entrou, com
 // busca, pra adicionar. O componente não fala com o banco — só devolve as
 // entradas por `setEntries`, e quem chama decide o que fazer com elas.
+// Campo de busca com lupa e botão de limpar. Componente de nível de módulo de
+// propósito: definido dentro de outro componente, ele remontaria a cada letra
+// e o teclado fecharia (ver claude/bug-teclado-fecha-textinput-remonta.md).
+function CampoBusca({ valor, onChange, placeholder }: {
+  valor: string; onChange: (v: string) => void; placeholder: string;
+}) {
+  const { C, s } = useBandaTema();
+  return (
+    <View style={s.buscaCampo}>
+      <Ionicons name="search" size={16} color={C.textMuted} />
+      <TextInput
+        style={s.buscaInput}
+        value={valor}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor={C.textDim}
+        autoCorrect={false}
+        autoCapitalize="none"
+        returnKeyType="search"
+      />
+      {!!valor && (
+        <TouchableOpacity onPress={() => onChange('')} hitSlop={8}>
+          <Ionicons name="close-circle" size={17} color={C.textDim} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 function SetlistEditor({ entries, setEntries, songs, versoes }: {
   entries: CultoSongEntry[];
   setEntries: React.Dispatch<React.SetStateAction<CultoSongEntry[]>>;
@@ -1011,15 +1061,44 @@ function SetlistEditor({ entries, setEntries, songs, versoes }: {
     }));
   };
 
-  const termo = busca.trim().toLowerCase();
+  const buscando = busca.trim() !== '';
   const disponiveis = songs.filter(sg =>
-    !entries.some(e => e.song_id === sg.id) &&
-    (termo === '' || `${sg.title} ${sg.artist}`.toLowerCase().includes(termo))
+    !entries.some(e => e.song_id === sg.id) && casaBusca(sg, busca)
+  );
+
+  // Uma linha "toque para adicionar". Função que devolve elemento, não
+  // componente — não cria tipo novo a cada render, então não remonta nada.
+  const linhaAdicionar = (song: Song) => (
+    <TouchableOpacity key={song.id} style={md.songRow} onPress={() => adicionar(song)} activeOpacity={0.7}>
+      <View style={[md.keyPill, { backgroundColor: C.surfaceHigh }]}>
+        <Text style={[md.keyPillText, { color: C.textMuted }]}>{song.song_key}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={md.songTitle}>{song.title}</Text>
+        <Text style={md.songArtist}>{song.artist} · {song.bpm} BPM</Text>
+      </View>
+      <Ionicons name="add-circle-outline" size={22} color={C.primary} />
+    </TouchableOpacity>
   );
 
   return (
     <>
-      <Text style={[md.label, { marginTop: 16 }]}>{t('banda.musicasSelecionadas', { n: entries.length })}</Text>
+      {/* A busca fica NO TOPO. Embaixo do setlist ela ficava depois de todas
+          as músicas já escolhidas — cada uma com versão, tom e BPM —, e o
+          ministro tinha que rolar tudo pra chegar nela. Os resultados
+          aparecem logo abaixo do campo; tocar adiciona e limpa a busca, pronto
+          pra próxima. */}
+      <Text style={[md.label, { marginTop: 16 }]}>{t('banda.adicionarDoRepertorio')}</Text>
+      <CampoBusca valor={busca} onChange={setBusca} placeholder={t('banda.buscarTituloPlaceholder')} />
+      {buscando && (
+        <View style={[md.songList, { marginTop: 8, marginBottom: 0 }]}>
+          {disponiveis.length === 0
+            ? <Text style={md.setlistVazio}>{t('banda.buscaRepertorioVazia')}</Text>
+            : disponiveis.map(linhaAdicionar)}
+        </View>
+      )}
+
+      <Text style={[md.label, { marginTop: 18 }]}>{t('banda.musicasSelecionadas', { n: entries.length })}</Text>
 
       {entries.length === 0 ? (
         <Text style={md.setlistVazio}>{t('banda.setlistVazio')}</Text>
@@ -1088,34 +1167,18 @@ function SetlistEditor({ entries, setEntries, songs, versoes }: {
         })
       )}
 
-      <Text style={[md.label, { marginTop: 18 }]}>{t('banda.adicionarDoRepertorio')}</Text>
-      <TextInput
-        style={md.input}
-        placeholder={t('banda.buscarPlaceholder')}
-        placeholderTextColor={C.textDim}
-        value={busca}
-        onChangeText={setBusca}
-      />
-      <View style={md.songList}>
-        {disponiveis.length === 0 ? (
-          <Text style={md.setlistVazio}>
-            {entries.length > 0 && termo === '' ? t('banda.todasNoSetlist') : t('banda.buscaSemResultado')}
-          </Text>
-        ) : (
-          disponiveis.map(song => (
-            <TouchableOpacity key={song.id} style={md.songRow} onPress={() => adicionar(song)} activeOpacity={0.7}>
-              <View style={[md.keyPill, { backgroundColor: C.surfaceHigh }]}>
-                <Text style={[md.keyPillText, { color: C.textMuted }]}>{song.song_key}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={md.songTitle}>{song.title}</Text>
-                <Text style={md.songArtist}>{song.artist} · {song.bpm} BPM</Text>
-              </View>
-              <Ionicons name="add-circle-outline" size={22} color={C.primary} />
-            </TouchableOpacity>
-          ))
-        )}
-      </View>
+      {/* Sem busca, a lista inteira continua aqui embaixo, pra quem prefere
+          rolar. Com busca, ela some — os resultados já estão lá em cima. */}
+      {!buscando && (
+        <>
+          <Text style={[md.label, { marginTop: 18 }]}>{t('banda.ouEscolhaNaLista')}</Text>
+          <View style={md.songList}>
+            {disponiveis.length === 0
+              ? <Text style={md.setlistVazio}>{t('banda.todasNoSetlist')}</Text>
+              : disponiveis.map(linhaAdicionar)}
+          </View>
+        </>
+      )}
     </>
   );
 }
@@ -1585,7 +1648,7 @@ function NovoEnsaioModal({ visible, onClose, onSaved, songs, versoes }: {
               <Text style={md.title}>{t('banda.novoEnsaio')}</Text>
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={md.label}>{t('banda.dataDoEnsaio')}</Text>
               <TextInput style={[md.input, !!dateError && md.inputError]} placeholder="DD/MM/AAAA" placeholderTextColor={C.textDim} value={date} onChangeText={formatDateInput} keyboardType="numeric" maxLength={10} />
               {!!dateError && <Text style={md.errorText}>{dateError}</Text>}
@@ -3249,6 +3312,7 @@ function BandaMain() {
   const [expandedCulto, setExpandedCulto] = useState<string | null>(null);
   const [expandedEnsaio, setExpandedEnsaio] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'repertoire'>('all');
+  const [buscaRepertorio, setBuscaRepertorio] = useState('');
   const [chatMsg, setChatMsg] = useState('');
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [loadingChat, setLoadingChat] = useState(true);
@@ -3770,7 +3834,8 @@ function BandaMain() {
   };
 
   const cultoDoDia = cultosVisiveis.find(c => c.date === today) ?? cultosVisiveis[0] ?? null;
-  const filteredSongs = filter === 'repertoire' ? songs.filter(sg => sg.in_repertoire) : songs;
+  const filteredSongs = (filter === 'repertoire' ? songs.filter(sg => sg.in_repertoire) : songs)
+    .filter(sg => casaBusca(sg, buscaRepertorio));
 
   const TABS: { id: Tab; icon: string; label: string }[] = [
     { id: 'hoje', icon: 'sunny-outline', label: t('banda.tabHoje') },
@@ -3962,12 +4027,22 @@ function BandaMain() {
               <Ionicons name="add" size={18} color={C.onPrimary} />
             </TouchableOpacity>
           </View>
+          <View style={s.reperBusca}>
+            <CampoBusca valor={buscaRepertorio} onChange={setBuscaRepertorio} placeholder={t('banda.buscarTituloPlaceholder')} />
+          </View>
           {loadingSongs ? (
             <View style={s.loadingWrap}><ActivityIndicator color={C.primary} /></View>
           ) : (
             <FlatList
               data={filteredSongs}
               keyExtractor={i => i.id}
+              // Com o teclado aberto, o primeiro toque num cartão tem que abrir
+              // a música — não só fechar o teclado.
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              ListEmptyComponent={buscaRepertorio.trim() ? (
+                <Text style={s.buscaVazia}>{t('banda.buscaRepertorioVazia')}</Text>
+              ) : null}
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
               ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} colors={[C.primary]} progressBackgroundColor={C.surface} />}
@@ -4134,7 +4209,12 @@ function BandaMain() {
                             <Ionicons name="chatbubble-ellipses-outline" size={15} color={C.textMuted} />
                             <Text style={s.acaoTexto}>{t('banda.conversa')}</Text>
                           </TouchableOpacity>
-                          {podeVerRascunho && (
+                          {/* Admin, ou o ministro deste culto — que é quem montou o
+                              setlist (gatilho culto_define_ministro) e quem a banda
+                              procura pela ordem. A policy de `culto_songs` já
+                              deixa qualquer membro da banda escrever; o limite
+                              aqui é de interface, como o do rascunho. */}
+                          {(podeVerRascunho || souOMinistro(culto.ministro_id)) && (
                             <TouchableOpacity
                               style={s.acaoBtn}
                               onPress={() => setSetlistModal({
@@ -4838,6 +4918,10 @@ const buildS = (C: BandaColors) => StyleSheet.create({
   pillText: { fontSize: 13, color: C.textMuted, fontWeight: '500' },
   pillTextActive: { color: C.onPrimaryDim, fontWeight: '700' },
   addSongBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  reperBusca: { paddingHorizontal: 16, paddingBottom: 10 },
+  buscaCampo: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: C.border, backgroundColor: C.surfaceHigh },
+  buscaInput: { flex: 1, fontSize: 15, color: C.text, paddingVertical: 0 },
+  buscaVazia: { fontSize: 13, color: C.textDim, textAlign: 'center', paddingVertical: 28 },
   songCard: { backgroundColor: C.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: C.border },
   songCardTopo: { flexDirection: 'row', alignItems: 'center' },
   songRodape: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },

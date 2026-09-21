@@ -58,6 +58,17 @@ function dataBR(iso: unknown): string {
   return a && m && d ? `${d.slice(0, 2)}/${m}` : '';
 }
 
+const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+/** "Domingo, 20/09". O dia da semana sai de meio-dia UTC da data: longe da
+ *  meia-noite, nenhum fuso empurra pro dia vizinho. */
+function diaEData(iso: unknown): string {
+  const dm = dataBR(iso);
+  if (!dm) return '';
+  const dt = new Date(`${String(iso).slice(0, 10)}T12:00:00Z`);
+  return isNaN(dt.getTime()) ? dm : `${DIAS[dt.getUTCDay()]}, ${dm}`;
+}
+
 /** O Expo recusa mais de 100 notificações por requisição e devolve 400 para o
  *  lote inteiro — o defeito que deixou a congregação sem push de aniversário. */
 async function enviarEmLotes(mensagens: unknown[]) {
@@ -109,9 +120,14 @@ Deno.serve(async (req) => {
 
       tipo = 'culto';
       referencia = String(r.id ?? '');
-      const quando = dataBR(r.date);
-      titulo = '🎶 Escala do culto publicada';
-      texto = `${String(r.label ?? 'Culto')}${quando ? ` · ${quando}` : ''}. Confira a sua escala na aba Banda.`;
+      // O culto nasce publicado e o push sai na criação — antes de existir
+      // escala. Por isso o texto fala do setlist, que já vem junto, e não da
+      // escala. Texto escolhido pelo Marcos em 21/09.
+      const quando = diaEData(r.date);
+      titulo = '🎶 Banda Peniel';
+      texto = quando
+        ? `Próximo culto — ${quando}. Veja o setlist na aba Banda.`
+        : 'Próximo culto marcado. Veja o setlist na aba Banda.';
       dados = { type: 'banda', origem: 'culto', id: referencia };
 
     // ── ENSAIO ───────────────────────────────────────────────────────────

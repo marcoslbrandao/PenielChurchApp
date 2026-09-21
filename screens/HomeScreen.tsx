@@ -9,6 +9,8 @@ import { useNotifications } from '../lib/useNotifications';
 import { useBirthdays } from '../lib/useBirthdays';
 import { getUltimaVisita, marcarComoVistoAgora, getIdsDispensados, dispensarAviso } from '../lib/notificacoesLidas';
 import { linhaCompartilharApp } from '../lib/appLinks';
+import { liveSemCota, liveComApi, urlDoVideo, YOUTUBE_CANAL_URL, YOUTUBE_LIVES_URL, type LiveAtual } from '../lib/youtubeCanal';
+import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import BirthdayBanner from '../components/BirthdayBanner';
 import MensagemDetalheModal, { Mensagem } from '../components/MensagemDetalheModal';
 import { livrosAT, livrosNT, Livro } from '../lib/bibliaLivros';
@@ -46,11 +48,7 @@ function paletaHome(isDark: boolean) {
 type PaletaHome = ReturnType<typeof paletaHome>;
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const YOUTUBE_LIVE_URL = 'https://www.youtube.com/@PenielChurchOfficial/streams';
-const YOUTUBE_CHANNEL  = 'https://www.youtube.com/@PenielChurchOfficial';
 const WHATSAPP_NUMBER  = '447540880456';
-const YOUTUBE_API_KEY  = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
-const CHANNEL_ID       = 'UCeipicy-AS_b66Asu65TBQQ';
 
 
 // Resolve o livro (com slug) e capítulo do versículo do dia, para permitir
@@ -595,99 +593,49 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   // ── Detecção automática de LIVE ───────────────────────────────────────────
   const [isLive, setIsLive] = useState(false);
   const [liveTitle, setLiveTitle] = useState('Peniel Church — YouTube');
+  const [liveVideoId, setLiveVideoId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Verifica se o canal está ao vivo sem gastar cota da YouTube Data API:
-    // a URL /channel/{id}/live redireciona automaticamente para o vídeo ao
-    // vivo (watch?v=...) quando há uma transmissão ativa. Isso é só uma
-    // página do YouTube, sem chave de API nem limite de cota — importante
-    // porque a busca via API (googleapis.com/youtube/v3/search) custa 100
-    // unidades por chamada, e com essa verificação rodando a cada poucos
-    // minutos em vários celulares ao mesmo tempo (ex: todo mundo abrindo o
-    // app durante o culto), a cota diária gratuita (10.000 unidades) estoura
-    // muito rápido — foi o que provavelmente já estava acontecendo antes.
-    // Espelha o isLive fora do state do React, pra decidir a cadência do
-    // fallback abaixo sem cair em closure desatualizada (o efeito só roda
-    // uma vez, então "isLive" capturado no useEffect nunca mudaria).
+    // Detecção em `lib/youtubeCanal.ts` — lá está o porquê de cada passo
+    // (o /live parou de redirecionar e a busca da API estourava a cota).
+    //
+    // `estaAoVivo` espelha o state fora do React, pra decidir a cadência da
+    // rede de segurança sem cair em closure desatualizada (o efeito roda uma vez).
     let estaAoVivo = false;
+    let cancelado = false;
 
-    const checkLiveSemCota = async (): Promise<boolean> => {
-      try {
-        const res = await fetch(`https://www.youtube.com/channel/${CHANNEL_ID}/live`, {
-          redirect: 'follow',
-          headers: {
-            // Sem isso, o YouTube às vezes responde com a página de aviso de
-            // cookies (comum pra usuários na UE/Reino Unido) em vez de
-            // redirecionar direto pro vídeo — então o app lê "não está ao
-            // vivo" mesmo com a transmissão rolando. Esse cookie de consentimento
-            // já pré-aceito evita essa página intermediária.
-            Cookie: 'CONSENT=YES+cb.20210328-17-p0.en+FX+119; SOCS=CAI',
-            'Accept-Language': 'en-US,en;q=0.9',
-          },
-        });
-        const finalUrl = res.url ?? '';
-        const match = finalUrl.match(/[?&]v=([a-zA-Z0-9_-]{6,})/);
-        if (!match) { estaAoVivo = false; setIsLive(false); return true; }
-        const videoId = match[1];
-        estaAoVivo = true;
-        setIsLive(true);
-        try {
-          const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
-          const oembed = await oembedRes.json();
-          if (oembed?.title) setLiveTitle(oembed.title);
-        } catch {
-          // Sem título disponível — mantém o título genérico, sem problema.
-        }
-        return true;
-      } catch {
-        return false; // Falha de rede/parse — deixa o fallback decidir.
-      }
-    };
-
-    // Fallback via YouTube Data API — usado (a) se a checagem gratuita falhar
-    // (ex: YouTube mudou a página), ou (b) periodicamente como rede de
-    // segurança, caso a checagem gratuita esteja dizendo "não está ao vivo"
-    // de forma equivocada. Gasta cota, então roda bem menos vezes.
-    const checkLiveComApi = async () => {
-      try {
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.items && data.items.length > 0) {
-          estaAoVivo = true;
-          setIsLive(true);
-          setLiveTitle(data.items[0].snippet.title);
-        }
-      } catch {
-        // Silencioso — se ambos os métodos falharem, mantém o último estado.
-      }
+    const aplicar = (r: LiveAtual | null) => {
+      if (cancelado) return;
+      estaAoVivo = !!r;
+      setIsLive(!!r);
+      setLiveVideoId(r?.videoId ?? null);
+      if (r?.titulo) setLiveTitle(r.titulo);
     };
 
     let ciclo = 0;
     const checkLive = async () => {
       ciclo++;
-      const ok = await checkLiveSemCota();
-      if (!ok) {
-        // A checagem gratuita falhou de vez (erro de rede/parse) — usa a API.
-        await checkLiveComApi();
-      } else {
-        // Confirma com a API de tempos em tempos, como rede de segurança.
-        // Enquanto o app acha que NÃO está ao vivo, confirma mais rápido
-        // (a cada ~4,5min) — é quando um falso-negativo realmente importa,
-        // porque senão o botão fica "Off" por até 15min mesmo com a live no ar.
-        // Já ao vivo, confirma menos (a cada ~15min) só pra manter o título em dia.
-        const intervaloCiclos = estaAoVivo ? 10 : 3;
-        if (ciclo % intervaloCiclos === 0) {
-          await checkLiveComApi();
+      const semCota = await liveSemCota();
+      if (semCota !== undefined) {
+        aplicar(semCota);
+        // Ainda "não está ao vivo"? Confirma pela API a cada ~4,5 min — é
+        // quando um falso-negativo importa. Custa 1–2 unidades, não 100.
+        if (!semCota && ciclo % 3 === 0) {
+          const api = await liveComApi();
+          if (api) aplicar(api);
         }
+        return;
       }
+      // Não deu para saber pela página: a API decide. Se ela também não
+      // souber, mantém o último estado.
+      const api = await liveComApi();
+      if (api !== undefined) aplicar(api);
     };
 
     checkLive();
-    // Verifica a cada 90 segundos — o método principal não gasta cota, então
-    // dá pra checar com mais frequência sem risco.
+    // A cada 90 s — a checagem principal não gasta cota.
     const interval = setInterval(checkLive, 90 * 1000);
-    return () => clearInterval(interval);
+    return () => { cancelado = true; clearInterval(interval); };
   }, []);
   useEffect(() => {
     if (!isLive) return;
@@ -932,7 +880,11 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     setNotifDismissedIds(novos);
   };
 
-  const openYouTube = () => Linking.openURL(isLive ? YOUTUBE_LIVE_URL : YOUTUBE_CHANNEL);
+  // Ao vivo: abre a transmissão direto (no app do YouTube, se instalado), não
+  // a lista de lives do canal.
+  const openYouTube = () => Linking.openURL(
+    isLive ? (liveVideoId ? urlDoVideo(liveVideoId) : YOUTUBE_LIVES_URL) : YOUTUBE_CANAL_URL,
+  );
   const openWhatsApp = (msg = '') => {
     const url = `https://wa.me/${WHATSAPP_NUMBER}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`;
     Linking.openURL(url).catch(() => Alert.alert(t('common.erro'), t('grupos.erroWhatsapp')));
@@ -1107,6 +1059,17 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
                 <Text style={styles.devocionalVersiculo}>"{devocionalVersiculoTraduzido}"</Text>
                 <Text style={styles.devocionalRef}>{devocionalReferenciaTraduzida}</Text>
                 <Text style={styles.devocionalTexto}>{devocionalTextoTraduzido}</Text>
+                <BotaoCompartilharDevocional
+                  original={devocional}
+                  traduzido={{
+                    titulo: devocionalTituloTraduzido,
+                    versiculo: devocionalVersiculoTraduzido,
+                    referencia: devocionalReferenciaTraduzida,
+                    texto: devocionalTextoTraduzido,
+                  }}
+                  corFundo="rgba(245,200,66,0.15)"
+                  corTexto="#F5C842"
+                />
               </View>
             )}
           </TouchableOpacity>

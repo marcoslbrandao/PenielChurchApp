@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { extractYoutubeId } from '../lib/youtube';
+import { videosRecentes } from '../lib/youtubeCanal';
 import MensagemDetalheModal, { Mensagem } from '../components/MensagemDetalheModal';
 import { useCampoTraduzido } from '../lib/useTraducao';
 
@@ -53,8 +54,6 @@ function AvisoCard({ aviso, t }: { aviso: Aviso; t: (key: string) => string }) {
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
-const YOUTUBE_API_KEY = process.env.EXPO_PUBLIC_YOUTUBE_API_KEY;
-const CHANNEL_ID = 'UCeipicy-AS_b66Asu65TBQQ';
 const CHANNEL_HANDLE = '@PenielChurchOfficial';
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@PenielChurchOfficial/streams';
 const INSTAGRAM_URL = 'https://www.instagram.com/penielchurchofficial/';
@@ -110,42 +109,20 @@ export default function MidiaScreen() {
 
   // ── Busca vídeos do YouTube ──────────────────────────────────────────────────
   const fetchVideos = useCallback(async () => {
-    try {
-      // Busca vídeos ao vivo primeiro
-      const liveUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=live&type=video&maxResults=3&key=${YOUTUBE_API_KEY}`;
-      const liveRes = await fetch(liveUrl);
-      const liveData = await liveRes.json();
-
-      // Busca últimos vídeos
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&maxResults=10&order=date&type=video&key=${YOUTUBE_API_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      if (data.items && data.items.length > 0) {
-        // Combina lives (primeiro) + vídeos recentes
-        const liveItems = liveData.items ?? [];
-        const allItems = [...liveItems, ...data.items];
-        // Remove duplicatas
-        const seen = new Set();
-        const unique = allItems.filter((item: any) => {
-          const id = item.id.videoId;
-          if (seen.has(id)) return false;
-          seen.add(id);
-          return true;
-        });
-        setVideos(unique.slice(0, 10).map((item: any) => ({
-          id: item.id.videoId,
-          videoId: item.id.videoId,
-          title: item.snippet.title,
-          thumbnail: item.snippet.thumbnails.medium?.url ?? item.snippet.thumbnails.default?.url,
-          publishedAt: item.snippet.publishedAt,
-          isLive: item.snippet.liveBroadcastContent === 'live',
-        })));
-      } else {
-        console.log('YouTube error:', JSON.stringify(data.error));
-      }
-    } catch (err) {
-      console.log('YouTube fetch error:', err);
+    // Antes: duas buscas `search` (200 unidades da cota diária de 10.000) a
+    // cada abertura da aba — era o que esgotava a cota no domingo e derrubava
+    // o "Ao vivo" da Home. Agora 1–2 unidades; ver lib/youtubeCanal.ts.
+    // Se falhar, mantém a lista que já estava na tela.
+    const lista = await videosRecentes(10);
+    if (lista) {
+      setVideos(lista.map(v => ({
+        id: v.videoId,
+        videoId: v.videoId,
+        title: v.titulo,
+        thumbnail: v.miniatura,
+        publishedAt: v.publicadoEm,
+        isLive: v.status === 'live',
+      })));
     }
     setLoadingVideos(false);
     setRefreshing(false);

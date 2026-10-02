@@ -1146,6 +1146,8 @@
     "contaCriadaEm": "Account created",
     "ultimoAcesso": "last seen",
     "verLista": "See list",
+    "tornarMembro": "Make member",
+    "tornarMembroConfirma": "{{nome}} will become a member and get a directory entry. Continue?",
     "pillMembro": "👤 Member",
     "pillBanda": "🎵 Band",
     "todaSemana": "🔁 Every week",

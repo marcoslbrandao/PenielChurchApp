@@ -639,10 +639,32 @@ const DIAS_SEMANA_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // O e-mail vem de auth.users pela RPC listar_contas_visitantes (só admin).
 type ContaVisitante = { id: string; nome: string | null; email: string | null; criado_em: string; ultimo_acesso: string | null };
 
-function ContasVisitantesModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function ContasVisitantesModal({ visible, onClose, onChanged }: { visible: boolean; onClose: () => void; onChanged: () => void }) {
   const { t } = useTranslation();
   const [contas, setContas] = useState<ContaVisitante[]>([]);
   const [carregando, setCarregando] = useState(false);
+  const [promovendoId, setPromovendoId] = useState<string | null>(null);
+
+  // Mesmo efeito de resgatar um convite: vira 'membro' e ganha ficha no
+  // diretório (RPC tornar_visitante_membro, só admin).
+  const tornarMembro = (c: ContaVisitante) => {
+    Alert.alert(
+      t('admin.tornarMembro'),
+      t('admin.tornarMembroConfirma', { nome: c.nome?.trim() || c.email || '' }),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        { text: t('admin.tornarMembro'), onPress: async () => {
+          setPromovendoId(c.id);
+          const { data, error } = await supabase.rpc('tornar_visitante_membro', { p_profile_id: c.id });
+          setPromovendoId(null);
+          const res = data as { success?: boolean; error?: string } | null;
+          if (error || !res?.success) { Alert.alert(t('common.erro'), error?.message ?? res?.error ?? ''); return; }
+          setContas(prev => prev.filter(x => x.id !== c.id));
+          onChanged();
+        } },
+      ],
+    );
+  };
 
   useEffect(() => {
     if (!visible) return;
@@ -672,7 +694,8 @@ function ContasVisitantesModal({ visible, onClose }: { visible: boolean; onClose
           ) : (
             <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
               {contas.map(c => (
-                <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border }}>
+                <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>{c.nome?.trim() || '—'}</Text>
                   {!!c.email && (
                     <TouchableOpacity onPress={() => Linking.openURL(`mailto:${c.email}`)}>
@@ -683,6 +706,16 @@ function ContasVisitantesModal({ visible, onClose }: { visible: boolean; onClose
                     {t('admin.contaCriadaEm')} {isoParaDataBR(c.criado_em)}
                     {c.ultimo_acesso ? ` · ${t('admin.ultimoAcesso')} ${isoParaDataBR(c.ultimo_acesso)}` : ''}
                   </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => tornarMembro(c)}
+                    disabled={promovendoId === c.id}
+                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: C.success + '18', borderWidth: 1, borderColor: C.success + '50' }}
+                  >
+                    {promovendoId === c.id ? <ActivityIndicator size="small" color={C.success} /> : (
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: C.success }}>{t('admin.tornarMembro')}</Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
               ))}
             </ScrollView>
@@ -3067,7 +3100,7 @@ export default function AdminScreen() {
         onClose={() => setDevocionalModalVisible(false)}
         onSaved={fetchData}
       />
-      <ContasVisitantesModal visible={contasVisitantesVisible} onClose={() => setContasVisitantesVisible(false)} />
+      <ContasVisitantesModal visible={contasVisitantesVisible} onClose={() => setContasVisitantesVisible(false)} onChanged={fetchData} />
       <NovoEventoModal
         visible={eventoModalVisible}
         onClose={() => setEventoModalVisible(false)}

@@ -1146,6 +1146,8 @@
     "contaCriadaEm": "Compte créé le",
     "ultimoAcesso": "dernière visite",
     "verLista": "Voir la liste",
+    "tornarMembro": "Rendre membre",
+    "tornarMembroConfirma": "{{nome}} deviendra membre et aura une fiche dans l'annuaire. Continuer ?",
     "pillMembro": "👤 Membre",
     "pillBanda": "🎵 Groupe",
     "todaSemana": "🔁 Chaque semaine",

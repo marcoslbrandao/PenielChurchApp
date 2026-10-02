@@ -1146,6 +1146,8 @@
     "contaCriadaEm": "Cuenta creada el",
     "ultimoAcesso": "último acceso",
     "verLista": "Ver lista",
+    "tornarMembro": "Hacer miembro",
+    "tornarMembroConfirma": "{{nome}} pasará a ser miembro y tendrá una ficha en el directorio. ¿Continuar?",
     "pillMembro": "👤 Miembro",
     "pillBanda": "🎵 Banda",
     "todaSemana": "🔁 Cada semana",

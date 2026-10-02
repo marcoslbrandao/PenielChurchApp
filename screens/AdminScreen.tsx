@@ -12,6 +12,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
+import { mascaraDataBR, dataBRparaISO, isoParaDataBR } from '../lib/datas';
 import { useAuth } from '../lib/useAuth';
 import { useBirthdays } from '../lib/useBirthdays';
 import { useTranslation } from 'react-i18next';
@@ -673,7 +674,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
   const [tipo, setTipo] = useState<'presencial' | 'online' | 'casa'>('presencial');
   const [recorrente, setRecorrente] = useState(true);
   const [diaSemana, setDiaSemana] = useState(0);
-  const [data, setData] = useState(''); // YYYY-MM-DD
+  const [data, setData] = useState(''); // DD/MM/AAAA (vira AAAA-MM-DD so ao salvar)
   const [horario, setHorario] = useState('');
   const [local, setLocal] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -701,7 +702,8 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
       Alert.alert(t('common.atencao'), t('admin.preenchaAoMenosNomeHorario'));
       return;
     }
-    if (!recorrente && !data.trim()) {
+    const dataISO = recorrente ? '' : dataBRparaISO(data);
+    if (!recorrente && !dataISO) {
       Alert.alert(t('common.atencao'), t('admin.informeADataNoFormato'));
       return;
     }
@@ -720,7 +722,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
       imagem_url: imagemUrl,
       nome: nome.trim(), tipo, recorrente,
       dia_semana: recorrente ? diaSemana : null,
-      data: !recorrente ? data.trim() : null,
+      data: !recorrente ? dataISO : null,
       horario: horario.trim(), local: local.trim(),
       descricao: descricao.trim() || null,
       link_zoom: tipo === 'online' ? (linkZoom.trim() || null) : null,
@@ -818,7 +820,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
               <View style={mo.fieldWrap}>
                 <Text style={mo.fieldLabel}>{t('admin.dataAaaaMmDd')}</Text>
                 <View style={mo.fieldRow}>
-                  <TextInput style={mo.fieldInput} placeholder={t('admin.ex20260828')} placeholderTextColor={C.textDim} value={data} onChangeText={setData} />
+                  <TextInput style={mo.fieldInput} placeholder={t('admin.ex20260828')} placeholderTextColor={C.textDim} value={data} onChangeText={v => setData(mascaraDataBR(v))} keyboardType="numeric" maxLength={10} />
                 </View>
               </View>
             )}
@@ -2693,7 +2695,7 @@ export default function AdminScreen() {
                         )}
                       </View>
                       <Text style={[s.inviteEmail, { marginTop: 4 }]}>
-                        {e.recorrente ? `Toda ${DIAS_SEMANA_LABELS[e.dia_semana ?? 0]}` : e.data} · {e.horario} · {e.local}
+                        {e.recorrente ? `Toda ${DIAS_SEMANA_LABELS[e.dia_semana ?? 0]}` : isoParaDataBR(e.data)} · {e.horario} · {e.local}
                       </Text>
                       <View style={s.inviteMetaRow}>
                         <View style={[s.statusBadge, {

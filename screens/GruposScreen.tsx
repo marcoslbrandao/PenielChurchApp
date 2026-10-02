@@ -21,6 +21,7 @@ import ChamadaModal from '../components/ChamadaModal';
 import FrequenciaModal from '../components/FrequenciaModal';
 import EncontroAulaModal from '../components/EncontroAulaModal';
 import CadernoModal from '../components/CadernoModal';
+import MeuCadernoModal from '../components/MeuCadernoModal';
 import { useTheme } from '../lib/theme';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -629,6 +630,8 @@ export default function GruposScreen() {
   const [meuMembroId, setMeuMembroId] = useState<string | null>(null);
   const [cadernoVisible, setCadernoVisible] = useState(false);
   const [cadernoTotal, setCadernoTotal] = useState(0);
+  const [meuCadernoVisible, setMeuCadernoVisible] = useState(false);
+  const [meuCadernoTotal, setMeuCadernoTotal] = useState(0);
 
   const grupo = GRUPOS[activeTab];
   const souLiderDesteGrupo = isAdmin || gruposLiderados.includes(activeTab);
@@ -761,7 +764,7 @@ export default function GruposScreen() {
     if (!temAcesso) {
       setEventos([]); setDevocionais([]); setShorts([]); setArquivos([]);
       setAulasAnteriores([]); setMinhaFreq(null); setCfg({ presencaAtiva: false, perguntasAtivas: false });
-      setCadernoTotal(0);
+      setCadernoTotal(0); setMeuCadernoTotal(0);
       setLoading(false); setRefreshing(false); return;
     }
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -847,13 +850,26 @@ export default function GruposScreen() {
     // grupo mudou (a professora pode ter soltado um PDF lá agora). Não segura
     // o carregamento: a lista do banco já está na tela, e só é trocada se a
     // pessoa ainda estiver nesta mesma aba quando a resposta chegar.
+    // Contador do "Meu caderno": anotações livres + anotações de aula que a
+    // pessoa escreveu neste grupo. Só leitura dela mesma (RLS), em segundo plano.
+    if (user?.id) {
+      Promise.all([
+        supabase.from('grupo_caderno_pessoal').select('id', { count: 'exact', head: true }).eq('grupo', tab),
+        supabase.from('grupo_encontro_notas')
+          .select('evento_id, grupo_eventos!inner(grupo)', { count: 'exact', head: true })
+          .eq('profile_id', user.id).eq('grupo_eventos.grupo', tab).neq('texto', ''),
+      ]).then(([livres, daAula]) => {
+        if (abaAtualRef.current === tab) setMeuCadernoTotal((livres.count ?? 0) + (daAula.count ?? 0));
+      });
+    }
+
     sincronizarMateriais(tab).then(async mudou => {
       if (!mudou || abaAtualRef.current !== tab) return;
       const { data } = await supabase.from('grupo_arquivos').select('*').eq('grupo', tab)
         .order('created_at', { ascending: false }).limit(20);
       if (abaAtualRef.current === tab) setArquivos((data ?? []) as GrupoArquivo[]);
     });
-  }, [meuMembroId]);
+  }, [meuMembroId, user?.id]);
 
   useEffect(() => {
     if (!permissoesCarregadas) return;
@@ -1086,6 +1102,33 @@ export default function GruposScreen() {
               </>
             )}
 
+            {/* Meu caderno — de cada participante, só a própria pessoa lê
+                (nem o líder nem o Admin). Junta anotações livres e as feitas
+                dentro das aulas. Aparece para quem tem acesso ao grupo. */}
+            {!!user && (
+              <>
+                <Text style={s.sectionLabel}>{t('grupos.meuCaderno.titulo')}</Text>
+                <TouchableOpacity
+                  style={[s.cadernoCard, { borderLeftColor: grupo.cor }]}
+                  activeOpacity={0.85}
+                  onPress={() => setMeuCadernoVisible(true)}
+                >
+                  <View style={[s.cadernoIcon, { backgroundColor: grupo.cor + '18' }]}>
+                    <Ionicons name="journal-outline" size={18} color={grupo.cor} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cadernoTitulo}>{t('grupos.meuCaderno.abrir')}</Text>
+                    <Text style={s.cadernoSub}>
+                      {meuCadernoTotal === 0
+                        ? t('grupos.meuCaderno.vazio')
+                        : t('grupos.meuCaderno.contador', { count: meuCadernoTotal })}
+                    </Text>
+                  </View>
+                  <Ionicons name="lock-closed-outline" size={14} color={C.textMuted} />
+                </TouchableOpacity>
+              </>
+            )}
+
             {/* Devocionais — só o mais recente aqui (banner), como na Home;
                 a lista completa desse grupo fica na tela Devocionais. */}
             <Text style={s.sectionLabel}>{t('grupos.devocionalGrupo')}</Text>
@@ -1275,6 +1318,18 @@ export default function GruposScreen() {
         onClose={() => setChamadaEvento(null)}
         onSaved={() => fetchGrupoData(activeTab, temAcessoConteudo)}
       />
+
+      {user && (
+        <MeuCadernoModal
+          visible={meuCadernoVisible}
+          grupo={activeTab}
+          grupoNome={grupo.nome}
+          cor={grupo.cor}
+          userId={user.id}
+          onClose={() => setMeuCadernoVisible(false)}
+          onChanged={() => fetchGrupoData(activeTab, temAcessoConteudo)}
+        />
+      )}
 
       {user && (
         <CadernoModal

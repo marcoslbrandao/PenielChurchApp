@@ -312,6 +312,25 @@
       "vazio": "No entries yet",
       "contador_one": "{{count}} entry",
       "contador_other": "{{count}} entries"
+    },
+    "meuCaderno": {
+      "titulo": "📓 My notebook",
+      "abrir": "My notebook",
+      "vazio": "No notes yet",
+      "contador_one": "{{count}} note",
+      "contador_other": "{{count}} notes",
+      "privado": "only you can read it, not even the leader",
+      "nova": "New note",
+      "editando": "Editing note",
+      "daAula": "Class note",
+      "campoTitulo": "Title (optional)",
+      "campoTexto": "Note",
+      "placeholderTitulo": "E.g. What I learned today",
+      "placeholderTexto": "Verses, prayer requests, anything you want to remember...",
+      "textoObrigatorio": "Write something before saving.",
+      "apagarTitulo": "Delete note",
+      "apagarMsg": "Delete this note? This can't be undone.",
+      "vazioLongo": "Your notebook is empty. Write down what you learned, verses and prayer requests. The notes you take inside each class also show up here."
     }
   },
   "devocionais": {

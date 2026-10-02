@@ -312,6 +312,25 @@
       "vazio": "Nenhuma anotação ainda",
       "contador_one": "{{count}} anotação",
       "contador_other": "{{count}} anotações"
+    },
+    "meuCaderno": {
+      "titulo": "📓 Meu caderno",
+      "abrir": "Meu caderno",
+      "vazio": "Nenhuma anotação ainda",
+      "contador_one": "{{count}} anotação",
+      "contador_other": "{{count}} anotações",
+      "privado": "só você lê, nem o líder",
+      "nova": "Nova anotação",
+      "editando": "Editando anotação",
+      "daAula": "Anotação da aula",
+      "campoTitulo": "Título (opcional)",
+      "campoTexto": "Anotação",
+      "placeholderTitulo": "Ex.: O que aprendi hoje",
+      "placeholderTexto": "Versículos, pedidos de oração, o que você quer lembrar...",
+      "textoObrigatorio": "Escreva alguma coisa antes de salvar.",
+      "apagarTitulo": "Apagar anotação",
+      "apagarMsg": "Apagar esta anotação? Não dá para desfazer.",
+      "vazioLongo": "Seu caderno está em branco. Anote o que aprendeu, versículos e pedidos de oração. As anotações que você faz dentro das aulas também aparecem aqui."
     }
   },
   "devocionais": {

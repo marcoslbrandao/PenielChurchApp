@@ -312,6 +312,25 @@
       "vazio": "Aucune note pour l'instant",
       "contador_one": "{{count}} note",
       "contador_other": "{{count}} notes"
+    },
+    "meuCaderno": {
+      "titulo": "📓 Mon carnet",
+      "abrir": "Mon carnet",
+      "vazio": "Aucune note pour l'instant",
+      "contador_one": "{{count}} note",
+      "contador_other": "{{count}} notes",
+      "privado": "vous seul le lisez, pas même le responsable",
+      "nova": "Nouvelle note",
+      "editando": "Modification de la note",
+      "daAula": "Note du cours",
+      "campoTitulo": "Titre (facultatif)",
+      "campoTexto": "Note",
+      "placeholderTitulo": "Ex. : Ce que j'ai appris aujourd'hui",
+      "placeholderTexto": "Versets, sujets de prière, ce que vous voulez retenir...",
+      "textoObrigatorio": "Écrivez quelque chose avant d'enregistrer.",
+      "apagarTitulo": "Supprimer la note",
+      "apagarMsg": "Supprimer cette note ? Impossible d'annuler.",
+      "vazioLongo": "Votre carnet est vide. Notez ce que vous avez appris, des versets et des sujets de prière. Les notes prises pendant les cours apparaissent aussi ici."
     }
   },
   "devocionais": {

@@ -312,6 +312,25 @@
       "vazio": "Todavía no hay apuntes",
       "contador_one": "{{count}} apunte",
       "contador_other": "{{count}} apuntes"
+    },
+    "meuCaderno": {
+      "titulo": "📓 Mi cuaderno",
+      "abrir": "Mi cuaderno",
+      "vazio": "Todavía no hay notas",
+      "contador_one": "{{count}} nota",
+      "contador_other": "{{count}} notas",
+      "privado": "solo tú lo lees, ni el líder",
+      "nova": "Nueva nota",
+      "editando": "Editando nota",
+      "daAula": "Nota de la clase",
+      "campoTitulo": "Título (opcional)",
+      "campoTexto": "Nota",
+      "placeholderTitulo": "Ej.: Lo que aprendí hoy",
+      "placeholderTexto": "Versículos, peticiones de oración, lo que quieras recordar...",
+      "textoObrigatorio": "Escribe algo antes de guardar.",
+      "apagarTitulo": "Borrar nota",
+      "apagarMsg": "¿Borrar esta nota? No se puede deshacer.",
+      "vazioLongo": "Tu cuaderno está vacío. Anota lo que aprendiste, versículos y peticiones de oración. Las notas que tomas dentro de las clases también aparecen aquí."
     }
   },
   "devocionais": {

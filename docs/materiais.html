@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Enviar material · Peniel Church</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1A1740">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!--
+  Envio de material dos grupos (02 Out 2026).
+  Quem é LÍDER do grupo (ou Admin) entra com o mesmo login do app, escolhe o
+  grupo e o arquivo. O arquivo vai para a subpasta do grupo no Drive da igreja,
+  gravado PELA CONTA DA IGREJA (ocupa o espaço dela, não o do líder), e aparece
+  no app na hora. Quem decide se pode é a Edge Function `materiais-drive`, não
+  esta página. Ver claude/materiais-dos-grupos-no-drive.md.
+-->
+<style>
+  :root{
+    --navy:#1A1740; --navy-2:#2D2870; --roxo:#534AB7;
+    --dourado:#F5C842; --dourado-escuro:#C8960A;
+    --bg:#F7F4EE; --surface:#FFFFFF; --surface-alt:#F0EDE8;
+    --texto:#1A1A2E; --texto-suave:#6B7280; --texto-fraco:#9CA3AF;
+    --borda:#E5E0D8; --ok:#27AE60; --erro:#C0392B;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0E0B22;--surface:#1C1940;--surface-alt:#241F4D;
+      --texto:#F1EFFA;--texto-suave:#A6A0C7;--texto-fraco:#726A99;--borda:#332D5C;
+      --navy:#100D28;--navy-2:#2D2870;--erro:#FF6B6B;--ok:#4ADE80;
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);color:var(--texto);
+    font-family:'Work Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:16px;line-height:1.5;padding-bottom:env(safe-area-inset-bottom);
+  }
+  .topo{
+    background:linear-gradient(160deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;padding:30px 22px 26px;text-align:center;border-radius:0 0 26px 26px;
+  }
+  .logo{
+    width:72px;height:72px;border-radius:50%;background:#fff;margin:0 auto 14px;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    box-shadow:0 6px 20px rgba(0,0,0,.28);
+  }
+  .logo img{width:100%;height:100%;object-fit:contain}
+  h1{font-family:'Manrope',sans-serif;font-weight:800;font-size:24px;line-height:1.2;margin:0 0 6px;letter-spacing:-.3px}
+  .sub{font-size:14.5px;color:rgba(255,255,255,.82);margin:0}
+  main{max-width:520px;margin:0 auto;padding:22px 16px 40px}
+  .cartao{
+    background:var(--surface);border:1px solid var(--borda);border-radius:16px;
+    padding:20px 18px;box-shadow:0 2px 10px rgba(26,23,64,.05);
+  }
+  label,.rotulo{
+    display:block;font-family:'Manrope',sans-serif;font-weight:700;font-size:11px;
+    letter-spacing:.7px;text-transform:uppercase;color:var(--texto-suave);margin:0 0 7px;
+  }
+  .campo{margin-bottom:18px}
+  input[type=email],input[type=password],input[type=text]{
+    width:100%;background:var(--surface-alt);border:1px solid var(--borda);border-radius:10px;
+    padding:0 14px;height:52px;font-size:16px;font-family:inherit;color:var(--texto);
+  }
+  input:focus{outline:none;border-color:var(--roxo);background:var(--surface)}
+  .dica{font-size:12.5px;color:var(--texto-fraco);margin:6px 0 0;line-height:1.45}
+  .pills{display:flex;flex-wrap:wrap;gap:8px}
+  .pill{
+    border:1px solid var(--borda);background:var(--surface-alt);border-radius:22px;
+    padding:9px 15px;font-size:14px;color:var(--texto-suave);cursor:pointer;font-family:inherit;
+  }
+  .pill[aria-pressed=true]{
+    background:rgba(245,200,66,.2);border-color:var(--dourado-escuro);
+    color:var(--dourado-escuro);font-weight:600;
+  }
+  .arquivo{
+    display:flex;align-items:center;gap:12px;border:1.5px dashed var(--borda);
+    border-radius:12px;padding:16px;cursor:pointer;background:var(--surface-alt);
+  }
+  .arquivo svg{flex:none}
+  .arquivo .nome{font-weight:600;word-break:break-word}
+  .arquivo .tam{font-size:13px;color:var(--texto-suave)}
+  #inputArquivo{position:absolute;left:-9999px;width:1px;height:1px}
+  button.principal{
+    width:100%;border:none;border-radius:14px;padding:16px;background:var(--navy);color:#fff;
+    font-size:16px;font-weight:700;font-family:'Manrope',sans-serif;cursor:pointer;
+  }
+  button.principal:disabled{opacity:.55;cursor:default}
+  button.link{
+    background:none;border:none;color:var(--texto-suave);font-family:inherit;font-size:14px;
+    text-decoration:underline;cursor:pointer;padding:6px;
+  }
+  .erro{
+    background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.35);color:var(--erro);
+    border-radius:10px;padding:12px 14px;font-size:14px;margin-bottom:16px;line-height:1.45;display:none;
+  }
+  .barra{height:10px;background:var(--surface-alt);border-radius:6px;overflow:hidden;margin:14px 0 6px;display:none}
+  .barra div{height:100%;width:0;background:var(--roxo);transition:width .2s}
+  .estado{font-size:13.5px;color:var(--texto-suave);text-align:center;min-height:20px}
+  .quem{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:var(--texto-suave);margin-bottom:14px}
+  .ok{text-align:center;padding:10px 4px}
+  .ok .circulo{
+    width:76px;height:76px;border-radius:50%;background:rgba(39,174,96,.13);
+    display:flex;align-items:center;justify-content:center;margin:6px auto 16px;
+  }
+  .ok h2{font-family:'Manrope',sans-serif;font-size:22px;margin:0 0 8px;font-weight:800}
+  .ok p{color:var(--texto-suave);margin:0 0 22px}
+  .oculto{display:none}
+  footer{text-align:center;color:var(--texto-fraco);font-size:12.5px;padding:4px 20px 30px;line-height:1.6}
+</style>
+</head>
+<body>
+<header class="topo">
+  <div class="logo"><img src="https://raw.githubusercontent.com/marcoslbrandao/PenielChurchApp/main/assets/peniel-logo.png" alt="Peniel Church"></div>
+  <h1>Enviar material do grupo</h1>
+  <p class="sub">Para líderes. O arquivo aparece no app para o grupo, sem ninguém precisar pedir acesso.</p>
+</header>
+
+<main>
+  <div id="erro" class="erro" role="alert"></div>
+
+  <!-- 1. Login -->
+  <form id="telaLogin" class="cartao oculto" novalidate>
+    <div class="campo">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="username" required>
+    </div>
+    <div class="campo">
+      <label for="senha">Senha</label>
+      <input id="senha" type="password" autocomplete="current-password" required>
+      <p class="dica">O mesmo e-mail e senha que você usa no app da Peniel. Esqueceu a senha? Troque pelo app, na tela de entrar.</p>
+    </div>
+    <button class="principal" type="submit" id="btnEntrar">Entrar</button>
+  </form>
+
+  <!-- 2. Envio -->
+  <form id="telaEnvio" class="cartao oculto" novalidate>
+    <div class="quem"><span id="quemSou"></span><button type="button" class="link" id="btnSair">Sair</button></div>
+
+    <div class="campo">
+      <span class="rotulo">Grupo</span>
+      <div class="pills" id="grupos" role="group" aria-label="Grupo"></div>
+    </div>
+
+    <div class="campo">
+      <span class="rotulo">Arquivo</span>
+      <input id="inputArquivo" type="file">
+      <label class="arquivo" for="inputArquivo" id="caixaArquivo" style="text-transform:none;letter-spacing:0;font-family:inherit;font-weight:400;font-size:15px;color:var(--texto);margin:0">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
+        <span><span class="nome" id="nomeArquivo">Toque para escolher o arquivo</span><br><span class="tam" id="tamArquivo">PDF, apostila, slides, áudio… até 200 MB</span></span>
+      </label>
+    </div>
+
+    <div class="campo">
+      <label for="titulo">Título no app (opcional)</label>
+      <input id="titulo" type="text" maxlength="150" placeholder="Ex.: Aula 5 · Romanos 8">
+      <p class="dica">Em branco, o app usa o nome do arquivo.</p>
+    </div>
+
+    <button class="principal" type="submit" id="btnEnviar" disabled>Enviar para o grupo</button>
+    <div class="barra" id="barra"><div></div></div>
+    <p class="estado" id="estado"></p>
+  </form>
+
+  <!-- 3. Pronto -->
+  <div id="telaOk" class="cartao ok oculto">
+    <div class="circulo"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <h2>Enviado!</h2>
+    <p id="msgOk"></p>
+    <button class="principal" type="button" id="btnOutro">Enviar outro arquivo</button>
+  </div>
+
+  <!-- Sem grupo -->
+  <div id="telaSemGrupo" class="cartao oculto">
+    <p style="margin:0 0 14px">Sua conta não está como <strong>líder</strong> de nenhum grupo. Só o líder do grupo e o Admin podem enviar material.</p>
+    <p class="dica" style="margin:0 0 14px">Se você deveria ser líder, peça ao Admin para marcar no app.</p>
+    <button class="principal" type="button" id="btnSair2">Sair</button>
+  </div>
+</main>
+<footer>Peniel Church · os arquivos ficam no Drive da igreja e só quem é do grupo abre, pelo app.</footer>
+
+<script>
+(function(){
+  var SUPABASE_URL = 'https://yudulaqsqhzbbarhxbnr.supabase.co';
+  // Chave pública (anon) — a mesma que vai dentro do app. Não dá acesso a nada
+  // sozinha: quem decide é a RLS e a função.
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1ZHVsYXFzcWh6YmJhcmh4Ym5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyOTkzNjgsImV4cCI6MjA5NDg3NTM2OH0.X66clWugVNeANpfb78mkTY-bu6SNMPIAZMJfZf6kEr8';
+  var FN = SUPABASE_URL + '/functions/v1/materiais-drive';
+  var NOMES = {
+    estudo_biblico:'Estudo Bíblico', homens:'Grupo de Homens', mulheres:'Grupo de Mulheres',
+    jovens:'Peniel Alive', infantil:'Peniel Kids'
+  };
+  var MAX = 200 * 1024 * 1024;
+  var CHAVE = 'peniel_materiais_sessao';
+
+  var $ = function(id){ return document.getElementById(id); };
+  var sessao = null, grupoEscolhido = null, arquivo = null;
+
+  // Armazenamento pode falhar (aba anônima, bloqueio de dados): a página
+  // funciona igual, só pede login de novo.
+  function lerSessao(){ try { return JSON.parse(sessionStorage.getItem(CHAVE) || 'null'); } catch(e){ return null; } }
+  function gravarSessao(s){ try { if (s) sessionStorage.setItem(CHAVE, JSON.stringify(s)); else sessionStorage.removeItem(CHAVE); } catch(e){} }
+
+  function mostrar(tela){
+    ['telaLogin','telaEnvio','telaOk','telaSemGrupo'].forEach(function(t){ $(t).classList.toggle('oculto', t !== tela); });
+  }
+  function erro(msg){ var e = $('erro'); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
+  function tamanho(b){ return b < 1048576 ? Math.max(1, Math.round(b/1024)) + ' KB' : (b/1048576).toFixed(1).replace('.', ',') + ' MB'; }
+
+  function chamar(corpo){
+    return fetch(FN, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + sessao.access_token },
+      body: JSON.stringify(corpo)
+    }).then(function(r){
+      return r.json().catch(function(){ return {}; }).then(function(d){
+        if (r.status === 401) { sair(); throw new Error('Sua sessão expirou. Entre de novo.'); }
+        if (!r.ok) throw new Error(d.error || 'Algo deu errado. Tente de novo.');
+        return d;
+      });
+    });
+  }
+
+  function sair(){ sessao = null; gravarSessao(null); $('senha').value = ''; mostrar('telaLogin'); }
+
+  // ─── Login ──────────────────────────────────────────────────────────────
+  $('telaLogin').addEventListener('submit', function(ev){
+    ev.preventDefault(); erro('');
+    var email = $('email').value.trim(), senha = $('senha').value;
+    if (!email || !senha) { erro('Preencha e-mail e senha.'); return; }
+    $('btnEntrar').disabled = true; $('btnEntrar').textContent = 'Entrando…';
+    fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+      method:'POST', headers:{ 'Content-Type':'application/json', 'apikey': ANON },
+      body: JSON.stringify({ email: email, password: senha })
+    }).then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d }; }); })
+      .then(function(res){
+        if (!res.ok || !res.d.access_token) throw new Error('E-mail ou senha incorretos.');
+        sessao = { access_token: res.d.access_token, email: email,
+                   expira: Date.now() + (res.d.expires_in || 3600) * 1000 };
+        gravarSessao(sessao);
+        return carregarGrupos();
+      })
+      .catch(function(e){ erro(e.message); })
+      .then(function(){ $('btnEntrar').disabled = false; $('btnEntrar').textContent = 'Entrar'; });
+  });
+
+  // ─── Grupos que a pessoa lidera ─────────────────────────────────────────
+  function carregarGrupos(){
+    return chamar({ acao:'meus_grupos' }).then(function(d){
+      var grupos = d.grupos || [];
+      if (!grupos.length) { mostrar('telaSemGrupo'); return; }
+      $('quemSou').textContent = sessao.email;
+      var pedido = new URLSearchParams(location.search).get('grupo');
+      grupoEscolhido = grupos.indexOf(pedido) >= 0 ? pedido : (grupos.length === 1 ? grupos[0] : null);
+      var caixa = $('grupos'); caixa.innerHTML = '';
+      grupos.forEach(function(g){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'pill'; b.textContent = NOMES[g] || g;
+        b.setAttribute('aria-pressed', String(g === grupoEscolhido));
+        b.addEventListener('click', function(){
+          grupoEscolhido = g;
+          Array.prototype.forEach.call(caixa.children, function(c){ c.setAttribute('aria-pressed', String(c === b)); });
+          atualizarBotao();
+        });
+        caixa.appendChild(b);
+      });
+      atualizarBotao();
+      mostrar('telaEnvio');
+    });
+  }
+
+  // ─── Arquivo ────────────────────────────────────────────────────────────
+  $('inputArquivo').addEventListener('change', function(){
+    erro('');
+    arquivo = this.files && this.files[0] || null;
+    if (arquivo && arquivo.size > MAX) { erro('Esse arquivo passa de 200 MB. Para vídeo, use o YouTube e publique como short.'); arquivo = null; this.value = ''; }
+    $('nomeArquivo').textContent = arquivo ? arquivo.name : 'Toque para escolher o arquivo';
+    $('tamArquivo').textContent = arquivo ? tamanho(arquivo.size) : 'PDF, apostila, slides, áudio… até 200 MB';
+    atualizarBotao();
+  });
+
+  function atualizarBotao(){ $('btnEnviar').disabled = !(grupoEscolhido && arquivo); }
+
+  function nomeFinal(){
+    var t = $('titulo').value.trim();
+    if (!t) return arquivo.name;
+    var m = arquivo.name.match(/\.[A-Za-z0-9]{2,5}$/);
+    return t + (m ? m[0] : '');
+  }
+
+  // Sobe os bytes. Primeiro direto para o Google; se o navegador barrar
+  // (rede ou CORS), tenta pela função.
+  function subir(url, cabecalhos){
+    return new Promise(function(resolve, reject){
+      var x = new XMLHttpRequest();
+      x.open(url.indexOf(FN) === 0 ? 'POST' : 'PUT', url);
+      Object.keys(cabecalhos).forEach(function(k){ x.setRequestHeader(k, cabecalhos[k]); });
+      x.upload.onprogress = function(e){
+        if (!e.lengthComputable) return;
+        var p = Math.round(e.loaded / e.total * 100);
+        $('barra').firstElementChild.style.width = p + '%';
+        $('estado').textContent = 'Enviando… ' + p + '%';
+      };
+      x.onload = function(){ (x.status >= 200 && x.status < 300) ? resolve() : reject(new Error('status ' + x.status)); };
+      x.onerror = function(){ reject(new Error('rede')); };
+      x.send(arquivo);
+    });
+  }
+
+  $('telaEnvio').addEventListener('submit', function(ev){
+    ev.preventDefault(); erro('');
+    if (!grupoEscolhido || !arquivo) return;
+    var grupo = grupoEscolhido, tipo = arquivo.type || 'application/octet-stream';
+    $('btnEnviar').disabled = true; $('barra').style.display = 'block';
+    $('barra').firstElementChild.style.width = '0'; $('estado').textContent = 'Preparando…';
+
+    chamar({ acao:'iniciar_upload', grupo: grupo, nome: nomeFinal(), mime: tipo, tamanho: arquivo.size })
+      .then(function(d){
+        return subir(d.sessao, { 'Content-Type': tipo }).catch(function(){
+          $('estado').textContent = 'Tentando outro caminho…';
+          var url = FN + '?acao=enviar&grupo=' + encodeURIComponent(grupo) + '&sessao=' + encodeURIComponent(d.sessao);
+          return subir(url, { 'Content-Type': tipo, 'Authorization': 'Bearer ' + sessao.access_token });
+        });
+      })
+      .then(function(){
+        $('estado').textContent = 'Publicando no app…';
+        return chamar({ acao:'concluir_upload', grupo: grupo });
+      })
+      .then(function(){
+        $('msgOk').textContent = '“' + nomeFinal().replace(/\.[A-Za-z0-9]{2,5}$/, '') + '” já está em ' + (NOMES[grupo] || grupo) + ' › Materiais, e o grupo recebe o aviso no celular.';
+        mostrar('telaOk');
+      })
+      .catch(function(e){ erro(e.message && e.message.indexOf('status') !== 0 && e.message !== 'rede' ? e.message : 'Não foi possível enviar. Confira a internet e tente de novo.'); })
+      .then(function(){ $('btnEnviar').disabled = !(grupoEscolhido && arquivo); $('barra').style.display = 'none'; if (!$('telaOk').classList.contains('oculto')) $('estado').textContent = ''; });
+  });
+
+  $('btnOutro').addEventListener('click', function(){
+    arquivo = null; $('inputArquivo').value = ''; $('titulo').value = '';
+    $('nomeArquivo').textContent = 'Toque para escolher o arquivo';
+    $('tamArquivo').textContent = 'PDF, apostila, slides, áudio… até 200 MB';
+    $('estado').textContent = ''; atualizarBotao(); mostrar('telaEnvio');
+  });
+  $('btnSair').addEventListener('click', sair);
+  $('btnSair2').addEventListener('click', sair);
+
+  // ─── Início ─────────────────────────────────────────────────────────────
+  sessao = lerSessao();
+  if (sessao && sessao.expira > Date.now() + 60000) {
+    carregarGrupos().catch(function(e){ erro(e.message); mostrar('telaLogin'); });
+  } else { sair(); }
+})();
+</script>
+</body>
+</html>

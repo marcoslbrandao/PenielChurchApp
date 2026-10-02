@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,12 @@ import { supabase } from '../lib/supabase';
 import { useTheme } from '../lib/theme';
 
 type Secao = 'aviso' | 'encontro' | 'devocional' | 'short' | 'material';
+
+// Página de envio de arquivo (docs/materiais.html, GitHub Pages). O arquivo vai
+// para a pasta do grupo no Drive da igreja, no nome da IGREJA (não ocupa o
+// espaço do líder). Escolher arquivo no celular pede módulo nativo, que só
+// entra no próximo build — por isso, por enquanto, o envio é pela página.
+const PAGINA_ENVIO = 'https://marcoslbrandao.github.io/PenielChurchApp/materiais.html';
 
 function paletaGrupoAdmin(isDark: boolean) {
   return isDark ? {
@@ -434,6 +440,13 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
 
               {secao === 'material' && (
                 <>
+                  <SaveBtn
+                    s={s} cor={cor} saving={false} icon="cloud-upload-outline" label="Enviar arquivo (PDF, apostila…)"
+                    onPress={() => Linking.openURL(`${PAGINA_ENVIO}?grupo=${encodeURIComponent(grupo)}`)
+                      .catch(() => Alert.alert('Erro', 'Não foi possível abrir a página de envio.'))}
+                  />
+                  <Text style={[s.hint, { marginTop: 8, marginBottom: 18 }]}>Abre a página de envio no navegador. Entre com o mesmo login do app: o arquivo vai para a pasta do grupo {grupoNome} no Drive da igreja, aparece aqui na hora e o grupo recebe push. Ninguém precisa pedir acesso.</Text>
+                  <Text style={[s.hint, { marginTop: 0, fontWeight: '700' }]}>Ou publique um link:</Text>
                   <Field s={s} C={C} label="Título" value={materialTitulo} onChangeText={setMaterialTitulo} placeholder="Ex: Apostila da aula 3 (PDF)" />
                   <Field
                     s={s} C={C}
@@ -465,7 +478,7 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
                       </View>
                     </View>
                   )}
-                  <Text style={s.hint}>PDF, apostila, slides: o melhor caminho é soltar o arquivo na pasta do grupo {grupoNome} em "Peniel App - Materiais", no Drive da igreja. Ele aparece aqui sozinho em até 10 minutos, o grupo recebe push, e ninguém precisa pedir acesso. Este formulário é para publicar um link (site, vídeo, arquivo de fora). Preso a uma aula, o material aparece também dentro daquela aula.</Text>
+                  <Text style={s.hint}>Para um link de fora (site, vídeo, arquivo de outro lugar). Só quem está no grupo {grupoNome} vê. Preso a uma aula, o material aparece também dentro daquela aula.</Text>
                   <SaveBtn s={s} cor={cor} saving={saving} onPress={publicarMaterial} label="Publicar material" icon="document-text-outline" />
                 </>
               )}

@@ -59,6 +59,63 @@ const LINK_VALIDADE_S = 10 * 60;
 // Drive: dentro deste intervalo a sincronização pedida pelo app é pulada.
 const SINCRONIA_MIN_S = 60;
 
+// Envio pela página `docs/materiais.html` (GitHub Pages), 02 Out 2026.
+// O arquivo é gravado pela conta da IGREJA, então ocupa o espaço dela e não o
+// do líder. O navegador sobe os bytes direto para o Google numa sessão de
+// upload resumível aberta aqui; esta função nunca segura o arquivo inteiro.
+const PAGINA_ORIGENS = ['https://marcoslbrandao.github.io'];
+const UPLOAD_MAX_BYTES = 200 * 1024 * 1024;
+const SESSAO_PREFIXO = 'https://www.googleapis.com/upload/drive/v3/files?';
+
+async function pessoaDoPedido(req: Request) {
+  const jwt = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+  const pessoa = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
+    auth: { persistSession: false },
+  });
+  const { data: u } = await pessoa.auth.getUser(jwt);
+  return u?.user ? pessoa : null;
+}
+
+// Só líder DAQUELE grupo ou Admin sobem arquivo — a mesma regra de quem apaga.
+async function podeEnviar(pessoa: SupabaseClient, grupo: string): Promise<boolean> {
+  if (!PASTAS[grupo]) return false;
+  const { data: adm } = await pessoa.rpc('is_admin');
+  if (adm) return true;
+  const { data: lider } = await pessoa.rpc('is_grupo_leader', { p_grupo: grupo });
+  return !!lider;
+}
+
+// Nome do arquivo no Drive = o que vira título no app. Tira barra e caractere
+// de controle, e limita o tamanho.
+function nomeSeguro(nome: string): string {
+  return nome.replace(/[\u0000-\u001f\/\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180) || 'material';
+}
+
+// Plano B: se o navegador não conseguir falar direto com o Google (CORS), ele
+// manda o arquivo para cá e esta função repassa, em streaming, para a mesma
+// sessão. Fica mais lento e sujeito ao limite de tempo da Edge Function.
+async function enviarPelaFuncao(req: Request, url: URL): Promise<Response> {
+  const pessoa = await pessoaDoPedido(req);
+  if (!pessoa) return json({ error: 'Faça login.' }, 401);
+  const grupo = url.searchParams.get('grupo') ?? '';
+  if (!(await podeEnviar(pessoa, grupo))) return json({ error: 'Só o líder do grupo ou o Admin podem enviar.' }, 403);
+  const sessao = url.searchParams.get('sessao') ?? '';
+  // Só repassa para uma sessão de upload do Drive — nunca para um endereço
+  // qualquer que viesse no parâmetro.
+  if (!sessao.startsWith(SESSAO_PREFIXO) || !req.body) return json({ error: 'Envio inválido.' }, 400);
+  const headers: Record<string, string> = { 'Content-Type': req.headers.get('content-type') ?? 'application/octet-stream' };
+  const tam = req.headers.get('content-length');
+  if (tam) headers['Content-Length'] = tam;
+  // deno-lint-ignore no-explicit-any
+  const r = await fetch(sessao, { method: 'PUT', headers, body: req.body, duplex: 'half' } as any);
+  if (!r.ok) {
+    console.error('envio pela função falhou', r.status, (await r.text()).slice(0, 300));
+    return json({ error: 'O Google recusou o arquivo.' }, 502);
+  }
+  return json(await r.json().catch(() => ({ ok: true })));
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -307,6 +364,9 @@ Deno.serve(async (req) => {
     }
     if (req.method !== 'POST') return json({ error: 'Método não suportado.' }, 405);
 
+    const urlPedido = new URL(req.url);
+    if (urlPedido.searchParams.get('acao') === 'enviar') return await enviarPelaFuncao(req, urlPedido);
+
     if (!PASTA_RAIZ) return json({ error: 'DRIVE_PASTA_RAIZ não configurado.' }, 500);
     const corpo = await req.json().catch(() => ({}));
     const acao = corpo?.acao as string;
@@ -367,6 +427,54 @@ Deno.serve(async (req) => {
         if (!r.ok && r.status !== 404) console.error('lixeira falhou', r.status, (await r.text()).slice(0, 300));
       }
       return json({ ok: true });
+    }
+
+    // ─── Envio pela página (só líder do grupo ou Admin) ───────────────────────
+
+    if (acao === 'meus_grupos') {
+      const grupos: string[] = [];
+      for (const g of Object.keys(PASTAS)) if (await podeEnviar(pessoa, g)) grupos.push(g);
+      return json({ grupos });
+    }
+
+    if (acao === 'iniciar_upload') {
+      const grupo = String(corpo.grupo ?? '');
+      if (!(await podeEnviar(pessoa, grupo))) return json({ error: 'Só o líder do grupo ou o Admin podem enviar.' }, 403);
+      const tamanho = Number(corpo.tamanho ?? 0);
+      if (!tamanho || tamanho > UPLOAD_MAX_BYTES) return json({ error: 'Arquivo vazio ou maior que 200 MB.' }, 400);
+      const mime = String(corpo.mime || 'application/octet-stream').slice(0, 120);
+      const pastaId = await pastaDoGrupo(admin, grupo);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': mime,
+        'X-Upload-Content-Length': String(tamanho),
+      };
+      // Com o Origin da página na abertura, o Google libera o CORS da sessão e
+      // o navegador pode mandar o arquivo direto.
+      const origem = req.headers.get('origin') ?? '';
+      if (PAGINA_ORIGENS.includes(origem)) headers['Origin'] = origem;
+
+      const token = await tokenGoogle();
+      const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name', {
+        method: 'POST',
+        headers: { ...headers, Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: nomeSeguro(String(corpo.nome ?? '')), parents: [pastaId] }),
+      });
+      const sessao = r.headers.get('location');
+      if (!r.ok || !sessao) {
+        console.error('sessão de upload recusada', r.status, (await r.text()).slice(0, 300));
+        return json({ error: 'O Drive não abriu o envio.' }, 502);
+      }
+      return json({ sessao });
+    }
+
+    if (acao === 'concluir_upload') {
+      // Sincroniza na hora: o arquivo aparece no app sem esperar o cron, e o
+      // push "Novo material" sai pelo gatilho de sempre.
+      const grupo = String(corpo.grupo ?? '');
+      if (!(await podeEnviar(pessoa, grupo))) return json({ error: 'Sem permissão.' }, 403);
+      return json(await sincronizar(admin, grupo, true));
     }
 
     return json({ error: 'Ação desconhecida.' }, 400);

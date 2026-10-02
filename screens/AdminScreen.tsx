@@ -56,6 +56,7 @@ type AgendaEvento = {
   data: string | null; horario: string; local: string; descricao: string | null;
   link_zoom: string | null; especial: boolean; cor: string | null;
   destaque_home: boolean; cta_texto: string | null; cta_url: string | null;
+  imagem_url: string | null;
 };
 
 type ShortVideo = { id: string; titulo: string; url: string; plataforma: string; destaque_home: boolean };
@@ -632,6 +633,38 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
 // ─── Novo Evento (Agenda) Modal ───────────────────────────────────────────────
 const DIAS_SEMANA_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+// ─── Imagem de evento (bucket 'eventos' no Storage) ──────────────────────────
+// Mesmo jeito de enviar da capa das Mensagens: lê o arquivo em base64 e sobe
+// para o bucket. O bucket é público para leitura (a Home mostra a imagem até
+// para quem não tem conta) e só admin consegue enviar (regras eventos_admin_*).
+async function escolherImagemEvento(t: (k: string) => string): Promise<string | null> {
+  const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permissao.granted) {
+    Alert.alert(t('admin.permissaoNecessaria'), t('admin.precisamosDeAcessoAsSuas'));
+    return null;
+  }
+  const resultado = await ImagePicker.launchImageLibraryAsync({
+    // No iOS o editor de corte do sistema é sempre QUADRADO (o `aspect` só vale
+      // no Android) — cortava as capas 16:9. No iOS a foto vai inteira.
+      mediaTypes: ['images'], allowsEditing: Platform.OS === 'android', aspect: [2, 1], quality: 0.7,
+  });
+  if (resultado.canceled || !resultado.assets?.[0]) return null;
+  return resultado.assets[0].uri;
+}
+
+async function enviarImagemEvento(uriLocal: string): Promise<string> {
+  const extensao = uriLocal.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const ext = extensao === 'png' ? 'png' : 'jpg';
+  const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+  const base64 = await FileSystem.readAsStringAsync(uriLocal, { encoding: FileSystem.EncodingType.Base64 });
+  const caminho = `capas/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage
+    .from('eventos')
+    .upload(caminho, decode(base64), { contentType, upsert: true });
+  if (error) throw error;
+  return supabase.storage.from('eventos').getPublicUrl(caminho).data.publicUrl;
+}
+
 function NovoEventoModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
@@ -650,10 +683,12 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
   const [destaqueHome, setDestaqueHome] = useState(false);
   const [ctaTexto, setCtaTexto] = useState('');
   const [ctaUrl, setCtaUrl] = useState('');
+  const [imagemLocal, setImagemLocal] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!visible) {
+      setImagemLocal(null);
       setNome(''); setTipo('presencial'); setRecorrente(true); setDiaSemana(0);
       setData(''); setHorario(''); setLocal(''); setDescricao('');
       setLinkZoom(''); setMapUrl(''); setEspecial(false);
@@ -671,7 +706,18 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
       return;
     }
     setSaving(true);
+    let imagemUrl: string | null = null;
+    if (imagemLocal) {
+      try {
+        imagemUrl = await enviarImagemEvento(imagemLocal);
+      } catch (e: any) {
+        setSaving(false);
+        Alert.alert(t('admin.erroAoEnviarImagem'), e?.message ?? 'Tente novamente.');
+        return;
+      }
+    }
     const { error } = await supabase.from('agenda_eventos').insert({
+      imagem_url: imagemUrl,
       nome: nome.trim(), tipo, recorrente,
       dia_semana: recorrente ? diaSemana : null,
       data: !recorrente ? data.trim() : null,
@@ -704,6 +750,24 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
               <Text style={mo.title}>{t('admin.novoEvento')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>{t('admin.imagemDeCapaOpcional')}</Text>
+              <TouchableOpacity
+                style={nm.imagemPicker}
+                disabled={saving}
+                onPress={async () => { const uri = await escolherImagemEvento(t); if (uri) setImagemLocal(uri); }}
+              >
+                {imagemLocal ? (
+                  <Image source={{ uri: imagemLocal }} style={[nm.imagemPreview, { height: undefined, aspectRatio: 2 }]} resizeMode="cover" />
+                ) : (
+                  <View style={nm.imagemPlaceholder}>
+                    <Ionicons name="image-outline" size={24} color={C.textDim} />
+                    <Text style={nm.imagemPlaceholderTexto}>{t('admin.toqueParaEscolherUmaFoto')}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
 
@@ -963,7 +1027,9 @@ function NovaMensagemModal({ visible, onClose, onSaved }: {
       return;
     }
     const resultado = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], allowsEditing: true, aspect: [16, 9], quality: 0.7,
+      // No iOS o editor de corte do sistema é sempre QUADRADO (o `aspect` só vale
+      // no Android) — cortava as capas 16:9. No iOS a foto vai inteira.
+      mediaTypes: ['images'], allowsEditing: Platform.OS === 'android', aspect: [16, 9], quality: 0.7,
     });
     if (!resultado.canceled && resultado.assets?.[0]) {
       setImagemLocal(resultado.assets[0].uri);
@@ -2047,6 +2113,25 @@ export default function AdminScreen() {
   // Liga/desliga o destaque da Home direto na lista, sem precisar recriar o
   // evento. Desligar tira só da Home — o evento continua normal na Agenda.
   // Ligar não exige desligar o anterior: o trigger no banco faz isso sozinho.
+  // Coloca ou troca a imagem de um evento que já existe (o formulário só cria
+  // eventos novos). A imagem antiga fica no Storage — não apagamos nada aqui.
+  const [imagemEnviandoId, setImagemEnviandoId] = useState<string | null>(null);
+  const trocarImagemEvento = async (evento: AgendaEvento) => {
+    const uri = await escolherImagemEvento(t);
+    if (!uri) return;
+    setImagemEnviandoId(evento.id);
+    try {
+      const url = await enviarImagemEvento(uri);
+      const { error } = await supabase.from('agenda_eventos').update({ imagem_url: url }).eq('id', evento.id);
+      if (error) throw error;
+      fetchData();
+    } catch (e: any) {
+      Alert.alert(t('admin.erroAoEnviarImagem'), e?.message ?? 'Tente novamente.');
+    } finally {
+      setImagemEnviandoId(null);
+    }
+  };
+
   const toggleDestaqueHome = async (evento: AgendaEvento) => {
     const { error } = await supabase
       .from('agenda_eventos')
@@ -2623,6 +2708,15 @@ export default function AdminScreen() {
                       </View>
                     </View>
                     <View style={s.inviteActions}>
+                      <TouchableOpacity
+                        style={[s.actionBtn, { borderColor: e.imagem_url ? C.accent : C.textDim + '40' }]}
+                        onPress={() => trocarImagemEvento(e)}
+                        disabled={imagemEnviandoId === e.id}
+                      >
+                        {imagemEnviandoId === e.id ? <ActivityIndicator size="small" color={C.accent} /> : (
+                          <Ionicons name={e.imagem_url ? 'image' : 'image-outline'} size={16} color={e.imagem_url ? C.accent : C.textMuted} />
+                        )}
+                      </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.actionBtn, { borderColor: e.destaque_home ? C.accent : C.textDim + '40' }]}
                         onPress={() => toggleDestaqueHome(e)}

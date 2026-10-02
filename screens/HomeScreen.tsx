@@ -512,6 +512,7 @@ type DestaqueHome = {
   id: string; nome: string; descricao: string | null; cor: string | null;
   data: string | null; recorrente: boolean; dia_semana: number | null;
   horario: string; cta_texto: string | null; cta_url: string | null;
+  imagem_url: string | null;
 };
 
 function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onAbrirAgenda: () => void }) {
@@ -544,7 +545,11 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
   const abrir = () => { if (evento.cta_url) Linking.openURL(evento.cta_url); else onAbrirAgenda(); };
 
   return (
-    <TouchableOpacity style={styles.especialCard} activeOpacity={0.85} onPress={abrir}>
+    <TouchableOpacity style={evento.imagem_url ? styles.especialCardComImagem : styles.especialCard} activeOpacity={0.85} onPress={abrir}>
+      {!!evento.imagem_url && (
+        <Image source={{ uri: evento.imagem_url }} style={styles.especialImagem} resizeMode="cover" />
+      )}
+      <View style={evento.imagem_url ? styles.especialLinha : { flex: 1, flexDirection: 'row', alignItems: 'center' }}>
       <View style={[styles.especialCorFaixa, { backgroundColor: cor }]} />
       <View style={styles.especialCorpo}>
         <Text style={styles.especialNome}>{nome}</Text>
@@ -560,6 +565,7 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
         )}
       </View>
       <Ionicons name="chevron-forward" size={18} color={C.textMuted} style={{ marginRight: 12 }} />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -795,7 +801,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     useCallback(() => {
       supabase
         .from('agenda_eventos')
-        .select('id, nome, descricao, cor, data, recorrente, dia_semana, horario, cta_texto, cta_url')
+        .select('id, nome, descricao, cor, data, recorrente, dia_semana, horario, cta_texto, cta_url, imagem_url')
         .eq('destaque_home', true)
         .limit(1)
         .maybeSingle()
@@ -1380,6 +1386,11 @@ function buildStyles(C: PaletaHome) { return StyleSheet.create({
   // Especial
   especialCard: { backgroundColor: C.cardBg, borderRadius: 16, borderWidth: 0.5, borderColor: C.cardBorder, marginBottom: 16, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   especialCorFaixa: { width: 4, alignSelf: 'stretch' },
+  // Com imagem: a foto ocupa o topo do card em formato banner 2:1 (ex.:
+  // 1600x800), o mesmo do preview no Admin; a linha de texto fica embaixo.
+  especialCardComImagem: { backgroundColor: C.cardBg, borderRadius: 16, borderWidth: 0.5, borderColor: C.cardBorder, marginBottom: 16, overflow: 'hidden' },
+  especialImagem: { width: '100%', aspectRatio: 2, backgroundColor: C.cardBorder },
+  especialLinha: { flexDirection: 'row', alignItems: 'center' },
   especialCorpo: { flex: 1, padding: 14, gap: 4 },
   especialNome: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
   especialDesc: { fontSize: 12, color: C.textMuted, marginTop: 2 },

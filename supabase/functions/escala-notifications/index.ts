@@ -82,18 +82,27 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ message: 'Ninguém com token de push para notificar.' }), { status: 200 });
     }
 
-    const response = await fetch(EXPO_PUSH_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mensagens),
-    });
-    const result = await response.json();
+    // O Expo recusa mais de 100 notificações por requisição e devolve 400 para
+    // o lote INTEIRO — ninguém recebe. Mesmo defeito que já derrubou o push de
+    // aniversário; aqui fatiado em lotes de 100 (corrigido em 28/09/2026).
+    const falhas: string[] = [];
+    let enviadas = 0;
+    for (let i = 0; i < mensagens.length; i += 100) {
+      const lote = mensagens.slice(i, i + 100);
+      const response = await fetch(EXPO_PUSH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lote),
+      });
+      if (!response.ok) falhas.push(`lote ${i / 100}: ${response.status} ${(await response.text()).slice(0, 180)}`);
+      else enviadas += lote.length;
+    }
 
     return new Response(JSON.stringify({
-      success: true,
+      success: falhas.length === 0,
       designacoes: comConta.length,
-      notificacoesEnviadas: mensagens.length,
-      result,
+      notificacoesEnviadas: enviadas,
+      falhas,
     }), { status: 200 });
 
   } catch (err: any) {

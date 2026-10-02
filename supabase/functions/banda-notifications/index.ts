@@ -5,7 +5,8 @@
 //   • `cultos`  — quando um culto é PUBLICADO. Não quando é criado: o culto
 //     tem rascunho, e avisar a banda de uma escala em montagem faria o aviso
 //     chegar duas vezes (uma errada e uma certa), que é pior que não avisar.
-//   • `ensaios` — ao ser criado. Ensaio não tem rascunho.
+//   • `ensaios` — quando é PUBLICADO, igual ao culto. Ensaio também tem
+//     rascunho (antes o push saía na criação, mesmo de rascunho).
 //   • `banda_chat_mensagens` — agrupado por bloco de conversa. Ver abaixo.
 //
 // DEPLOY
@@ -17,10 +18,10 @@
 //   | Tabela                 | Eventos         |
 //   |------------------------|-----------------|
 //   | cultos                 | INSERT, UPDATE  |
-//   | ensaios                | INSERT          |
+//   | ensaios                | INSERT, UPDATE  |
 //   | banda_chat_mensagens   | INSERT          |
 //
-// O UPDATE em `cultos` é o que pega o rascunho virando publicado. A função
+// O UPDATE em `cultos` e em `ensaios` é o que pega o rascunho virando publicado. A função
 // compara `record` com `old_record` e ignora todo o resto — um webhook de
 // UPDATE dispara a cada salvamento, e sem essa comparação um ajuste de
 // horário reenviaria o aviso.
@@ -132,6 +133,15 @@ Deno.serve(async (req) => {
 
     // ── ENSAIO ───────────────────────────────────────────────────────────
     } else if (tabela === 'ensaios') {
+      // Mesma regra do culto: só avisa quando nasce publicado ou quando o
+      // rascunho é publicado. Sem o webhook de UPDATE em `ensaios` no painel,
+      // rascunho publicado depois não avisa — mas também não avisa errado.
+      const publicadoAgora = r.publicado !== false;
+      const publicadoAntes = anterior ? anterior.publicado !== false : false;
+      if (!(publicadoAgora && !publicadoAntes)) {
+        return ok({ message: 'ensaio sem mudança de publicação — nada enviado' });
+      }
+
       tipo = 'ensaio';
       referencia = String(r.id ?? '');
       const quando = dataBR(r.date);

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
 import { useCampoTraduzido } from '../lib/useTraducao';
+import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import { useAuth } from '../lib/useAuth';
 import GrupoAdminModal from '../components/GrupoAdminModal';
 import GrupoChatModal from '../components/GrupoChatModal';
@@ -285,6 +286,12 @@ function GrupoDevocionalCard({ dev, cor, isOpen, onToggle, onApagar }: {
             <Text style={[s.versiculoRef, { color: cor }]}>{referencia}</Text>
           </View>
           <Text style={s.reflexaoText}>{texto}</Text>
+          <BotaoCompartilharDevocional
+            original={dev}
+            traduzido={{ titulo, versiculo, referencia, texto }}
+            corFundo={cor + '18'}
+            corTexto={cor}
+          />
         </View>
       )}
     </View>
@@ -404,7 +411,7 @@ function ParticipantesModal({ visible, grupo, grupoNome, cor, podeGerenciar, onC
             )}
 
             <Text style={gm.listLabel}>No grupo ({participantes.length})</Text>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320, flexShrink: 1 }}>
               {loading ? (
                 <ActivityIndicator color={cor} style={{ marginVertical: 20 }} />
               ) : participantes.length === 0 ? (
@@ -536,7 +543,7 @@ function GerenciarLideresModal({ visible, grupo, grupoNome, cor, onClose }: {
             )}
 
             <Text style={gm.listLabel}>Líderes atuais ({lideres.length})</Text>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 280 }}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 280, flexShrink: 1 }}>
               {loading ? (
                 <ActivityIndicator color={cor} style={{ marginVertical: 20 }} />
               ) : lideres.length === 0 ? (
@@ -566,7 +573,7 @@ function GerenciarLideresModal({ visible, grupo, grupoNome, cor, onClose }: {
 
 function buildGm(C: Paleta) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   title: { fontSize: 17, fontWeight: '800', color: C.text, flex: 1, marginRight: 10 },
   searchRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surfaceAlt, borderRadius: 10, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12, height: 46, marginBottom: 4 },

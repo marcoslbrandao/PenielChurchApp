@@ -189,7 +189,7 @@ export default function CadernoModal({
               </TouchableOpacity>
             )}
 
-            <ScrollView ref={listaRef} style={{ marginTop: 12 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView ref={listaRef} style={{ marginTop: 12, flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {escrevendo && (
                 <View style={[s.formulario, { borderLeftColor: cor }]}>
                   <Text style={s.formularioTitulo}>{editando ? 'Editando anotação' : 'Nova anotação'}</Text>
@@ -290,7 +290,7 @@ export default function CadernoModal({
 
 function buildStyles(C: PaletaCaderno) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 26 },
+  sheet: { flexShrink: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 },
   title: { fontSize: 17, fontWeight: '800', color: C.text },
   subtitle: { fontSize: 11, color: C.textMuted, marginTop: 3 },

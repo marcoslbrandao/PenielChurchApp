@@ -253,7 +253,7 @@ export default function EncontroAulaModal({
             {loading ? (
               <ActivityIndicator color={cor} style={{ marginVertical: 40 }} />
             ) : (
-              <ScrollView style={{ marginTop: 14 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <ScrollView style={{ marginTop: 14, flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
                 {aba === 'aula' && (
                   <>
@@ -412,7 +412,7 @@ export default function EncontroAulaModal({
 
 function buildStyles(C: PaletaAula) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 26 },
+  sheet: { flexShrink: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 },
   title: { fontSize: 17, fontWeight: '800', color: C.text },
   subtitle: { fontSize: 11, color: C.textMuted, marginTop: 3 },

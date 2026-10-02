@@ -231,7 +231,7 @@ function SearchModal({ visible, onClose, navigation }: {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ marginTop: 14 }} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ marginTop: 14, flexShrink: 1 }} keyboardShouldPersistTaps="handled">
             {query.trim().length < 2 ? (
               <Text style={sm.hint}>{t('home.digiteDuasLetras')}</Text>
             ) : (
@@ -277,7 +277,7 @@ function SearchModal({ visible, onClose, navigation }: {
                     <Ionicons name="close" size={20} color="rgba(255,255,255,0.6)" />
                   </TouchableOpacity>
                 </View>
-                <ScrollView>
+                <ScrollView style={{ flexShrink: 1 }}>
                   <Text style={sm.avisoTexto}>{avisoAbertoTexto}</Text>
                 </ScrollView>
               </View>
@@ -1245,7 +1245,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
             ) : notifAvisos.length === 0 ? (
               <Text style={sm.hint}>{t('home.nenhumAvisoAinda')}</Text>
             ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
                 <Text style={sm.swipeHint}>{t('home.deslizeRemover')}</Text>
                 {notifAvisos.map(a => (
                   <NotifAvisoCard key={a.id} aviso={a} onRemover={() => removerNotificacao(a.id)} />

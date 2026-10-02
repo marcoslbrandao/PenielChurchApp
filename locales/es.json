@@ -253,6 +253,9 @@
     "nenhumShortAinda": "Aún no hay videos publicados",
     "materiaisGrupo": "📄 Materiales del Grupo",
     "nenhumMaterialAinda": "Aún no hay materiales publicados",
+    "erroAbrirMaterial": "No se pudo abrir el material. Inténtalo de nuevo.",
+    "removerMaterialDriveMsg": "¿Quitar \"{{titulo}}\"? Desaparece de la app para todo el grupo y va a la papelera del Drive de la iglesia (se puede recuperar durante 30 días).",
+    "erroRemoverMaterial": "No se pudo quitar el material. Inténtalo de nuevo.",
     "entrarContatoLider": "Contactar al líder",
     "erroWhatsapp": "No se pudo abrir WhatsApp.",
     "tagPresencial": "Presencial",
@@ -1014,6 +1017,18 @@
     "erroAoGerar": "No se pudo generar",
     "escalaGerada": "Calendario generado",
     "gerarEscalaDoSemestre": "Generar Calendario del Semestre",
+    "escalaVerEditar": "Ver y editar calendario",
+    "escalaVerEditarDesc": "Cambiar o quitar a quien está asignado y llenar vacantes",
+    "escalaNadaAgendado": "No hay calendario en las próximas fechas. Genera primero el calendario del semestre.",
+    "escalaVagaLivre": "Vacante — añadir",
+    "escalaTrocarTitulo": "Cambiar a {{nome}}",
+    "escalaAdicionarTitulo": "Añadir en {{area}}",
+    "escalaTimeDaArea": "Equipo del área",
+    "escalaOutraPessoa": "Otra persona",
+    "escalaJaServeNoDia": "ya asignado este día",
+    "escalaJaEscaladoNoDia": "Esta persona ya está asignada en otra área este día.",
+    "escalaRemoverTitulo": "Quitar del calendario",
+    "escalaRemoverMsg": "¿Quitar a {{nome}} de {{area}} el {{data}}? La vacante quedará libre.",
     "domingoDeInicio": "Domingo de inicio",
     "ddMmAaaa": "DD/MM/AAAA",
     "quantidadeDeDomingos": "Cantidad de domingos",
@@ -1425,5 +1440,10 @@
     "obrigatoriaTitulo": "Actualiza para continuar",
     "obrigatoriaTexto": "Esta versión de la app ({{instalada}}) ya no es compatible. Instala la versión {{minima}} o más reciente desde la tienda para seguir usando Peniel Church.",
     "erroLoja": "No se pudo abrir la tienda. Busca \"Peniel Church\" en la App Store o en Google Play."
+  },
+  "compartilharApp": {
+    "baixe": "Descarga la app en la App Store: {{url}}",
+    "googlePlayEmBreve": "Muy pronto en Google Play",
+    "googlePlay": "Android (Google Play): {{url}}"
   }
 }

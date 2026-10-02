@@ -899,7 +899,7 @@ function MembroFormModal({ visible, membro, membros, isAdmin, onClose, onSaved }
 
 const fm = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '95%', paddingBottom: 24 },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '95%', paddingBottom: 24 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingBottom: 12 },
   title: { fontSize: 18, fontWeight: '800', color: C.text },
   sectionTabs: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 6, marginBottom: 4 },
@@ -989,7 +989,7 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
               </TouchableOpacity>
             </View>
           </View>
-          <ScrollView contentContainerStyle={dd.content}>
+          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={dd.content}>
             <View style={dd.avatarRow}>
               <View style={dd.avatar}>
                 <Text style={dd.avatarInitials}>{membro.nome[0]}{membro.sobrenome[0] ?? ''}</Text>
@@ -1141,7 +1141,7 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
 const dd = StyleSheet.create({
   filhoAlergia: { fontSize: 12.5, color: C.danger, marginTop: 3, fontWeight: '600' },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   actionBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },

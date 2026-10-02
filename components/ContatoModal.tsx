@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
+  View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
   Modal, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -94,6 +94,7 @@ export default function ContatoModal({ visible, grupo, grupoNome, cor, mensagemI
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
             <View style={s.fieldWrap}>
               <Text style={s.fieldLabel}>{t('contato.nome')}</Text>
@@ -141,6 +142,7 @@ export default function ContatoModal({ visible, grupo, grupoNome, cor, mensagemI
               <Ionicons name="mail-outline" size={15} color={C.textMuted} />
               <Text style={s.emailBtnText}>{t('contato.ouEnviarEmail')}</Text>
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -150,7 +152,7 @@ export default function ContatoModal({ visible, grupo, grupoNome, cor, mensagemI
 
 function buildStyles(C: PaletaContato) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 },
+  sheet: { flexShrink: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
   title: { fontSize: 17, fontWeight: '800', color: C.text },
   subtitle: { fontSize: 11, color: C.textMuted, marginTop: 3, lineHeight: 16 },

@@ -108,8 +108,12 @@ type Culto = {
   // setlist (gatilho da migração 20260919150000) e trocável na tela — é um
   // palpite bom, não um dado que a pessoa declarou.
   ministro_id: string | null;
-  // false = rascunho: escondido de quem não é admin enquanto a escala não
-  // está pronta. É filtro de interface, não barreira de segurança.
+  // Quem criou o culto (profile id, `default auth.uid()` no banco — migração
+  // 20260928120000). Null nos cultos antigos e enquanto a migração não subir.
+  criado_por: string | null;
+  // false = rascunho: escondido de quem não é admin, do ministro do culto e
+  // de quem criou, enquanto a escala não está pronta. É filtro de interface,
+  // não barreira de segurança.
   publicado: boolean;
   entries: CultoSongEntry[]; escala: EscalaEntry[]; roadmap: RoadmapItem[];
 };
@@ -132,6 +136,8 @@ type MembroFuncao = { membro_id: string; funcao_id: string; principal: boolean }
 
 type Ensaio = {
   id: string; label: string; date: string; time: string; local: string; observacao: string;
+  // Quem criou o ensaio (`default auth.uid()`, migração 20260928120000_culto_e_ensaio_criado_por).
+  criado_por: string | null;
   publicado: boolean;
   entries: CultoSongEntry[]; escala: EscalaEntry[];
 };
@@ -751,13 +757,13 @@ function MusicaModal({ visible, song, onClose, onSaved }: {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={nm.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={nm.sheet}>
             <View style={nm.header}>
               <Text style={nm.title}>{isEdit ? t('banda.editarMusica') : t('banda.novaMusica')}</Text>
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* Busca no Deezer: preenche título, artista, capa e duração */}
               <View style={nm.buscaBox}>
                 <Text style={nm.buscaTitulo}>{t('banda.buscarMusica')}</Text>
@@ -926,7 +932,7 @@ function MusicaModal({ visible, song, onClose, onSaved }: {
 }
 const buildNm = (C: BandaColors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: C.overlay },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, maxHeight: '90%' },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, maxHeight: '90%' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   title: { fontSize: 18, fontWeight: '800', color: C.text },
   fieldWrap: { marginBottom: 14 },
@@ -1246,7 +1252,7 @@ function NovoCultoModal({ visible, onClose, onSaved, songs, versoes }: {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={md.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={md.sheet}>
             <View style={md.header}>
               <Text style={md.title}>{t('banda.novoCulto')}</Text>
@@ -1255,7 +1261,7 @@ function NovoCultoModal({ visible, onClose, onSaved, songs, versoes }: {
             <Text style={md.label}>{t('banda.dataDoCulto')}</Text>
             <TextInput style={[md.input, !!dateError && md.inputError]} placeholder="DD/MM/AAAA" placeholderTextColor={C.textDim} value={date} onChangeText={formatDateInput} keyboardType="numeric" maxLength={10} />
             {!!dateError && <Text style={md.errorText}>{dateError}</Text>}
-            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ maxHeight: 420, flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <SetlistEditor entries={entries} setEntries={setEntries} songs={songs} versoes={versoes} />
             </ScrollView>
             <TouchableOpacity style={md.publicarRow} onPress={() => setPublicado(v => !v)} activeOpacity={0.7}>
@@ -1300,7 +1306,7 @@ const buildMd = (C: BandaColors) => StyleSheet.create({
   publicarKnob: { width: 18, height: 18, borderRadius: 9, backgroundColor: C.surface },
   publicarKnobOn: { backgroundColor: C.surface, alignSelf: 'flex-end' },
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: C.overlay },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, maxHeight: '92%' },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36, maxHeight: '92%' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   title: { fontSize: 18, fontWeight: '800', color: C.text },
   label: { fontSize: 11, color: C.textMuted, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 },
@@ -1483,7 +1489,7 @@ function PresencaListaModal({ visible, onClose, presencas, escaladosIds, membros
           {vazio ? (
             <Text style={ind.vazio}>{t('banda.presencaSemNinguem')}</Text>
           ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
               {grupos.map(g => g.gente.length === 0 ? null : (
                 <View key={g.chave} style={s.presencaGrupo}>
                   <View style={s.presencaGrupoHeader}>
@@ -1651,13 +1657,13 @@ function NovoEnsaioModal({ visible, onClose, onSaved, songs, versoes }: {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={md.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={md.sheet}>
             <View style={md.header}>
               <Text style={md.title}>{t('banda.novoEnsaio')}</Text>
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={md.label}>{t('banda.dataDoEnsaio')}</Text>
               <TextInput style={[md.input, !!dateError && md.inputError]} placeholder="DD/MM/AAAA" placeholderTextColor={C.textDim} value={date} onChangeText={formatDateInput} keyboardType="numeric" maxLength={10} />
               {!!dateError && <Text style={md.errorText}>{dateError}</Text>}
@@ -1759,14 +1765,14 @@ function EditarSetlistModal({ alvo, songs, versoes, onClose, onSalvo }: {
   return (
     <Modal visible={!!alvo} animationType="slide" transparent onRequestClose={onClose}>
       <View style={md.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={md.sheet}>
             <View style={md.header}>
               <Text style={md.title}>{t('banda.editarSetlist')}</Text>
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
             <Text style={md.setlistSubtitulo}>{alvo?.label}</Text>
-            <ScrollView style={{ maxHeight: 440 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ maxHeight: 440, flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <SetlistEditor entries={entries} setEntries={setEntries} songs={songs} versoes={versoes} />
             </ScrollView>
             <TouchableOpacity style={[md.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
@@ -1820,7 +1826,7 @@ function MinistroModal({ visible, onClose, onSalvo, cultoId, ministroAtual, memb
           {salvando ? (
             <View style={{ paddingVertical: 28 }}><ActivityIndicator color={C.primary} /></View>
           ) : (
-            <ScrollView style={{ maxHeight: 380 }}>
+            <ScrollView style={{ maxHeight: 380, flexShrink: 1 }}>
               {membros.map(m => {
                 const ativo = m.id === ministroAtual;
                 return (
@@ -1971,13 +1977,13 @@ function EscalaModal({ visible, onClose, onSaved, membros, tipo, eventoId, times
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={md.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={md.sheet}>
             <View style={md.header}>
               <Text style={md.title}>{t('banda.adicionarNaEscala')}</Text>
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
               {/* Quem avisou que não pode neste dia */}
               {indisponiveis.length > 0 && (
                 <View style={md.avisoIndisp}>
@@ -2200,7 +2206,7 @@ function MembroFuncoesModal({ membro, funcoes, membroFuncoes, onClose, onSaved }
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
           </View>
           <Text style={md.setlistSubtitulo}>{t('banda.marqueAsFuncoes')}</Text>
-          <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ maxHeight: 420, flexShrink: 1 }} showsVerticalScrollIndicator={false}>
             {funcoes.length === 0 ? (
               <Text style={md.setlistVazio}>{t('banda.semFuncoesCadastradas')}</Text>
             ) : funcoes.map(f => {
@@ -2312,7 +2318,7 @@ function FuncoesModal({ visible, funcoes, onClose, onSaved }: {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={md.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={md.sheet}>
             <View style={md.header}>
               <Text style={md.title}>{t('banda.funcoes')}</Text>
@@ -2347,7 +2353,7 @@ function FuncoesModal({ visible, funcoes, onClose, onSaved }: {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ maxHeight: 380, flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {funcoes.length === 0 ? (
                 <Text style={md.setlistVazio}>{t('banda.semFuncoesCadastradas')}</Text>
               ) : funcoes.map((f, idx) => (
@@ -2477,7 +2483,7 @@ function IndisponibilidadeModal({ visible, onClose, indisponibilidades, membros,
             ))}
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
             <View>
               {semanas.map((semana, si) => (
               <View key={`s${si}`} style={ind.semana}>
@@ -2677,7 +2683,7 @@ function RelatoriosModal({ visible, onClose, cultos, ensaios, songs, membros }: 
                   </TouchableOpacity>
                 ))}
               </View>
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
                 {ranking.length === 0 ? (
                   <Text style={ind.vazio}>{t('banda.semDadosPeriodo')}</Text>
                 ) : ranking.map((r, i) => (
@@ -2733,7 +2739,7 @@ function RelatoriosModal({ visible, onClose, cultos, ensaios, songs, membros }: 
                         </View>
                       ))}
                     </View>
-                    <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
+                    <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380, flexShrink: 1 }}>
                       {instrumentos.map(([chave, rotuloInst]) => (
                         <View key={chave} style={rel.gradeLinha}>
                           <View style={rel.gradeCanto}>
@@ -2828,7 +2834,7 @@ function NotaMusicaModal({ alvo, onClose, onSalvo }: {
   return (
     <Modal visible={!!alvo} animationType="slide" transparent>
       <View style={nm.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={nm.sheet}>
             <View style={nm.header}>
               <Text style={nm.title} numberOfLines={1}>{alvo?.titulo ?? ''}</Text>
@@ -2899,12 +2905,13 @@ function RoadmapItemModal({ visible, cultoId, onClose, onSalvo, proximoIndice }:
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={nm.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={nm.sheet}>
             <View style={nm.header}>
               <Text style={nm.title}>{t('banda.novoItemDoCulto')}</Text>
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
               {ROADMAP_SUGESTOES.map(sug => (
                 <TouchableOpacity key={sug} style={s.pill} onPress={() => setTitulo(rotulo[sug])}>
@@ -2923,6 +2930,7 @@ function RoadmapItemModal({ visible, cultoId, onClose, onSalvo, proximoIndice }:
             <TouchableOpacity style={[nm.saveBtn, (salvando || !titulo.trim()) && { opacity: 0.6 }]} onPress={salvar} disabled={salvando || !titulo.trim()} activeOpacity={0.85}>
               {salvando ? <ActivityIndicator color={C.onPrimary} /> : <><Ionicons name="add" size={18} color={C.onPrimary} /><Text style={nm.saveBtnText}>{t('banda.adicionarItem')}</Text></>}
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -3027,7 +3035,7 @@ function ComentariosModal({ culto, onClose, meuId, meuNome, souAdmin, nomePronto
   return (
     <Modal visible={!!culto} animationType="slide" transparent onRequestClose={onClose}>
       <View style={nm.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={[nm.sheet, { maxHeight: '88%' }]}>
             <View style={nm.header}>
               <View style={{ flex: 1 }}>
@@ -3053,7 +3061,7 @@ function ComentariosModal({ culto, onClose, meuId, meuNome, souAdmin, nomePronto
               <View style={s.loadingWrap}><ActivityIndicator color={C.primary} /></View>
             ) : aba === 'conversa' ? (
               <>
-                <ScrollView ref={listaRef} style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+                <ScrollView ref={listaRef} style={{ maxHeight: 340, flexShrink: 1 }} showsVerticalScrollIndicator={false}>
                   {comentarios.length === 0 ? (
                     <Text style={ind.vazio}>{t('banda.semComentarios')}</Text>
                   ) : comentarios.map(c => {
@@ -3093,7 +3101,7 @@ function ComentariosModal({ culto, onClose, meuId, meuNome, souAdmin, nomePronto
                 </View>
               </>
             ) : (
-              <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ maxHeight: 420, flexShrink: 1 }} showsVerticalScrollIndicator={false}>
                 {historico.length === 0 ? (
                   <Text style={ind.vazio}>{t('banda.semHistorico')}</Text>
                 ) : historico.map(h => (
@@ -3207,7 +3215,7 @@ function VersoesModal({ song, versoes, onClose, onMudou }: {
   return (
     <Modal visible={!!song} animationType="slide" transparent onRequestClose={onClose}>
       <View style={nm.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={[nm.sheet, { maxHeight: '90%' }]}>
             <View style={nm.header}>
               <View style={{ flex: 1 }}>
@@ -3217,7 +3225,7 @@ function VersoesModal({ song, versoes, onClose, onMudou }: {
               <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* O original nunca é uma linha no banco — aparece aqui só pra
                   deixar claro que ele continua existindo. */}
               <View style={vs.linha}>
@@ -3361,6 +3369,21 @@ function BandaMain() {
   const [escalaModal, setEscalaModal] = useState<{ tipo: 'culto' | 'ensaio'; eventoId: string } | null>(null);
   const [ministroModal, setMinistroModal] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Distância real do topo da tela até onde o chat começa. O KeyboardAvoidingView
+  // do RN calcula a sobreposição do teclado com a posição RELATIVA ao pai, então
+  // precisa receber esse deslocamento. Antes era um 90 fixo, mas a Banda fica
+  // dentro da área de membros (cabeçalho + abas por cima) e, com letra grande
+  // no iPhone, o cabeçalho cresce — o teclado cobria a caixa de mensagem.
+  const chatKavRef = useRef<View>(null);
+  const [chatKavOffset, setChatKavOffset] = useState(0);
+  // O KeyboardAvoidingView fica em y=0 dentro desta View, então o deslocamento
+  // certo é simplesmente onde ela está na tela.
+  const medirChatKav = useCallback(() => {
+    chatKavRef.current?.measureInWindow((_x, yNaTela) => {
+      const off = Math.max(0, Math.round(yNaTela));
+      setChatKavOffset(atual => (atual === off ? atual : off));
+    });
+  }, []);
   const today = todayISO();
 
   // Meu id NA BANDA. `user.id` é o perfil; a escala, a presença e agora o
@@ -3602,6 +3625,7 @@ function BandaMain() {
           id: culto.id, label: culto.label, date: culto.date,
           publicado: culto.publicado !== false,
           ministro_id: culto.ministro_id ?? null,
+          criado_por: culto.criado_por ?? null,
           roadmap: (roadmapData ?? []).map((r: any) => ({
             id: r.id, titulo: r.titulo, descricao: r.descricao,
             duracao_segundos: r.duracao_segundos, order_index: r.order_index,
@@ -3639,6 +3663,7 @@ function BandaMain() {
           id: ensaio.id, label: ensaio.label, date: ensaio.date,
           time: ensaio.time ?? '', local: ensaio.local ?? '', observacao: ensaio.observacao ?? '',
           publicado: ensaio.publicado !== false,
+          criado_por: ensaio.criado_por ?? null,
           entries: (entriesData ?? []).map((e: any) => ({
             song_id: e.song_id, song_key: e.song_key,
             bpm: String(e.bpm), order_index: e.order_index, nota: e.nota,
@@ -3862,8 +3887,18 @@ function BandaMain() {
   }, [cultos, ensaios]);
 
   const podeVerRascunho = !!meuPerfil?.admin;
-  const cultosVisiveis = cultos.filter(c => c.publicado || podeVerRascunho);
-  const ensaiosVisiveis = ensaios.filter(e => e.publicado || podeVerRascunho);
+  // Culto em rascunho: além do admin, o ministro do culto e quem o criou
+  // precisam voltar nele pra terminar a escala/setlist e publicar. Antes só o
+  // admin via — o ministro salvava como rascunho e o culto sumia da tela dele.
+  const podeGerirCulto = (c: Culto) =>
+    podeVerRascunho
+    || souOMinistro(c.ministro_id)
+    || (!!c.criado_por && c.criado_por === user?.id);
+  const cultosVisiveis = cultos.filter(c => c.publicado || podeGerirCulto(c));
+  // Ensaio não tem ministro: o rascunho aparece pro admin e pra quem criou.
+  const podeGerirEnsaio = (e: Ensaio) =>
+    podeVerRascunho || (!!e.criado_por && e.criado_por === user?.id);
+  const ensaiosVisiveis = ensaios.filter(e => e.publicado || podeGerirEnsaio(e));
 
   const alternarPublicado = async (tipo: 'culto' | 'ensaio', id: string, publicado: boolean) => {
     const tabela = tipo === 'culto' ? 'cultos' : 'ensaios';
@@ -4202,7 +4237,7 @@ function BandaMain() {
                         </View>
                       </View>
                       <View style={s.cultoHeaderRight}>
-                        {podeVerRascunho && (
+                        {podeGerirCulto(culto) && (
                           <TouchableOpacity
                             onPress={() => alternarPublicado('culto', culto.id, !culto.publicado)}
                             style={s.deleteBtn}
@@ -4253,7 +4288,7 @@ function BandaMain() {
                               procura pela ordem. A policy de `culto_songs` já
                               deixa qualquer membro da banda escrever; o limite
                               aqui é de interface, como o do rascunho. */}
-                          {(podeVerRascunho || souOMinistro(culto.ministro_id)) && (
+                          {podeGerirCulto(culto) && (
                             <TouchableOpacity
                               style={s.acaoBtn}
                               onPress={() => setSetlistModal({
@@ -4477,7 +4512,7 @@ function BandaMain() {
                         )}
                       </View>
                       <View style={s.cultoHeaderRight}>
-                        {podeVerRascunho && (
+                        {podeGerirEnsaio(ensaio) && (
                           <TouchableOpacity
                             onPress={() => alternarPublicado('ensaio', ensaio.id, !ensaio.publicado)}
                             style={s.deleteBtn}
@@ -4512,7 +4547,7 @@ function BandaMain() {
                             <Ionicons name="calendar-outline" size={15} color={C.textMuted} />
                             <Text style={s.acaoTexto}>{t('banda.agenda')}</Text>
                           </TouchableOpacity>
-                          {podeVerRascunho && (
+                          {podeGerirEnsaio(ensaio) && (
                             <TouchableOpacity
                               style={s.acaoBtn}
                               onPress={() => setSetlistModal({
@@ -4740,7 +4775,12 @@ function BandaMain() {
 
       {/* ══ CHAT ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'chat' && (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+        <View ref={chatKavRef} collapsable={false} style={{ flex: 1 }} onLayout={medirChatKav}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={chatKavOffset}
+        >
           {loadingChat ? (
             <View style={s.loadingWrap}><ActivityIndicator color={C.primary} /></View>
           ) : (
@@ -4822,6 +4862,7 @@ function BandaMain() {
             )}
           </View>
         </KeyboardAvoidingView>
+        </View>
       )}
 
       <IndisponibilidadeModal

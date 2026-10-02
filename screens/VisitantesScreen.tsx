@@ -557,7 +557,7 @@ function buildStyles(C: ReturnType<typeof paleta>) {
     centro: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 10 },
     vazio: { fontSize: 14, color: C.textMuted, textAlign: 'center', paddingHorizontal: 40, lineHeight: 20 },
     modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalCartao: {
+    modalCartao: { flexShrink: 1,
       backgroundColor: C.bg, borderTopLeftRadius: 20, borderTopRightRadius: 20,
       padding: 20, maxHeight: '88%',
     },

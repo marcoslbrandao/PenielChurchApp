@@ -577,7 +577,7 @@ export default function BibleScreen() {
                 <Ionicons name="close" size={22} color={C.textPrimary} />
               </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
               {idiomas.map((idioma) => (
                 <View key={idioma}>
                   <Text style={styles.idiomaLabel}>{idioma}</Text>
@@ -759,7 +759,7 @@ function buildStyles(C: PaletaBiblia) { return StyleSheet.create({
   busca: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.15)' },
   buscaInput: { flex: 1, fontSize: 13, color: '#fff' },
   modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: C.cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
+  modalCard: { flexShrink: 1, backgroundColor: C.cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   modalTitulo: { fontSize: 16, fontWeight: '500', color: C.textPrimary },
   idiomaLabel: { fontSize: 11, fontWeight: '500', color: C.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 16, marginBottom: 8 },

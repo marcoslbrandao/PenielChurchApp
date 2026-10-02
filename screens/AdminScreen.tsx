@@ -158,7 +158,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={mo.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
         <View style={mo.sheet}>
           <View style={mo.header}>
             <Text style={mo.title}>{t('admin.novoConvite')}</Text>
@@ -166,6 +166,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
           </View>
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
           {/* Tipo de convite */}
           <View style={mo.fieldWrap}>
@@ -220,6 +221,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
               <><Ionicons name="share-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.criarECompartilhar')}</Text></>
             )}
           </TouchableOpacity>
+          </ScrollView>
         </View>
         </KeyboardAvoidingView>
       </View>
@@ -229,7 +231,7 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
 
 const mo = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   title: { fontSize: 18, fontWeight: '800', color: C.text },
   codeBox: { backgroundColor: C.primary, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 20 },
@@ -298,7 +300,7 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
       <View style={mo.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '85%' }}>
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
               <Text style={mo.title}>{t('admin.registrarOferta')}</Text>
               <TouchableOpacity onPress={onClose}>
@@ -436,7 +438,7 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
       <View style={mo.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '85%' }}>
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
               <Text style={mo.title}>{t('admin.novoAviso')}</Text>
               <TouchableOpacity onPress={onClose}>
@@ -553,7 +555,7 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
       <View style={mo.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '85%' }}>
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
               <Text style={mo.title}>{t('admin.novoDevocional')}</Text>
               <TouchableOpacity onPress={onClose}>
@@ -697,7 +699,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
       <View style={mo.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '90%' }}>
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
               <Text style={mo.title}>{t('admin.novoEvento')}</Text>
               <TouchableOpacity onPress={onClose}>
@@ -883,7 +885,7 @@ function NovoShortModal({ visible, onClose, onSaved }: {
       <View style={mo.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '80%' }}>
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
               <Text style={mo.title}>{t('admin.novoShort')}</Text>
               <TouchableOpacity onPress={onClose}>
@@ -1014,7 +1016,7 @@ function NovaMensagemModal({ visible, onClose, onSaved }: {
       <View style={mo.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '90%' }}>
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
-          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
               <Text style={mo.title}>{t('admin.novaMensagem')}</Text>
               <TouchableOpacity onPress={onClose}>
@@ -1120,7 +1122,7 @@ function NovaAreaModal({ visible, onClose, onSaved }: {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={mo.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
         <View style={mo.sheet}>
           <View style={mo.header}>
             <Text style={mo.title}>{t('admin.novaAreaDeEscala')}</Text>
@@ -1128,6 +1130,7 @@ function NovaAreaModal({ visible, onClose, onSaved }: {
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
           </View>
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
           <View style={mo.fieldWrap}>
             <Text style={mo.fieldLabel}>{t('admin.nomeDaArea')}</Text>
@@ -1152,6 +1155,7 @@ function NovaAreaModal({ visible, onClose, onSaved }: {
           <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
             {saving ? <ActivityIndicator color="#fff" /> : <Text style={mo.saveBtnText}>{t('admin.criarArea')}</Text>}
           </TouchableOpacity>
+          </ScrollView>
         </View>
         </KeyboardAvoidingView>
       </View>
@@ -1260,7 +1264,7 @@ function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
             <Text style={[s.sectionLabel, { marginTop: 16 }]}>
               Time atual ({voluntarios.length}) · vagas por domingo: {area.vagas_padrao}
             </Text>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320 }}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320, flexShrink: 1 }}>
               {loading ? (
                 <ActivityIndicator color={C.purple} style={{ marginVertical: 20 }} />
               ) : voluntarios.length === 0 ? (
@@ -1284,6 +1288,242 @@ function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
   );
 }
 
+// ─── Ver e editar a escala (admin / líder da área) ─────────────────────────────
+// Trocar quem foi escalado, tirar alguém, ou preencher uma vaga livre, nas
+// próximas datas. A RLS de `escala_designacoes` já libera escrita pro admin e
+// pro líder daquela área ("Líder da área gerencia a escala"), então o filtro
+// de áreas aqui é só pra cada líder ver o que é dele. Nomes vêm pelas RPCs
+// (`escala_proximas_designacoes`, `voluntarios_da_area`,
+// `membros_para_area_escala`), porque a RLS de `members` não abre o diretório
+// pro líder. Sem push ao trocar — decisão do Marcos em 28/09.
+type DesignacaoEdit = { id: string; data: string; area_id: string; membro_id: string; nome: string; sobrenome: string };
+type AlvoEdicao =
+  | { modo: 'trocar'; area: EscalaArea; data: string; designacao: DesignacaoEdit }
+  | { modo: 'adicionar'; area: EscalaArea; data: string };
+
+function dataEscalaLonga(iso: string, lng: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(lng, { weekday: 'long', day: '2-digit', month: 'long' });
+}
+
+function EditarEscalaModal({ visible, areas, userId, onClose }: {
+  visible: boolean; areas: EscalaArea[]; userId: string | undefined; onClose: () => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const [loading, setLoading] = useState(false);
+  const [designacoes, setDesignacoes] = useState<DesignacaoEdit[]>([]);
+  const [alvo, setAlvo] = useState<AlvoEdicao | null>(null);
+  const [time, setTime] = useState<MembroDiretorio[]>([]);
+  const [carregandoTime, setCarregandoTime] = useState(false);
+  const [query, setQuery] = useState('');
+  const [resultados, setResultados] = useState<MembroDiretorio[]>([]);
+  const [salvando, setSalvando] = useState(false);
+
+  const idsAreas = areas.map(a => a.id).join(',');
+
+  const carregar = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.rpc('escala_proximas_designacoes');
+    if (error) Alert.alert(t('common.erro'), error.message);
+    const permitidas = new Set(idsAreas.split(','));
+    setDesignacoes(((data ?? []) as any[])
+      .filter(d => permitidas.has(d.area_id))
+      .map(d => ({ id: d.id, data: d.data, area_id: d.area_id, membro_id: d.membro_id, nome: d.nome ?? '', sobrenome: d.sobrenome ?? '' })));
+    setLoading(false);
+  }, [idsAreas, t]);
+
+  useEffect(() => {
+    if (visible) { setAlvo(null); carregar(); }
+  }, [visible, carregar]);
+
+  // Ao escolher trocar/adicionar: carrega o time daquela área.
+  useEffect(() => {
+    if (!alvo) return;
+    setQuery(''); setResultados([]); setTime([]);
+    setCarregandoTime(true);
+    supabase.rpc('voluntarios_da_area', { p_area_id: alvo.area.id }).then(({ data }) => {
+      setTime(((data ?? []) as any[]).map(r => ({ id: r.membro_id, nome: r.nome ?? '', sobrenome: r.sobrenome ?? '' })));
+      setCarregandoTime(false);
+    });
+  }, [alvo]);
+
+  // Busca de alguém fora do time (a função já exclui quem é do time).
+  useEffect(() => {
+    if (!alvo || query.trim().length < 2) { setResultados([]); return; }
+    const areaId = alvo.area.id;
+    const tm = setTimeout(() => {
+      supabase.rpc('membros_para_area_escala', { p_area_id: areaId, p_busca: query.trim() })
+        .then(({ data }) => setResultados((data ?? []) as MembroDiretorio[]));
+    }, 300);
+    return () => clearTimeout(tm);
+  }, [query, alvo]);
+
+  const mensagemDeErro = (error: { code?: string; message: string }) =>
+    error.code === '23505' ? t('admin.escalaJaEscaladoNoDia') : error.message;
+
+  const escolher = async (m: MembroDiretorio) => {
+    if (!alvo || salvando) return;
+    setSalvando(true);
+    const { error } = alvo.modo === 'trocar'
+      ? await supabase.from('escala_designacoes').update({ membro_id: m.id }).eq('id', alvo.designacao.id)
+      : await supabase.from('escala_designacoes').insert({
+          area_id: alvo.area.id, membro_id: m.id, data: alvo.data,
+          gerado_automaticamente: false, criado_por: userId,
+        });
+    setSalvando(false);
+    if (error) { Alert.alert(t('common.erro'), mensagemDeErro(error)); return; }
+    setAlvo(null);
+    carregar();
+  };
+
+  const remover = (d: DesignacaoEdit, area: EscalaArea) => {
+    Alert.alert(
+      t('admin.escalaRemoverTitulo'),
+      t('admin.escalaRemoverMsg', { nome: `${d.nome} ${d.sobrenome}`.trim(), area: area.nome, data: dataEscalaLonga(d.data, i18n.language) }),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        { text: t('common.remover'), style: 'destructive', onPress: async () => {
+          const { error } = await supabase.from('escala_designacoes').delete().eq('id', d.id);
+          if (error) { Alert.alert(t('common.erro'), error.message); return; }
+          carregar();
+        }},
+      ],
+    );
+  };
+
+  const areasOrdenadas = [...areas].sort((a, b) => a.nome.localeCompare(b.nome));
+  const datas = [...new Set(designacoes.map(d => d.data))].sort();
+  // Quem já serve em cada data (em qualquer área visível) — pra não oferecer
+  // a mesma pessoa duas vezes no mesmo dia. O banco também barra (unique).
+  const ocupadosNoDia = (data: string) => new Set(designacoes.filter(d => d.data === data).map(d => d.membro_id));
+
+  const linhaPessoa = (m: MembroDiretorio, ocupado: boolean) => (
+    <TouchableOpacity
+      key={m.id}
+      disabled={ocupado || salvando}
+      onPress={() => escolher(m)}
+      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border, opacity: ocupado ? 0.45 : 1 }}
+    >
+      <Text style={{ flex: 1, fontSize: 14, color: C.text }}>{m.nome} {m.sobrenome}</Text>
+      {ocupado
+        ? <Text style={{ fontSize: 11, color: C.textMuted }}>{t('admin.escalaJaServeNoDia')}</Text>
+        : <Ionicons name="checkmark-circle-outline" size={22} color={C.purple} />}
+    </TouchableOpacity>
+  );
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={() => (alvo ? setAlvo(null) : onClose())}>
+      <View style={mo.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
+          <View style={[mo.sheet, { maxHeight: '100%' }]}>
+            {alvo ? (
+              <>
+                <View style={mo.header}>
+                  <TouchableOpacity onPress={() => setAlvo(null)} hitSlop={8} style={{ marginRight: 10 }}>
+                    <Ionicons name="arrow-back" size={22} color={C.textMuted} />
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={mo.title} numberOfLines={2}>
+                      {alvo.modo === 'trocar'
+                        ? t('admin.escalaTrocarTitulo', { nome: alvo.designacao.nome })
+                        : t('admin.escalaAdicionarTitulo', { area: alvo.area.nome })}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>
+                      {alvo.area.nome} · {dataEscalaLonga(alvo.data, i18n.language)}
+                    </Text>
+                  </View>
+                  {salvando && <ActivityIndicator color={C.purple} />}
+                </View>
+
+                <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <Text style={[s.sectionLabel, { marginTop: 4 }]}>{t('admin.escalaTimeDaArea')}</Text>
+                  {carregandoTime ? (
+                    <ActivityIndicator color={C.purple} style={{ marginVertical: 16 }} />
+                  ) : time.length === 0 ? (
+                    <Text style={s.emptyText}>{t('admin.ninguemAdicionadoAinda')}</Text>
+                  ) : (() => {
+                    const ocupados = ocupadosNoDia(alvo.data);
+                    return time.map(m => linhaPessoa(m, ocupados.has(m.id)));
+                  })()}
+
+                  <Text style={[s.sectionLabel, { marginTop: 18 }]}>{t('admin.escalaOutraPessoa')}</Text>
+                  <View style={mo.fieldRow}>
+                    <Ionicons name="search-outline" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
+                    <TextInput
+                      style={mo.fieldInput}
+                      placeholder={t('admin.buscarNoDiretorioPraAdicionar')}
+                      placeholderTextColor={C.textDim}
+                      value={query}
+                      onChangeText={setQuery}
+                    />
+                  </View>
+                  {(() => {
+                    const ocupados = ocupadosNoDia(alvo.data);
+                    return resultados.map(m => linhaPessoa(m, ocupados.has(m.id)));
+                  })()}
+                  <View style={{ height: 12 }} />
+                </ScrollView>
+              </>
+            ) : (
+              <>
+                <View style={mo.header}>
+                  <Text style={mo.title}>{t('admin.escalaVerEditar')}</Text>
+                  <TouchableOpacity onPress={onClose}>
+                    <Ionicons name="close" size={22} color={C.textMuted} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
+                  {loading ? (
+                    <ActivityIndicator color={C.purple} style={{ marginVertical: 30 }} />
+                  ) : datas.length === 0 ? (
+                    <Text style={[s.emptyText, { marginVertical: 20 }]}>{t('admin.escalaNadaAgendado')}</Text>
+                  ) : datas.map(data => (
+                    <View key={data} style={{ marginBottom: 18 }}>
+                      <Text style={[s.sectionLabel, { textTransform: 'capitalize' }]}>{dataEscalaLonga(data, i18n.language)}</Text>
+                      {areasOrdenadas.map(area => {
+                        const pessoas = designacoes.filter(d => d.data === data && d.area_id === area.id);
+                        const livres = Math.max(0, area.vagas_padrao - pessoas.length);
+                        return (
+                          <View key={area.id} style={{ borderWidth: 1, borderColor: C.border, borderRadius: 12, padding: 12, marginBottom: 8 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 4 }}>{area.nome}</Text>
+                            {pessoas.map(d => (
+                              <View key={d.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 14 }}>
+                                <Text style={{ flex: 1, fontSize: 14, color: C.text }}>{d.nome} {d.sobrenome}</Text>
+                                <TouchableOpacity onPress={() => setAlvo({ modo: 'trocar', area, data, designacao: d })} hitSlop={8}>
+                                  <Ionicons name="swap-horizontal" size={20} color={C.purple} />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => remover(d, area)} hitSlop={8}>
+                                  <Ionicons name="trash-outline" size={18} color={C.danger} />
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                            {Array.from({ length: livres }).map((_, i) => (
+                              <TouchableOpacity
+                                key={`livre-${i}`}
+                                onPress={() => setAlvo({ modo: 'adicionar', area, data })}
+                                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 8 }}
+                              >
+                                <Ionicons name="add-circle-outline" size={20} color={C.textMuted} />
+                                <Text style={{ fontSize: 13, color: C.textMuted }}>{t('admin.escalaVagaLivre')}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ))}
+                  <View style={{ height: 10 }} />
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Gerador de Escala Automático (admin) ──────────────────────────────────────
 // Distribui o pool de voluntários de cada área pelos domingos do período
 // escolhido, por rotação (cada pessoa vai avançando na fila da própria área),
@@ -1296,8 +1536,14 @@ function proximoDomingo(): Date {
   hoje.setDate(hoje.getDate() + diasAte);
   return hoje;
 }
+// Data de CALENDÁRIO local, montada pelos componentes. `toISOString()` converte
+// pra UTC: no horário de verão britânico, meia-noite de domingo em Londres é
+// 23h de sábado em UTC, e o gerador gravava a escala inteira NO SÁBADO (de
+// abril a outubro). Corrigido em 28/09/2026.
 function toISODate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 function formatarDataBR(iso: string): string {
   const [y, m, d] = iso.split('-');
@@ -1416,7 +1662,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={mo.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={mo.sheet}>
             <View style={mo.header}>
               <Text style={mo.title}>{t('admin.gerarEscalaDoSemestre')}</Text>
@@ -1424,6 +1670,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 16, lineHeight: 18 }}>
               Preenche automaticamente as vagas de todas as áreas, revezando o time de voluntários de cada uma. Ninguém é escalado em duas áreas no mesmo domingo, e domingos/áreas já preenchidos manualmente não são sobrescritos.
@@ -1454,6 +1701,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
                 <><Ionicons name="shuffle-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.gerarEscala')}</Text></>
               )}
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -1642,6 +1890,7 @@ export default function AdminScreen() {
   const [areaModalVisible, setAreaModalVisible] = useState(false);
   const [areaGerenciarVisible, setAreaGerenciarVisible] = useState<EscalaArea | null>(null);
   const [gerarEscalaModalVisible, setGerarEscalaModalVisible] = useState(false);
+  const [editarEscalaVisible, setEditarEscalaVisible] = useState(false);
   const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao'>('convites');
   // São 9 abas e só ~3 cabem na tela por vez — sem esse indicador, dava a
   // impressão de que a lista de abas estava cortada/quebrada (só aparecia
@@ -2505,6 +2754,18 @@ export default function AdminScreen() {
                     <Ionicons name="shuffle-outline" size={22} color={C.purple} />
                   </TouchableOpacity>
                 )}
+                {areasVisiveis.length > 0 && (
+                  <TouchableOpacity
+                    style={[s.inviteCard, { marginBottom: 16 }]}
+                    onPress={() => setEditarEscalaVisible(true)}
+                  >
+                    <View style={s.inviteLeft}>
+                      <Text style={s.inviteCode}>{t('admin.escalaVerEditar')}</Text>
+                      <Text style={s.emptyText}>{t('admin.escalaVerEditarDesc')}</Text>
+                    </View>
+                    <Ionicons name="create-outline" size={22} color={C.purple} />
+                  </TouchableOpacity>
+                )}
                 <Text style={s.sectionLabel}>{t('admin.areasDeServico')}</Text>
                 {areasVisiveis.length === 0 ? (
                   <View style={s.empty}>
@@ -2669,6 +2930,12 @@ export default function AdminScreen() {
         area={areaGerenciarVisible}
         onClose={() => setAreaGerenciarVisible(null)}
         onChanged={fetchData}
+      />
+      <EditarEscalaModal
+        visible={editarEscalaVisible}
+        areas={role === 'admin' ? escalaAreas : escalaAreas.filter(a => areasLideradas.includes(a.id))}
+        userId={user?.id}
+        onClose={() => setEditarEscalaVisible(false)}
       />
       <GerarEscalaModal
         visible={gerarEscalaModalVisible}

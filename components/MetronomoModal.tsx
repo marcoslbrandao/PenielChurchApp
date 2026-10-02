@@ -281,7 +281,7 @@ export default function MetronomoModal({ visible, onClose, bpmInicial, titulo }:
 
 const buildM = (C: BandaColors) => StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: C.overlay },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 28 },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 28 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 22 },
   titulo: { fontSize: 18, fontWeight: '800', color: C.text },
   subtitulo: { fontSize: 12, color: C.textMuted, marginTop: 2 },

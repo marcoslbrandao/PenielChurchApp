@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useCampoTraduzido } from '../lib/useTraducao';
+import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Tela "Devocionais" — mostra só UM destino por vez, não tudo junto:
@@ -60,6 +61,12 @@ function DevocionalItem({ dev, aberto, onToggle }: { dev: Devocional; aberto: bo
           <Text style={styles.versiculo}>"{versiculo}"</Text>
           <Text style={styles.referencia}>{referencia}</Text>
           <Text style={styles.texto}>{texto}</Text>
+          <BotaoCompartilharDevocional
+            original={dev}
+            traduzido={{ titulo, versiculo, referencia, texto }}
+            corFundo="rgba(245,200,66,0.15)"
+            corTexto="#F5C842"
+          />
         </View>
       )}
     </TouchableOpacity>

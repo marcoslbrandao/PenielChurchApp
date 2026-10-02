@@ -253,6 +253,9 @@
     "nenhumShortAinda": "Aucune vidéo publiée pour le moment",
     "materiaisGrupo": "📄 Documents du Groupe",
     "nenhumMaterialAinda": "Aucun document publié pour le moment",
+    "erroAbrirMaterial": "Impossible d'ouvrir le document. Réessayez.",
+    "removerMaterialDriveMsg": "Retirer « {{titulo}} » ? Il disparaît de l'app pour tout le groupe et va dans la corbeille du Drive de l'église (récupérable pendant 30 jours).",
+    "erroRemoverMaterial": "Impossible de retirer le document. Réessayez.",
     "entrarContatoLider": "Contacter le responsable",
     "erroWhatsapp": "Impossible d'ouvrir WhatsApp.",
     "tagPresencial": "En présentiel",
@@ -1014,6 +1017,18 @@
     "erroAoGerar": "Échec de la génération",
     "escalaGerada": "Planning généré",
     "gerarEscalaDoSemestre": "Générer le Planning du Semestre",
+    "escalaVerEditar": "Voir et modifier le planning",
+    "escalaVerEditarDesc": "Remplacer ou retirer une personne et combler les places libres",
+    "escalaNadaAgendado": "Aucun planning pour les prochaines dates. Générez d'abord le planning du semestre.",
+    "escalaVagaLivre": "Place libre — ajouter",
+    "escalaTrocarTitulo": "Remplacer {{nome}}",
+    "escalaAdicionarTitulo": "Ajouter à {{area}}",
+    "escalaTimeDaArea": "Équipe du service",
+    "escalaOutraPessoa": "Une autre personne",
+    "escalaJaServeNoDia": "déjà prévu ce jour",
+    "escalaJaEscaladoNoDia": "Cette personne est déjà prévue dans un autre service ce jour-là.",
+    "escalaRemoverTitulo": "Retirer du planning",
+    "escalaRemoverMsg": "Retirer {{nome}} de {{area}} le {{data}} ? La place sera libre.",
     "domingoDeInicio": "Dimanche de début",
     "ddMmAaaa": "JJ/MM/AAAA",
     "quantidadeDeDomingos": "Nombre de dimanches",
@@ -1425,5 +1440,10 @@
     "obrigatoriaTitulo": "Mettez à jour pour continuer",
     "obrigatoriaTexto": "Cette version de l'app ({{instalada}}) n'est plus prise en charge. Installez la version {{minima}} ou plus récente depuis le store pour continuer à utiliser Peniel Church.",
     "erroLoja": "Impossible d'ouvrir le store. Cherchez « Peniel Church » sur l'App Store ou Google Play."
+  },
+  "compartilharApp": {
+    "baixe": "Téléchargez l'app sur l'App Store : {{url}}",
+    "googlePlayEmBreve": "Bientôt disponible sur Google Play",
+    "googlePlay": "Android (Google Play) : {{url}}"
   }
 }

@@ -253,6 +253,9 @@
     "nenhumShortAinda": "No videos published yet",
     "materiaisGrupo": "📄 Group Materials",
     "nenhumMaterialAinda": "No materials published yet",
+    "erroAbrirMaterial": "Could not open the material. Please try again.",
+    "removerMaterialDriveMsg": "Remove \"{{titulo}}\"? It will disappear from the app for the whole group and go to the church Drive bin (recoverable for 30 days).",
+    "erroRemoverMaterial": "Could not remove the material. Please try again.",
     "entrarContatoLider": "Get in touch with the leader",
     "erroWhatsapp": "Couldn't open WhatsApp.",
     "tagPresencial": "In person",
@@ -1014,6 +1017,18 @@
     "erroAoGerar": "Couldn't generate",
     "escalaGerada": "Rota generated",
     "gerarEscalaDoSemestre": "Generate Half-Year Rota",
+    "escalaVerEditar": "View and edit rota",
+    "escalaVerEditarDesc": "Swap or remove who is on the rota, and fill open slots",
+    "escalaNadaAgendado": "No rota for the upcoming dates. Generate the half-year rota first.",
+    "escalaVagaLivre": "Open slot — add",
+    "escalaTrocarTitulo": "Swap {{nome}}",
+    "escalaAdicionarTitulo": "Add to {{area}}",
+    "escalaTimeDaArea": "Area team",
+    "escalaOutraPessoa": "Someone else",
+    "escalaJaServeNoDia": "already serving this day",
+    "escalaJaEscaladoNoDia": "This person is already on the rota in another area this day.",
+    "escalaRemoverTitulo": "Remove from rota",
+    "escalaRemoverMsg": "Remove {{nome}} from {{area}} on {{data}}? The slot will be open.",
     "domingoDeInicio": "Starting Sunday",
     "ddMmAaaa": "DD/MM/YYYY",
     "quantidadeDeDomingos": "Number of Sundays",
@@ -1425,5 +1440,10 @@
     "obrigatoriaTitulo": "Update to continue",
     "obrigatoriaTexto": "This version of the app ({{instalada}}) is no longer supported. Install version {{minima}} or newer from the store to keep using Peniel Church.",
     "erroLoja": "Couldn't open the store. Search for \"Peniel Church\" on the App Store or Google Play."
+  },
+  "compartilharApp": {
+    "baixe": "Download the app on the App Store: {{url}}",
+    "googlePlayEmBreve": "Coming soon to Google Play",
+    "googlePlay": "Android (Google Play): {{url}}"
   }
 }

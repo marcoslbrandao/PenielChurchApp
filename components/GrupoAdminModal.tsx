@@ -318,7 +318,7 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
               ))}
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 14 }}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginTop: 14, flexShrink: 1 }}>
               {secao === 'aviso' && (
                 <>
                   <View style={s.fieldWrap}>
@@ -512,7 +512,7 @@ function SaveBtn({ s, cor, saving, onPress, label, icon }: {
 
 function buildStyles(C: PaletaGrupoAdmin) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 },
+  sheet: { flexShrink: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
   title: { fontSize: 17, fontWeight: '800', color: C.text },
   subtitle: { fontSize: 11, color: C.textMuted, marginTop: 3 },

@@ -105,7 +105,7 @@ function EditProfileModal({ visible, profile, userId, onClose, onSaved }: {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={em.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={em.sheet}>
             <View style={em.header}>
               <Text style={em.title}>{t('perfil.editarPerfil')}</Text>
@@ -135,7 +135,7 @@ function EditProfileModal({ visible, profile, userId, onClose, onSaved }: {
 
 function buildEm(C: Paleta) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   title: { fontSize: 18, fontWeight: '800', color: C.text },
   field: { marginBottom: 16 },
@@ -148,7 +148,7 @@ function buildEm(C: Paleta) { return StyleSheet.create({
 // ─── List modal styles (compartilhado entre os modais abaixo) ────────────────
 function buildLm(C: Paleta) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '82%' },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '82%' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   title: { fontSize: 18, fontWeight: '800', color: C.text },
   empty: { alignItems: 'center', paddingVertical: 40, gap: 10 },
@@ -208,7 +208,7 @@ function SavedVersesModal({ visible, userId, onClose }: {
             <Text style={lm.title}>{t('perfil.versiculosSalvos')}</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
           </View>
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
             {loading ? (
               <ActivityIndicator color={C.primary} style={{ marginVertical: 30 }} />
             ) : items.length === 0 ? (
@@ -265,7 +265,7 @@ function ReadingHistoryModal({ visible, userId, onClose }: {
             <Text style={lm.title}>{t('perfil.historicoDeEstudos')}</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
           </View>
-          <ScrollView showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
             {loading ? (
               <ActivityIndicator color={C.primary} style={{ marginVertical: 30 }} />
             ) : items.length === 0 ? (
@@ -360,7 +360,7 @@ function PrayerRequestsModal({ visible, userId, onClose }: {
                 <Ionicons name="add" size={18} color="#fff" />
                 <Text style={lm.addBtnText}>{t('perfil.novoPedido')}</Text>
               </TouchableOpacity>
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
                 {loading ? (
                   <ActivityIndicator color={C.primary} style={{ marginVertical: 30 }} />
                 ) : items.length === 0 ? (
@@ -427,7 +427,7 @@ function LanguagePickerModal({ visible, onClose }: { visible: boolean; onClose: 
 
 function buildLang(C: Paleta) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
+  sheet: { flexShrink: 1, backgroundColor: C.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 36 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   title: { fontSize: 18, fontWeight: '800', color: C.text },
   opcao: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 12, marginBottom: 4 },
@@ -535,7 +535,7 @@ function DeleteAccountModal({ visible, onClose }: { visible: boolean; onClose: (
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={em.overlay}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
           <View style={em.sheet}>
             <View style={em.header}>
               <Text style={em.title}>{t('perfil.excluirConta')}</Text>
@@ -543,6 +543,7 @@ function DeleteAccountModal({ visible, onClose }: { visible: boolean; onClose: (
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
             <View style={dam.warningBox}>
               <Ionicons name="warning-outline" size={20} color="#922B21" />
@@ -570,6 +571,7 @@ function DeleteAccountModal({ visible, onClose }: { visible: boolean; onClose: (
             >
               {deleting ? <ActivityIndicator color="#fff" /> : <Text style={dam.dangerBtnText}>{t('perfil.excluirContaPermanentemente')}</Text>}
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>

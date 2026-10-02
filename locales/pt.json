@@ -253,6 +253,9 @@
     "nenhumShortAinda": "Nenhum vídeo publicado ainda",
     "materiaisGrupo": "📄 Materiais do Grupo",
     "nenhumMaterialAinda": "Nenhum material publicado ainda",
+    "erroAbrirMaterial": "Não foi possível abrir o material. Tente de novo.",
+    "removerMaterialDriveMsg": "Remover \"{{titulo}}\"? O arquivo sai do app para todo o grupo e vai para a lixeira do Drive da igreja (dá para recuperar por 30 dias).",
+    "erroRemoverMaterial": "Não foi possível remover o material. Tente de novo.",
     "entrarContatoLider": "Entrar em contato com o líder",
     "erroWhatsapp": "Não foi possível abrir o WhatsApp.",
     "tagPresencial": "Presencial",
@@ -1014,6 +1017,18 @@
     "erroAoGerar": "Erro ao gerar",
     "escalaGerada": "Escala gerada",
     "gerarEscalaDoSemestre": "Gerar Escala do Semestre",
+    "escalaVerEditar": "Ver e editar escala",
+    "escalaVerEditarDesc": "Trocar ou tirar quem foi escalado, e preencher vagas livres",
+    "escalaNadaAgendado": "Nenhuma escala nas próximas datas. Gere a escala do semestre primeiro.",
+    "escalaVagaLivre": "Vaga livre — adicionar",
+    "escalaTrocarTitulo": "Trocar {{nome}}",
+    "escalaAdicionarTitulo": "Adicionar em {{area}}",
+    "escalaTimeDaArea": "Time da área",
+    "escalaOutraPessoa": "Outra pessoa",
+    "escalaJaServeNoDia": "já escalado neste dia",
+    "escalaJaEscaladoNoDia": "Essa pessoa já está escalada em outra área neste dia.",
+    "escalaRemoverTitulo": "Tirar da escala",
+    "escalaRemoverMsg": "Tirar {{nome}} de {{area}} em {{data}}? A vaga fica livre.",
     "domingoDeInicio": "Domingo de início",
     "ddMmAaaa": "DD/MM/AAAA",
     "quantidadeDeDomingos": "Quantidade de domingos",
@@ -1425,5 +1440,10 @@
     "obrigatoriaTitulo": "Atualize para continuar",
     "obrigatoriaTexto": "Esta versão do app ({{instalada}}) não é mais compatível. Instale a versão {{minima}} ou mais nova pela loja para continuar usando o Peniel Church.",
     "erroLoja": "Não foi possível abrir a loja. Procure por \"Peniel Church\" na App Store ou no Google Play."
+  },
+  "compartilharApp": {
+    "baixe": "Baixe o app na App Store: {{url}}",
+    "googlePlayEmBreve": "Em breve no Google Play",
+    "googlePlay": "Android (Google Play): {{url}}"
   }
 }

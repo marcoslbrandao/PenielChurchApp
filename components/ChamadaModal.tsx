@@ -232,7 +232,7 @@ export default function ChamadaModal({
                   </Text>
                 )}
 
-                <ScrollView style={{ marginTop: 6 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <ScrollView style={{ marginTop: 6, flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                   {participantes.map(p => {
                     const m = marcas[p.membro_id];
                     return (
@@ -298,7 +298,7 @@ export default function ChamadaModal({
 
 function buildStyles(C: PaletaChamada) { return StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  sheet: { backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 26 },
+  sheet: { flexShrink: 1, backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 },
   title: { fontSize: 17, fontWeight: '800', color: C.text },
   subtitle: { fontSize: 11, color: C.textMuted, marginTop: 3 },

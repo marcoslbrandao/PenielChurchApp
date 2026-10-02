@@ -634,6 +634,65 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
 // ─── Novo Evento (Agenda) Modal ───────────────────────────────────────────────
 const DIAS_SEMANA_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+// ─── Contas de visitantes (Admin → Estatísticas) ────────────────────────────
+// Quem criou conta no app mas ainda não é membro (profiles.role = 'visitante').
+// O e-mail vem de auth.users pela RPC listar_contas_visitantes (só admin).
+type ContaVisitante = { id: string; nome: string | null; email: string | null; criado_em: string; ultimo_acesso: string | null };
+
+function ContasVisitantesModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [contas, setContas] = useState<ContaVisitante[]>([]);
+  const [carregando, setCarregando] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    setCarregando(true);
+    supabase.rpc('listar_contas_visitantes').then(({ data, error }) => {
+      setCarregando(false);
+      if (error) { Alert.alert(t('common.erro'), error.message); return; }
+      setContas((data as ContaVisitante[]) ?? []);
+    });
+  }, [visible]);
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={mo.overlay}>
+        <View style={[mo.sheet, { maxHeight: '85%' }]}>
+          <View style={mo.header}>
+            <Text style={mo.title}>{t('admin.contasVisitantes')}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={22} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
+          <Text style={[mo.fieldHint, { marginTop: -12, marginBottom: 12 }]}>{t('admin.contasVisitantesDica')}</Text>
+          {carregando ? (
+            <ActivityIndicator color={C.primary} style={{ marginVertical: 24 }} />
+          ) : contas.length === 0 ? (
+            <Text style={{ color: C.textMuted, textAlign: 'center', marginVertical: 24 }}>{t('admin.nenhumaContaVisitante')}</Text>
+          ) : (
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
+              {contas.map(c => (
+                <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>{c.nome?.trim() || '—'}</Text>
+                  {!!c.email && (
+                    <TouchableOpacity onPress={() => Linking.openURL(`mailto:${c.email}`)}>
+                      <Text style={{ fontSize: 13, color: C.primary, marginTop: 2 }}>{c.email}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <Text style={{ fontSize: 11, color: C.textDim, marginTop: 4 }}>
+                    {t('admin.contaCriadaEm')} {isoParaDataBR(c.criado_em)}
+                    {c.ultimo_acesso ? ` · ${t('admin.ultimoAcesso')} ${isoParaDataBR(c.ultimo_acesso)}` : ''}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Imagem de evento (bucket 'eventos' no Storage) ──────────────────────────
 // Mesmo jeito de enviar da capa das Mensagens: lê o arquivo em base64 e sobe
 // para o bucket. O bucket é público para leitura (a Home mostra a imagem até
@@ -1950,6 +2009,7 @@ export default function AdminScreen() {
   const [avisoModalVisible, setAvisoModalVisible] = useState(false);
   const [devocionalModalVisible, setDevocionalModalVisible] = useState(false);
   const [eventoModalVisible, setEventoModalVisible] = useState(false);
+  const [contasVisitantesVisible, setContasVisitantesVisible] = useState(false);
   const [shortModalVisible, setShortModalVisible] = useState(false);
   const [mensagemModalVisible, setMensagemModalVisible] = useState(false);
   const [escalaAreas, setEscalaAreas] = useState<EscalaArea[]>([]);
@@ -2905,15 +2965,21 @@ export default function AdminScreen() {
                   { label: t('admin.statMembros'), value: stats.membros, icon: 'person-outline', color: C.success },
                   { label: t('admin.statLideres'), value: stats.lideres, icon: 'star-outline', color: C.accent },
                   { label: t('admin.statVisitantes'), value: stats.visitantes, icon: 'eye-outline', color: C.textMuted },
-                ].map(stat => (
-                  <View key={stat.label} style={s.statCard}>
-                    <View style={[s.statIcon, { backgroundColor: stat.color + '18' }]}>
-                      <Ionicons name={stat.icon as any} size={22} color={stat.color} />
-                    </View>
-                    <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
-                    <Text style={s.statLabel}>{stat.label}</Text>
-                  </View>
-                ))}
+                ].map(stat => {
+                  // Só o card de Visitantes abre uma lista (nome e e-mail das contas).
+                  const abreLista = stat.label === t('admin.statVisitantes') && ehAdmin;
+                  return (
+                    <TouchableOpacity key={stat.label} style={s.statCard} disabled={!abreLista} activeOpacity={0.7}
+                      onPress={() => setContasVisitantesVisible(true)}>
+                      <View style={[s.statIcon, { backgroundColor: stat.color + '18' }]}>
+                        <Ionicons name={stat.icon as any} size={22} color={stat.color} />
+                      </View>
+                      <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
+                      <Text style={s.statLabel}>{stat.label}</Text>
+                      {abreLista && <Text style={{ fontSize: 10, color: C.primary, marginTop: 4 }}>{t('admin.verLista')}</Text>}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               <Text style={[s.sectionLabel, { marginTop: 24 }]}>{t('admin.convites')}</Text>
@@ -3001,6 +3067,7 @@ export default function AdminScreen() {
         onClose={() => setDevocionalModalVisible(false)}
         onSaved={fetchData}
       />
+      <ContasVisitantesModal visible={contasVisitantesVisible} onClose={() => setContasVisitantesVisible(false)} />
       <NovoEventoModal
         visible={eventoModalVisible}
         onClose={() => setEventoModalVisible(false)}

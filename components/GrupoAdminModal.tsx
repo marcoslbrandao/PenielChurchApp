@@ -465,7 +465,7 @@ export default function GrupoAdminModal({ visible, grupo, grupoNome, cor, onClos
                       </View>
                     </View>
                   )}
-                  <Text style={s.hint}>Sobe o arquivo em qualquer lugar (Drive, WeTransfer etc.) e cola o link de acesso aqui. Só quem está no grupo {grupoNome} consegue ver. Preso a uma aula, ele aparece dentro daquela aula em vez de na lista de materiais do grupo.</Text>
+                  <Text style={s.hint}>PDF, apostila, slides: o melhor caminho é soltar o arquivo na pasta do grupo {grupoNome} em "Peniel App - Materiais", no Drive da igreja. Ele aparece aqui sozinho em até 10 minutos, o grupo recebe push, e ninguém precisa pedir acesso. Este formulário é para publicar um link (site, vídeo, arquivo de fora). Preso a uma aula, o material aparece também dentro daquela aula.</Text>
                   <SaveBtn s={s} cor={cor} saving={saving} onPress={publicarMaterial} label="Publicar material" icon="document-text-outline" />
                 </>
               )}

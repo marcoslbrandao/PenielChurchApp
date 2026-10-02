@@ -441,3 +441,11 @@ entrypoint = "./functions/stripe-webhook/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/limpar-audios-chat/index.ts"
+
+# Material dos grupos no Drive da igreja. O download abre no navegador do
+# celular (sem cabeçalho de autorização) com um link assinado por 10 min; as
+# outras ações conferem o JWT dentro da função, e o cron passa pela hook-auth.ts.
+[functions.materiais-drive]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/materiais-drive/index.ts"

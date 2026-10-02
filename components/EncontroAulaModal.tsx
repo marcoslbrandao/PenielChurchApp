@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
+import { abrirMaterial, iconeDoMaterial, Material as MaterialBase } from '../lib/materiais';
 import { useTheme } from '../lib/theme';
 
 // A aula em si — o que a TURMA usa enquanto o Zoom está aberto. Por isso,
@@ -29,7 +30,8 @@ type Pergunta = {
   id: string; autor_id: string; autor_nome: string; texto: string;
   resposta: string | null; respondida: boolean; created_at: string;
 };
-type Material = { id: string; titulo: string; url: string };
+// Por link ou do Drive da igreja — ver lib/materiais.ts.
+type Material = MaterialBase;
 
 function paletaAula(isDark: boolean) {
   return isDark ? {
@@ -111,7 +113,7 @@ export default function EncontroAulaModal({
     (async () => {
       setLoading(true);
       const [{ data: materiaisData }, { data: notaData }] = await Promise.all([
-        supabase.from('grupo_arquivos').select('id, titulo, url').eq('evento_id', encontro.id).order('created_at'),
+        supabase.from('grupo_arquivos').select('id, titulo, url, drive_id, mime_type, tamanho').eq('evento_id', encontro.id).order('created_at'),
         supabase.from('grupo_encontro_notas').select('texto').eq('evento_id', encontro.id).eq('profile_id', userId).maybeSingle(),
       ]);
       if (!vivo) return;
@@ -272,9 +274,9 @@ export default function EncontroAulaModal({
                     {materiais.length === 0 ? (
                       <Text style={s.vazio}>{t('grupos.aula.semMaterial')}</Text>
                     ) : materiais.map(m => (
-                      <TouchableOpacity key={m.id} style={s.material} activeOpacity={0.8} onPress={() => abrirLink(m.url)}>
+                      <TouchableOpacity key={m.id} style={s.material} activeOpacity={0.8} onPress={() => abrirMaterial(m).catch(() => Alert.alert(t('common.erro'), t('grupos.erroAbrirMaterial')))}>
                         <View style={[s.materialIcon, { backgroundColor: cor + '18' }]}>
-                          <Ionicons name="document-text-outline" size={17} color={cor} />
+                          <Ionicons name={iconeDoMaterial(m) as any} size={17} color={cor} />
                         </View>
                         <Text style={s.materialTitulo} numberOfLines={1}>{m.titulo}</Text>
                         <Ionicons name="open-outline" size={16} color={C.textMuted} />

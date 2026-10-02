@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
   StatusBar, ActivityIndicator, RefreshControl, Linking, Alert,
@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
+import { abrirMaterial, removerMaterialDoDrive, sincronizarMateriais, iconeDoMaterial, tamanhoLegivel, Material } from '../lib/materiais';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import { useAuth } from '../lib/useAuth';
@@ -99,12 +100,8 @@ type GrupoShort = {
   plataforma: 'youtube' | 'instagram';
 };
 
-type GrupoArquivo = {
-  id: string;
-  titulo: string;
-  url: string;
-  created_at: string;
-};
+// Por link (drive_id null) ou guardado no Drive da igreja — ver lib/materiais.ts.
+type GrupoArquivo = Material;
 
 function extractYoutubeId(url: string): string | null {
   const m = url.match(/(?:shorts\/|watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
@@ -603,6 +600,8 @@ export default function GruposScreen() {
   const navigation = useNavigation<any>();
   const grupoInicial = route.params?.grupoInicial as Tab | undefined;
   const [activeTab, setActiveTab] = useState<Tab>(grupoInicial ?? 'homens');
+  const abaAtualRef = useRef<Tab>(activeTab);
+  abaAtualRef.current = activeTab;
   const [expandedDev, setExpandedDev] = useState<string | null>(null);
   const [eventos, setEventos] = useState<GrupoEvento[]>([]);
   const [devocionais, setDevocionais] = useState<GrupoDevocional[]>([]);
@@ -683,6 +682,19 @@ export default function GruposScreen() {
         }},
       ],
     );
+  };
+
+  // Material do Drive: sai do app E vai para a lixeira do Drive da igreja
+  // (recuperável por 30 dias). Só apagar a linha não adianta — a próxima
+  // sincronização traria o arquivo de volta.
+  const confirmarRemocaoDoDrive = (id: string, titulo: string) => {
+    Alert.alert(t('grupos.removerConteudoTitulo'), t('grupos.removerMaterialDriveMsg', { titulo }), [
+      { text: t('common.cancelar'), style: 'cancel' },
+      { text: t('common.remover'), style: 'destructive', onPress: async () => {
+        if (await removerMaterialDoDrive(id)) fetchGrupoData(activeTab, temAcessoConteudo);
+        else Alert.alert(t('common.erro'), t('grupos.erroRemoverMaterial'));
+      }},
+    ]);
   };
 
   // A notificação que já foi para o sininho quando o conteúdo foi publicado
@@ -830,6 +842,17 @@ export default function GruposScreen() {
 
     setLoading(false);
     setRefreshing(false);
+
+    // Depois de a tela aparecer, pergunta ao Drive da igreja se a pasta do
+    // grupo mudou (a professora pode ter soltado um PDF lá agora). Não segura
+    // o carregamento: a lista do banco já está na tela, e só é trocada se a
+    // pessoa ainda estiver nesta mesma aba quando a resposta chegar.
+    sincronizarMateriais(tab).then(async mudou => {
+      if (!mudou || abaAtualRef.current !== tab) return;
+      const { data } = await supabase.from('grupo_arquivos').select('*').eq('grupo', tab)
+        .order('created_at', { ascending: false }).limit(20);
+      if (abaAtualRef.current === tab) setArquivos((data ?? []) as GrupoArquivo[]);
+    });
   }, [meuMembroId]);
 
   useEffect(() => {
@@ -1158,16 +1181,23 @@ export default function GruposScreen() {
                 key={arq.id}
                 style={s.arquivoCard}
                 activeOpacity={0.8}
-                onPress={() => Linking.openURL(arq.url).catch(() => Alert.alert(t('common.erro'), t('grupos.erroWhatsapp')))}
+                onPress={() => abrirMaterial(arq).catch(() => Alert.alert(t('common.erro'), t('grupos.erroAbrirMaterial')))}
               >
                 <View style={[s.arquivoIcon, { backgroundColor: grupo.cor + '18' }]}>
-                  <Ionicons name="document-text-outline" size={18} color={grupo.cor} />
+                  <Ionicons name={iconeDoMaterial(arq) as any} size={18} color={grupo.cor} />
                 </View>
-                <Text style={s.arquivoTitulo} numberOfLines={1}>{arq.titulo}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.arquivoTitulo, { flex: 0 }]} numberOfLines={1}>{arq.titulo}</Text>
+                  {!!tamanhoLegivel(arq.tamanho) && (
+                    <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{tamanhoLegivel(arq.tamanho)}</Text>
+                  )}
+                </View>
                 {souLiderDesteGrupo && (
                   <TouchableOpacity
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    onPress={() => confirmarRemocao('grupo_arquivos', arq.id, arq.titulo)}
+                    onPress={() => arq.drive_id
+                      ? confirmarRemocaoDoDrive(arq.id, arq.titulo)
+                      : confirmarRemocao('grupo_arquivos', arq.id, arq.titulo)}
                   >
                     <Ionicons name="trash-outline" size={15} color={C.textMuted} />
                   </TouchableOpacity>

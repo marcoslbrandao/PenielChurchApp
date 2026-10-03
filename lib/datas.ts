@@ -29,3 +29,22 @@ export function isoParaDataBR(iso: string | null | undefined): string {
   const m = (iso ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
 }
+
+// Dia e mes de HOJE em Londres, sem depender de Intl. O Hermes (motor JS do
+// app) nao aplica `timeZone` em `formatToParts` de forma confiavel: a parte
+// 'month' vinha vazia e o codigo caia no padrao 1 -- o filtro de aniversario
+// abria sempre em Janeiro. Aqui a conta e feita na mao: Londres e UTC no
+// inverno e UTC+1 no horario de verao (BST), que vai do ultimo domingo de
+// marco ao ultimo domingo de outubro, sempre as 01:00 UTC.
+function ultimoDomingoUTC(ano: number, mes0: number): number {
+  const ultimoDia = new Date(Date.UTC(ano, mes0 + 1, 0));
+  const dia = ultimoDia.getUTCDate() - ultimoDia.getUTCDay();
+  return Date.UTC(ano, mes0, dia, 1, 0, 0);
+}
+export function hojeEmLondres(agora: Date = new Date()): { dia: number; mes: number; ano: number } {
+  const t = agora.getTime();
+  const ano = agora.getUTCFullYear();
+  const emBST = t >= ultimoDomingoUTC(ano, 2) && t < ultimoDomingoUTC(ano, 9);
+  const londres = new Date(t + (emBST ? 3600_000 : 0));
+  return { dia: londres.getUTCDate(), mes: londres.getUTCMonth() + 1, ano: londres.getUTCFullYear() };
+}

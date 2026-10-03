@@ -12,7 +12,7 @@ import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { PAISES, Pais, bandeira, formatarNumeroLocal, montarTelefone, splitTelefone, paisPorNome, paisPorIso2, paisPadraoDdi } from '../lib/paises';
 import { useTranslation } from 'react-i18next';
-import { isoParaDataBR } from '../lib/datas';
+import { isoParaDataBR, hojeEmLondres } from '../lib/datas';
 
 const C = {
   bg: '#F7F4EE', surface: '#FFFFFF', surfaceAlt: '#F0EDE8',
@@ -133,8 +133,7 @@ function diaDoNascimento(dob: string): number | null {
  *  estar. Sem isto, o card "Aniversariantes do mês" mostraria outro mês para
  *  quem abrisse o app viajando. */
 function mesAtualEmLondres(): number {
-  const partes = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', month: '2-digit' }).formatToParts(new Date());
-  return Number(partes.find(x => x.type === 'month')?.value ?? 1);
+  return hojeEmLondres().mes;
 }
 const MESES_CHAVE = [
   'meses.janeiro', 'meses.fevereiro', 'meses.marco', 'meses.abril',

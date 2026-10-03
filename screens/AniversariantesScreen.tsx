@@ -29,6 +29,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../lib/theme';
+import { hojeEmLondres } from '../lib/datas';
 
 type Aniversariante = {
   id: string;
@@ -59,17 +60,8 @@ function paleta(isDark: boolean) {
   };
 }
 
-/** Mês e dia de HOJE em Londres — a igreja é no Reino Unido, e o aparelho
- *  pode estar em qualquer fuso (é comum estar no Brasil em viagem). Sem
- *  isto, "hoje" na lista discordaria do push que chega no mesmo dia. */
-function hojeEmLondres(): { dia: number; mes: number } {
-  const partes = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/London', day: '2-digit', month: '2-digit',
-  }).formatToParts(new Date());
-  const p = (tipo: string) => Number(partes.find(x => x.type === tipo)?.value ?? 0);
-  return { dia: p('day'), mes: p('month') };
-}
-
+// "Hoje" vem de `hojeEmLondres` (lib/datas): a igreja é no Reino Unido e o
+// aparelho pode estar em qualquer fuso.
 export default function AniversariantesScreen() {
   const navigation = useNavigation();
   const { t } = useTranslation();

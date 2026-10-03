@@ -1410,17 +1410,32 @@ export default function MembrosScreen() {
         {[
           // Os três primeiros contam ADULTOS: criança entra como 'crianca' e
           // não deve inflar "quantos membros a igreja tem".
-          { label: 'Membros', value: adultos.filter(m => m.status === 'membro').length, color: C.success },
-          { label: t('membros.lideres'), value: adultos.filter(m => m.status === 'lider').length, color: C.accent },
-          { label: t('membros.visitantes'), value: adultos.filter(m => m.status === 'visitante').length + contasVisitantes.filter(c => !perfisComFicha.has(c.id)).length, color: C.textMuted, visitantes: true },
-          { label: t('membros.anivMes'), value: birthdayCount, color: '#7C4DFF', aniversario: true },
-        ].map(stat => (
-          <TouchableOpacity key={stat.label} style={s.statCard}
-            onPress={() => { if (stat.aniversario) setFilterMes(m => (m === null ? mesAtual : null)); else if ((stat as any).visitantes) setFilterStatus('visitante'); }}>
+          // Os quatro são atalhos: tocar filtra a lista; tocar de novo volta
+          // para Todos.
+          { label: 'Membros', value: adultos.filter(m => m.status === 'membro').length, color: C.success, status: 'membro' as const },
+          { label: t('membros.lideres'), value: adultos.filter(m => m.status === 'lider').length, color: C.accent, status: 'lider' as const },
+          { label: t('membros.visitantes'), value: adultos.filter(m => m.status === 'visitante').length + contasVisitantes.filter(c => !perfisComFicha.has(c.id)).length, color: C.textMuted, status: 'visitante' as const },
+          { label: t('membros.anivMes'), value: birthdayCount, color: '#7C4DFF', status: null },
+        ].map(stat => {
+          const ativo = stat.status ? (filterStatus === stat.status && filterMes === null) : filterMes !== null;
+          return (
+          <TouchableOpacity key={stat.label} style={[s.statCard, ativo && { borderColor: stat.color }]}
+            activeOpacity={0.75}
+            onPress={() => {
+              if (stat.status) {
+                setFilterMes(null);
+                setFilterStatus(atual => (atual === stat.status && filterMes === null ? 'todos' : stat.status!));
+              } else {
+                // Aniversariantes do mês vigente, de todo mundo.
+                setFilterStatus('todos');
+                setFilterMes(m => (m === null ? mesAtual : null));
+              }
+            }}>
             <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
             <Text style={s.statLabel}>{stat.label}</Text>
           </TouchableOpacity>
-        ))}
+          );
+        })}
       </View>
 
       {/* Search */}
@@ -1624,7 +1639,7 @@ const s = StyleSheet.create({
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F5C842', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20 },
   addBtnText: { fontSize: 13, fontWeight: '700', color: C.primary },
   statsRow: { flexDirection: 'row', backgroundColor: C.primary, paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
-  statCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  statCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, paddingVertical: 10, alignItems: 'center', borderWidth: 1.5, borderColor: 'transparent' },
   statValue: { fontSize: 22, fontWeight: '800' },
   statLabel: { fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 2, fontWeight: '500' },
   searchRow: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },

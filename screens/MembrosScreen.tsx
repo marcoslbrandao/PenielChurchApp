@@ -1452,8 +1452,11 @@ export default function MembrosScreen() {
           tem busca, estatísticas e filtros. */}
       {filterMes !== null && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRowScroll} contentContainerStyle={s.filterRow}>
-          {MESES_CHAVE.map((chave, i) => {
-            const numero = i + 1;
+          {/* Começa no mês vigente (Out, Nov, Dez, Jan…): ao abrir o filtro, o
+              mês selecionado já está à vista, sem rolar a barra. */}
+          {MESES_CHAVE.map((_, i) => (mesAtual - 1 + i) % 12).map(idx => {
+            const chave = MESES_CHAVE[idx];
+            const numero = idx + 1;
             const ativo = numero === filterMes;
             return (
               <TouchableOpacity
@@ -1497,7 +1500,6 @@ export default function MembrosScreen() {
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <Text style={s.memberName}>{m.nome} {m.sobrenome}</Text>
-                    {mesDoNascimento(m.data_nascimento) === (filterMes ?? mesAtual) && <Text style={{ fontSize: 14 }}>🎂</Text>}
                   </View>
                   {filterMes !== null && diaDoNascimento(m.data_nascimento) !== null ? (
                     <Text style={[s.memberSub, { color: C.accent, fontWeight: '700' }]}>
@@ -1513,7 +1515,12 @@ export default function MembrosScreen() {
                       {t(statusChave(m.responsavel_id ? 'crianca' : m.status))}
                     </Text>
                   </View>
-                  {m.batizado && <Ionicons name="water-outline" size={13} color={C.primary} />}
+                  {/* Bolo e gotinha numa linha só, abaixo da etiqueta: no meio do
+                      nome, o bolo se embolava com a etiqueta em nomes longos. */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {mesDoNascimento(m.data_nascimento) === (filterMes ?? mesAtual) && <Text style={{ fontSize: 13 }}>🎂</Text>}
+                    {m.batizado && <Ionicons name="water-outline" size={13} color={C.primary} />}
+                  </View>
                 </View>
               </TouchableOpacity>
             ))

@@ -18,6 +18,7 @@ import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { useAcesso } from '../lib/acesso';
+import { mascaraDataBR, dataBRparaISO, isoParaDataBR } from '../lib/datas';
 import { IDIOMAS, trocarIdioma } from '../lib/i18n';
 import { useTheme, ThemeMode } from '../lib/theme';
 import { pushEstaAtivo, definirPush, removerTokenDesteAparelho } from '../lib/useNotifications';
@@ -74,9 +75,11 @@ function paleta(isDark: boolean) {
 type Paleta = ReturnType<typeof paleta>;
 
 // ─── Edit Profile Modal ───────────────────────────────────────────────────────
-function EditProfileModal({ visible, profile, userId, onClose, onSaved }: {
+function EditProfileModal({ visible, profile, userId, onClose, onSaved, mostrarAniversario }: {
   visible: boolean; profile: any; userId: string | undefined;
   onClose: () => void; onSaved: () => void;
+  /** Visitante: pede a data de aniversário (o membro já tem em Meu Cadastro). */
+  mostrarAniversario?: boolean;
 }) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
@@ -84,18 +87,34 @@ function EditProfileModal({ visible, profile, userId, onClose, onSaved }: {
   const em = useMemo(() => buildEm(C), [C]);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [aniversario, setAniversario] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setFullName(profile?.full_name ?? '');
     setPhone(profile?.phone ?? '');
+    setAniversario(isoParaDataBR(profile?.data_nascimento));
   }, [profile, visible]);
 
   const handleSave = async () => {
     if (!fullName.trim()) { Alert.alert(t('common.atencao'), t('perfil.nomeObrigatorio')); return; }
+    const mudancas: Record<string, any> = { full_name: fullName.trim(), phone: phone.trim(), updated_at: new Date().toISOString() };
+    if (mostrarAniversario) {
+      // Vazio = apagar. Preenchido tem de ser uma data real em DD/MM/AAAA.
+      if (aniversario.trim()) {
+        const iso = dataBRparaISO(aniversario);
+        if (!iso || iso > new Date().toISOString().slice(0, 10)) {
+          Alert.alert(t('common.atencao'), t('perfil.dataAniversarioInvalida'));
+          return;
+        }
+        mudancas.data_nascimento = iso;
+      } else {
+        mudancas.data_nascimento = null;
+      }
+    }
     setSaving(true);
     const { error } = await supabase.from('profiles')
-      .update({ full_name: fullName.trim(), phone: phone.trim(), updated_at: new Date().toISOString() })
+      .update(mudancas)
       .eq('id', userId);
     setSaving(false);
     if (error) { Alert.alert(t('biblia.erroAoSalvar'), error.message); return; }
@@ -123,6 +142,14 @@ function EditProfileModal({ visible, profile, userId, onClose, onSaved }: {
               <TextInput style={em.input} value={phone} onChangeText={setPhone}
                 placeholder={t('perfil.telefoneExemplo')} placeholderTextColor={C.textDim} keyboardType="phone-pad" />
             </View>
+            {mostrarAniversario && (
+              <View style={em.field}>
+                <Text style={em.label}>{t('perfil.dataAniversario')}</Text>
+                <TextInput style={em.input} value={aniversario} onChangeText={v => setAniversario(mascaraDataBR(v))}
+                  placeholder="DD/MM/AAAA" placeholderTextColor={C.textDim} keyboardType="number-pad" maxLength={10} />
+                <Text style={{ fontSize: 11, color: C.textDim, marginTop: 6 }}>{t('perfil.dataAniversarioDica')}</Text>
+              </View>
+            )}
             <TouchableOpacity style={[em.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : <Text style={em.saveBtnText}>{t('perfil.salvarAlteracoes')}</Text>}
             </TouchableOpacity>
@@ -1014,6 +1041,7 @@ export default function ProfileScreen() {
         userId={user?.id}
         onClose={() => setEditModalVisible(false)}
         onSaved={fetchProfile}
+        mostrarAniversario={!ehMembro && !carregandoPapel}
       />
       <SavedVersesModal
         visible={savedVersesVisible}

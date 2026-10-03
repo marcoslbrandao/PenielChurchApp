@@ -234,7 +234,10 @@
     "facaLoginAniversariantes": "Sign in to see the church's birthdays.",
     "registrarVisitante": "Register a visitor",
     "facaLoginVisitante": "Sign in to register a visitor.",
-    "visitantes": "Visitors"
+    "visitantes": "Visitors",
+    "dataAniversario": "Birthday",
+    "dataAniversarioDica": "On your birthday the church will send you a message. Only you see it.",
+    "dataAniversarioInvalida": "Enter a valid date as DD/MM/YYYY."
   },
   "grupos": {
     "titulo": "Groups",
@@ -304,7 +307,9 @@
       "notasPlaceholder": "What you want to keep from this session...",
       "notasSalvas": "Saved",
       "erroAbrirLink": "Couldn't open this link.",
-      "alguem": "Someone"
+      "alguem": "Someone",
+      "verMais": "Show more",
+      "verMenos": "Show less"
     },
     "caderno": {
       "titulo": "🗒️ Leader's notebook",

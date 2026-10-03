@@ -117,7 +117,25 @@ Deno.serve(async (req) => {
       .not('data_nascimento', 'is', null);
     if (pessoasErro) throw pessoasErro;
 
-    const visiveis = (pessoas ?? []).filter((m: any) => m.mostrar_aniversario !== false);
+    // Visitante que só tem conta no app: a data vem do Perfil
+    // (`profiles.data_nascimento`). Quem já tem ficha usa a ficha.
+    const comFicha = new Set((pessoas ?? []).map((m: any) => m.profile_id).filter(Boolean));
+    const { data: perfisVisitantes } = await supabase
+      .from('profiles').select('id, full_name, data_nascimento')
+      .eq('role', 'visitante').not('data_nascimento', 'is', null);
+    const visitantesSoConta = (perfisVisitantes ?? [])
+      .filter((p: any) => !comFicha.has(p.id))
+      .map((p: any) => {
+        const partes = String(p.full_name ?? '').trim().split(/\s+/);
+        return {
+          nome: partes[0] || 'Visitante', sobrenome: partes.slice(1).join(' ') || null,
+          data_nascimento: p.data_nascimento, responsavel_id: null,
+          mostrar_aniversario: true, status: 'visitante', profile_id: p.id,
+        };
+      });
+
+    const visiveis = [...(pessoas ?? []), ...visitantesSoConta]
+      .filter((m: any) => m.mostrar_aniversario !== false);
     const resultado: Record<string, unknown> = {};
 
     // Textos editáveis pelo Admin. Se a tabela ainda não existir, cai no

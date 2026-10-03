@@ -234,7 +234,10 @@
     "facaLoginAniversariantes": "Faça login para ver os aniversariantes da igreja.",
     "registrarVisitante": "Registrar visitante",
     "facaLoginVisitante": "Faça login para registrar um visitante.",
-    "visitantes": "Visitantes"
+    "visitantes": "Visitantes",
+    "dataAniversario": "Data de aniversário",
+    "dataAniversarioDica": "No seu aniversário a igreja vai te mandar uma mensagem. Só você vê.",
+    "dataAniversarioInvalida": "Digite uma data válida no formato DD/MM/AAAA."
   },
   "grupos": {
     "titulo": "Grupos",
@@ -304,7 +307,9 @@
       "notasPlaceholder": "O que você quer guardar desta aula...",
       "notasSalvas": "Salvo",
       "erroAbrirLink": "Não foi possível abrir este link.",
-      "alguem": "Alguém"
+      "alguem": "Alguém",
+      "verMais": "Ver mais",
+      "verMenos": "Ver menos"
     },
     "caderno": {
       "titulo": "🗒️ Caderno do líder",

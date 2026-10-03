@@ -167,8 +167,11 @@ function formatDataDevocional(iso: string, lang: string = 'pt'): string {
 
 // Card de evento do grupo — título e descrição (digitados pelo admin em
 // português) traduzidos automaticamente pro idioma do app.
-function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar, onAbrir, podeChamada, onChamada }: {
+function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar, onAbrir, podeChamada, onChamada, semDescricao }: {
   evento: GrupoEvento; tag: { bg: string; text: string; label: string };
+  // Aulas anteriores: a descrição é o texto do Zoom (ID e senha), que não
+  // serve para nada numa aula que já passou.
+  semDescricao?: boolean;
   podeEditar?: boolean; onEditar?: () => void; onApagar?: () => void;
   // Tocar no card abre a aula (roteiro, material, perguntas, anotações).
   // A chamada é só do líder, e só aparece onde a presença está ligada.
@@ -204,7 +207,7 @@ function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar, onAbrir,
           )}
         </View>
       </View>
-      <Text style={s.eventoDesc}>{descricao}</Text>
+      {!semDescricao && !!descricao && <Text style={s.eventoDesc}>{descricao}</Text>}
       <View style={s.eventoMeta}>
         <View style={s.eventoMetaItem}>
           <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
@@ -622,6 +625,9 @@ export default function GruposScreen() {
   const [lideresModalVisible, setLideresModalVisible] = useState(false);
   const [contatoModalVisible, setContatoModalVisible] = useState(false);
   const [aulasAnteriores, setAulasAnteriores] = useState<GrupoEvento[]>([]);
+  // Aulas anteriores aparecem de duas em duas ("Ver mais").
+  const [aulasVisiveis, setAulasVisiveis] = useState(2);
+  useEffect(() => { setAulasVisiveis(2); }, [activeTab]);
   const [cfg, setCfg] = useState<ConfigGrupo>({ presencaAtiva: false, perguntasAtivas: false });
   const [aulaAberta, setAulaAberta] = useState<GrupoEvento | null>(null);
   const [chamadaEvento, setChamadaEvento] = useState<GrupoEvento | null>(null);
@@ -763,7 +769,7 @@ export default function GruposScreen() {
   const fetchGrupoData = useCallback(async (tab: Tab, temAcesso: boolean, isRefresh = false) => {
     if (!temAcesso) {
       setEventos([]); setDevocionais([]); setShorts([]); setArquivos([]);
-      setAulasAnteriores([]); setMinhaFreq(null); setCfg({ presencaAtiva: false, perguntasAtivas: false });
+      setAulasAnteriores([]); setAulasVisiveis(2); setMinhaFreq(null); setCfg({ presencaAtiva: false, perguntasAtivas: false });
       setCadernoTotal(0); setMeuCadernoTotal(0);
       setLoading(false); setRefreshing(false); return;
     }
@@ -791,7 +797,7 @@ export default function GruposScreen() {
       // encontro futuro some da lista de cima quando a data passa, e sem esta
       // segunda consulta o líder não teria como registrar a presença depois
       // da aula, que é justamente quando ele sabe quem estava lá.
-      supabase.from('grupo_eventos').select('*').eq('grupo', tab).lt('data', hoje).order('data', { ascending: false }).limit(12),
+      supabase.from('grupo_eventos').select('*').eq('grupo', tab).lt('data', hoje).order('data', { ascending: false }).limit(60),
       supabase.from('grupo_config').select('presenca_ativa, perguntas_ativas').eq('grupo', tab).maybeSingle(),
       // Só a contagem, sem baixar linha nenhuma — e para quem não lidera o
       // grupo a RLS devolve 0, que é exatamente o que deve aparecer.
@@ -1058,10 +1064,11 @@ export default function GruposScreen() {
                   <View style={s.emptyWrap}>
                     <Text style={s.emptyText}>{t('grupos.aula.semAulasAnteriores')}</Text>
                   </View>
-                ) : aulasAnteriores.map(evento => (
+                ) : aulasAnteriores.slice(0, aulasVisiveis).map(evento => (
                   <GrupoEventoCard
                     key={evento.id}
                     evento={evento}
+                    semDescricao
                     tag={tipoTag(evento.tipo)}
                     podeEditar={souLiderDesteGrupo}
                     onEditar={() => { setEncontroEditando(evento); setAdminModalVisible(true); }}
@@ -1071,6 +1078,25 @@ export default function GruposScreen() {
                     onChamada={() => setChamadaEvento(evento)}
                   />
                 ))}
+
+                {aulasAnteriores.length > 2 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 2, marginBottom: 8 }}>
+                    {aulasVisiveis < aulasAnteriores.length && (
+                      <TouchableOpacity onPress={() => setAulasVisiveis(n => n + 2)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={{ color: grupo.cor, fontWeight: '700', fontSize: 13 }}>{t('grupos.aula.verMais')}</Text>
+                        <Ionicons name="chevron-down" size={14} color={grupo.cor} />
+                      </TouchableOpacity>
+                    )}
+                    {aulasVisiveis > 2 && (
+                      <TouchableOpacity onPress={() => setAulasVisiveis(2)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={{ color: C.textMuted, fontWeight: '600', fontSize: 13 }}>{t('grupos.aula.verMenos')}</Text>
+                        <Ionicons name="chevron-up" size={14} color={C.textMuted} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </>
             )}
 

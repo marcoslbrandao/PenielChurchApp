@@ -1499,7 +1499,13 @@ export default function MembrosScreen() {
                     <Text style={s.memberName}>{m.nome} {m.sobrenome}</Text>
                     {mesDoNascimento(m.data_nascimento) === (filterMes ?? mesAtual) && <Text style={{ fontSize: 14 }}>🎂</Text>}
                   </View>
-                  <Text style={s.memberSub}>{m.ministerio ? `${m.ministerio} · ` : ''}{m.telefone}</Text>
+                  {filterMes !== null && diaDoNascimento(m.data_nascimento) !== null ? (
+                    <Text style={[s.memberSub, { color: C.accent, fontWeight: '700' }]}>
+                      Dia: {String(diaDoNascimento(m.data_nascimento)).padStart(2, '0')}
+                    </Text>
+                  ) : (
+                    <Text style={s.memberSub}>{m.ministerio ? `${m.ministerio} · ` : ''}{m.telefone}</Text>
+                  )}
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
                   <View style={[s.statusBadge, { backgroundColor: statusColor(m.responsavel_id ? 'crianca' : m.status) + '18' }]}>

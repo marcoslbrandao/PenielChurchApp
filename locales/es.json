@@ -234,7 +234,10 @@
     "facaLoginAniversariantes": "Inicia sesión para ver los cumpleaños de la iglesia.",
     "registrarVisitante": "Registrar visitante",
     "facaLoginVisitante": "Inicia sesión para registrar un visitante.",
-    "visitantes": "Visitantes"
+    "visitantes": "Visitantes",
+    "dataAniversario": "Fecha de cumpleaños",
+    "dataAniversarioDica": "En tu cumpleaños la iglesia te enviará un mensaje. Solo tú lo ves.",
+    "dataAniversarioInvalida": "Escribe una fecha válida en el formato DD/MM/AAAA."
   },
   "grupos": {
     "titulo": "Grupos",
@@ -304,7 +307,9 @@
       "notasPlaceholder": "Lo que quieras guardar de esta clase...",
       "notasSalvas": "Guardado",
       "erroAbrirLink": "No se pudo abrir este enlace.",
-      "alguem": "Alguien"
+      "alguem": "Alguien",
+      "verMais": "Ver más",
+      "verMenos": "Ver menos"
     },
     "caderno": {
       "titulo": "🗒️ Cuaderno del líder",

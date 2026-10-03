@@ -234,7 +234,10 @@
     "facaLoginAniversariantes": "Connectez-vous pour voir les anniversaires de l'église.",
     "registrarVisitante": "Enregistrer un visiteur",
     "facaLoginVisitante": "Connectez-vous pour enregistrer un visiteur.",
-    "visitantes": "Visiteurs"
+    "visitantes": "Visiteurs",
+    "dataAniversario": "Date d'anniversaire",
+    "dataAniversarioDica": "Le jour de votre anniversaire, l'église vous enverra un message. Vous seul le voyez.",
+    "dataAniversarioInvalida": "Saisissez une date valide au format JJ/MM/AAAA."
   },
   "grupos": {
     "titulo": "Groupes",
@@ -304,7 +307,9 @@
       "notasPlaceholder": "Ce que vous voulez retenir de cette séance...",
       "notasSalvas": "Enregistré",
       "erroAbrirLink": "Impossible d'ouvrir ce lien.",
-      "alguem": "Quelqu'un"
+      "alguem": "Quelqu'un",
+      "verMais": "Voir plus",
+      "verMenos": "Voir moins"
     },
     "caderno": {
       "titulo": "🗒️ Carnet du responsable",

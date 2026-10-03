@@ -1321,7 +1321,21 @@
     "removerDaAreaCerteza": "Are you sure? Confirm to make visitor:",
     "removerDaAreaSim": "Yes, make visitor",
     "removerDaAreaFeito": "{{nome}} is now a visitor and was removed from groups and rotas.",
-    "continuar": "Continue"
+    "continuar": "Continue",
+    "tornarAdmin": "Make administrator",
+    "removerAdmin": "Remove administrator",
+    "tornarAdminDica": "Access to the Admin and Members tabs and to every group.",
+    "removerAdminDica": "Goes back to a regular member (or leader).",
+    "tornarAdminConfirma": "{{nome}} will see the Admin and Members tabs, with everyone's personal data, and can manage every group, the Band and rotas.\n\nThey need to close and reopen the app for it to apply.",
+    "removerAdminConfirma": "{{nome}} will no longer be an administrator and loses access to the Admin and Members tabs.",
+    "tornarAdminSim": "Yes, make admin",
+    "removerAdminSim": "Yes, remove admin",
+    "tornarAdminFeito": "{{nome}} is now an administrator. Ask them to close and reopen the app.",
+    "removerAdminFeito": "{{nome}} is no longer an administrator.",
+    "lidera": "Leads",
+    "penielKids": "Peniel Kids",
+    "liderDaBanda": "Band leader",
+    "bandaPeniel": "Peniel Band"
   },
   "meses": {
     "janeiro": "January",

@@ -135,6 +135,11 @@ function diaDoNascimento(dob: string): number | null {
 function mesAtualEmLondres(): number {
   return hojeEmLondres().mes;
 }
+// Nome do grupo a partir da chave de `group_leaders.grupo` (mesmas chaves do Admin).
+const NOME_GRUPO_CHAVE: Record<string, string> = {
+  mulheres: 'admin.grupoDeMulheres', homens: 'admin.grupoDeHomens',
+  jovens: 'admin.penielAlive', estudo_biblico: 'admin.estudoBiblico', infantil: 'membros.penielKids', banda: 'membros.bandaPeniel',
+};
 const MESES_CHAVE = [
   'meses.janeiro', 'meses.fevereiro', 'meses.marco', 'meses.abril',
   'meses.maio', 'meses.junho', 'meses.julho', 'meses.agosto',
@@ -276,18 +281,21 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
   const [grupos, setGrupos] = useState<string[]>([]);
   const [areas, setAreas] = useState<{ id: string; nome: string }[]>([]);
   const [areasLideradas, setAreasLideradas] = useState<string[]>([]);
+  const [lideraBanda, setLideraBanda] = useState(false);
   const [salvandoPapel, setSalvandoPapel] = useState(false);
 
   useEffect(() => {
-    if (!profileId) { setPerfilVinculado(null); setGrupos([]); setAreasLideradas([]); return; }
+    if (!profileId) { setPerfilVinculado(null); setGrupos([]); setAreasLideradas([]); setLideraBanda(false); return; }
     setCarregando(true);
     (async () => {
-      const [{ data: perfil }, { data: gl }, { data: areasData }, { data: eal }] = await Promise.all([
+      const [{ data: perfil }, { data: gl }, { data: areasData }, { data: eal }, { data: bl }] = await Promise.all([
         supabase.from('profiles').select('id, full_name').eq('id', profileId).single(),
         supabase.from('group_leaders').select('grupo').eq('profile_id', profileId),
         supabase.from('escala_areas').select('id, nome').order('nome'),
         supabase.from('escala_area_lideres').select('area_id').eq('profile_id', profileId),
+        supabase.from('banda_lideres').select('profile_id').eq('profile_id', profileId),
       ]);
+      setLideraBanda((bl ?? []).length > 0);
       setPerfilVinculado((perfil as ProfileLite) ?? null);
       setGrupos((gl ?? []).map((g: any) => g.grupo));
       setAreas(areasData ?? []);
@@ -340,6 +348,17 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
       setGrupos(prev => [...prev, grupo]);
     }
     setSalvandoPapel(false);
+  };
+
+  const alternarBanda = async () => {
+    if (!profileId) return;
+    setSalvandoPapel(true);
+    const { error } = lideraBanda
+      ? await supabase.from('banda_lideres').delete().eq('profile_id', profileId)
+      : await supabase.from('banda_lideres').insert({ profile_id: profileId });
+    setSalvandoPapel(false);
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
+    setLideraBanda(v => !v);
   };
 
   const alternarArea = async (areaId: string) => {
@@ -407,13 +426,22 @@ function ContaSection({ membro, profileId, onProfileIdChange }: {
           <View style={fm.fieldWrap}>
             <Text style={fm.fieldLabel}>{t('membros.liderDeGrupo')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-              {(['mulheres', 'homens', 'jovens'] as const).map(g => (
+              {(['mulheres', 'homens', 'jovens', 'estudo_biblico', 'infantil'] as const).map(g => (
                 <TouchableOpacity key={g} disabled={salvandoPapel} style={[fm.pill, grupos.includes(g) && fm.pillActive]} onPress={() => alternarGrupo(g)}>
                   <Text style={[fm.pillText, grupos.includes(g) && fm.pillTextActive]}>
-                    {g === 'mulheres' ? 'Mulheres' : g === 'homens' ? 'Homens' : 'Jovens'}
+                    {g === 'mulheres' ? 'Mulheres' : g === 'homens' ? 'Homens' : g === 'jovens' ? 'Alive (Jovens)' : g === 'estudo_biblico' ? 'Estudo Bíblico' : 'Peniel Kids'}
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+          </View>
+
+          <View style={fm.fieldWrap}>
+            <Text style={fm.fieldLabel}>{t('membros.liderDaBanda')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+              <TouchableOpacity disabled={salvandoPapel} style={[fm.pill, lideraBanda && fm.pillActive]} onPress={alternarBanda}>
+                <Text style={[fm.pillText, lideraBanda && fm.pillTextActive]}>🎵 Banda Peniel</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -941,9 +969,11 @@ const fm = StyleSheet.create({
 });
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
-function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete, onRemoverDaArea, foto }: {
+function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete, onRemoverDaArea, foto, ehAdminConta, onAlternarAdmin }: {
   membro: Membro | null; membros: Membro[]; onClose: () => void; onEdit: () => void; onDelete: () => void;
   onRemoverDaArea: () => void; foto?: string | null;
+  /** A conta do app desta ficha tem papel admin. */
+  ehAdminConta?: boolean; onAlternarAdmin?: () => void;
 }) {
   const { t } = useTranslation();
   if (!membro) return null;
@@ -1006,6 +1036,12 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete, onRemov
                   <View style={[dd.badge, { backgroundColor: statusColor(membro.status) + '18' }]}>
                     <Text style={[dd.badgeText, { color: statusColor(membro.status) }]}>{t(statusChave(membro.status))}</Text>
                   </View>
+                  {ehAdminConta && (
+                    <View style={[dd.badge, { backgroundColor: '#7C4DFF18' }]}>
+                      <Ionicons name="shield-checkmark-outline" size={11} color="#7C4DFF" />
+                      <Text style={[dd.badgeText, { color: '#7C4DFF' }]}>Admin</Text>
+                    </View>
+                  )}
                   {membro.batizado && (
                     <View style={[dd.badge, { backgroundColor: C.primary + '15' }]}>
                       <Ionicons name="water-outline" size={11} color={C.primary} />
@@ -1137,6 +1173,17 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete, onRemov
               {!!membro.observacoes && <Row icon="document-text-outline" label={t('membros.obs')} value={membro.observacoes} />}
               {!!membro.info_responsavel && <Row icon="information-circle-outline" label={t('membros.infoResponsavel')} value={membro.info_responsavel} />}
             </View>
+            {/* Administrador: só para quem tem conta no app. */}
+            {!!membro.profile_id && !membro.responsavel_id && !!onAlternarAdmin && (
+              <TouchableOpacity onPress={onAlternarAdmin} activeOpacity={0.8}
+                style={[dd.saiuBtn, { borderColor: '#7C4DFF50', backgroundColor: '#7C4DFF0D' }]}>
+                <Ionicons name={ehAdminConta ? 'shield-outline' : 'shield-checkmark-outline'} size={18} color="#7C4DFF" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[dd.saiuBtnText, { color: '#7C4DFF' }]}>{ehAdminConta ? t('membros.removerAdmin') : t('membros.tornarAdmin')}</Text>
+                  <Text style={dd.saiuBtnSub}>{ehAdminConta ? t('membros.removerAdminDica') : t('membros.tornarAdminDica')}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
             {/* Saiu da igreja: deixa de ser membro e continua no app como
                 visitante. Fica no fim da ficha, com texto, longe dos ícones
                 do topo, para não ser tocado sem querer. Só admin chega aqui. */}
@@ -1211,6 +1258,12 @@ export default function MembrosScreen() {
   const [contasVisitantes, setContasVisitantes] = useState<{ id: string; nome: string | null; email: string | null; criado_em: string; avatar_url?: string | null }[]>([]);
   // Foto do perfil do app (profiles.avatar_url), por profile_id da ficha.
   const [fotos, setFotos] = useState<Record<string, string>>({});
+  // Papel da conta no app (profiles.role) por profile_id — para o selo Admin.
+  const [papeis, setPapeis] = useState<Record<string, string>>({});
+  // Quem lidera algum grupo (group_leaders), por profile_id -> grupos.
+  // A liderança de verdade mora lá; `members.status = 'lider'` é só uma
+  // etiqueta que ninguém lembrava de mudar ao nomear o líder no grupo.
+  const [lideraGrupos, setLideraGrupos] = useState<Record<string, string[]>>({});
   const [promovendoId, setPromovendoId] = useState<string | null>(null);
 
   // Esta tela mostra telefone, e-mail e endereço de todo mundo — só
@@ -1231,10 +1284,32 @@ export default function MembrosScreen() {
       setMembros(data as Membro[]);
       const ids = (data as Membro[]).map(m => m.profile_id).filter(Boolean) as string[];
       if (ids.length) {
-        const { data: perfis } = await supabase.from('profiles').select('id, avatar_url').in('id', ids).not('avatar_url', 'is', null);
+        const { data: perfis } = await supabase.from('profiles').select('id, avatar_url, role').in('id', ids);
         const mapa: Record<string, string> = {};
-        (perfis ?? []).forEach((p: any) => { if (p.avatar_url) mapa[p.id] = p.avatar_url; });
+        const roles: Record<string, string> = {};
+        (perfis ?? []).forEach((p: any) => {
+          if (p.avatar_url) mapa[p.id] = p.avatar_url;
+          if (p.role) roles[p.id] = p.role;
+        });
         setFotos(mapa);
+        setPapeis(roles);
+      }
+      {
+        const { data: lideres } = await supabase.from('group_leaders').select('profile_id, grupo');
+        const porPessoa: Record<string, string[]> = {};
+        (lideres ?? []).forEach((l: any) => {
+          if (!l.profile_id) return;
+          (porPessoa[l.profile_id] ??= []).push(l.grupo);
+        });
+        const { data: lideresBanda } = await supabase.from('banda_lideres').select('profile_id');
+        (lideresBanda ?? []).forEach((l: any) => { (porPessoa[l.profile_id] ??= []).push('banda'); });
+        // Líder de área de escala (Recepção, Som…) também é líder.
+        const { data: lideresArea } = await supabase.from('escala_area_lideres').select('profile_id, escala_areas(nome)');
+        (lideresArea ?? []).forEach((l: any) => {
+          const nome = l.escala_areas?.nome;
+          if (l.profile_id && nome) (porPessoa[l.profile_id] ??= []).push(`area:${nome}`);
+        });
+        setLideraGrupos(porPessoa);
       }
     }
     const { data: contas, error: erroContas } = await supabase.rpc('listar_contas_visitantes');
@@ -1282,6 +1357,31 @@ export default function MembrosScreen() {
     );
   };
 
+  // Tornar / remover administrador. Dois passos, como "Tornar visitante":
+  // admin vê dados pessoais de todo mundo.
+  const alternarAdmin = (m: Membro) => {
+    if (!m.profile_id) return;
+    const nome = `${m.nome} ${m.sobrenome ?? ''}`.trim();
+    const virarAdmin = papeis[m.profile_id] !== 'admin';
+    const executar = async () => {
+      const { data, error } = await supabase.rpc('definir_admin', { p_profile_id: m.profile_id, p_admin: virarAdmin });
+      const res = data as { success?: boolean; error?: string } | null;
+      if (error || !res?.success) { Alert.alert(t('common.erro'), error?.message ?? res?.error ?? ''); return; }
+      setDetailMembro(null);
+      fetchMembros();
+      Alert.alert(virarAdmin ? t('membros.tornarAdmin') : t('membros.removerAdmin'),
+        t(virarAdmin ? 'membros.tornarAdminFeito' : 'membros.removerAdminFeito', { nome }));
+    };
+    Alert.alert(
+      virarAdmin ? t('membros.tornarAdmin') : t('membros.removerAdmin'),
+      t(virarAdmin ? 'membros.tornarAdminConfirma' : 'membros.removerAdminConfirma', { nome }),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        { text: virarAdmin ? t('membros.tornarAdminSim') : t('membros.removerAdminSim'), style: virarAdmin ? 'default' : 'destructive', onPress: executar },
+      ],
+    );
+  };
+
   const tornarMembro = async (contaId: string) => {
     setPromovendoId(contaId);
     const { data, error } = await supabase.rpc('tornar_visitante_membro', { p_profile_id: contaId });
@@ -1319,6 +1419,10 @@ export default function MembrosScreen() {
   // muitas famílias elas dobrariam o diretório. A pílula "Crianças" traz elas
   // de volta, e o filtro de aniversário sempre mostra todo mundo — que é o
   // ponto de ter a criança no cadastro.
+  // Status mostrado e filtrado: quem lidera algum grupo conta como Líder,
+  // automaticamente, mesmo com a ficha marcada como Membro.
+  const statusEfetivo = (m: Membro): Membro['status'] =>
+    m.status === 'membro' && m.profile_id && lideraGrupos[m.profile_id]?.length ? 'lider' : m.status;
   const adultos = membros.filter(m => !m.responsavel_id);
   const perfisComFicha = new Set(membros.map(m => m.profile_id).filter(Boolean));
   const contasSemFicha = contasVisitantes.filter(c => {
@@ -1342,7 +1446,7 @@ export default function MembrosScreen() {
       ? true
       : filterStatus === 'crianca'
         ? ehDependenteLinha
-        : m.status === filterStatus && !ehDependenteLinha;
+        : statusEfetivo(m) === filterStatus && !ehDependenteLinha;
     const matchMes = filterMes === null || mesDoNascimento(m.data_nascimento) === filterMes;
     // Sem filtro explícito de criança nem de aniversário, o dependente não
     // aparece. Buscar pelo nome dele funciona sempre.
@@ -1411,8 +1515,8 @@ export default function MembrosScreen() {
           // não deve inflar "quantos membros a igreja tem".
           // Os quatro são atalhos: tocar filtra a lista; tocar de novo volta
           // para Todos.
-          { label: 'Membros', value: adultos.filter(m => m.status === 'membro').length, color: C.success, status: 'membro' as const },
-          { label: t('membros.lideres'), value: adultos.filter(m => m.status === 'lider').length, color: C.accent, status: 'lider' as const },
+          { label: 'Membros', value: adultos.filter(m => statusEfetivo(m) === 'membro').length, color: C.success, status: 'membro' as const },
+          { label: t('membros.lideres'), value: adultos.filter(m => statusEfetivo(m) === 'lider').length, color: C.accent, status: 'lider' as const },
           { label: t('membros.visitantes'), value: adultos.filter(m => m.status === 'visitante').length + contasVisitantes.filter(c => !perfisComFicha.has(c.id)).length, color: C.textMuted, status: 'visitante' as const },
           { label: t('membros.anivMes'), value: birthdayCount, color: '#7C4DFF', status: null },
         ].map(stat => {
@@ -1504,11 +1608,11 @@ export default function MembrosScreen() {
           ) : (
             filtered.map(m => (
               <TouchableOpacity key={m.id} style={s.memberCard} onPress={() => setDetailMembro(m)} activeOpacity={0.75}>
-                <View style={[s.memberAvatar, { backgroundColor: statusColor(m.status) + '22' }]}>
+                <View style={[s.memberAvatar, { backgroundColor: statusColor(statusEfetivo(m)) + '22' }]}>
                   {m.profile_id && fotos[m.profile_id] ? (
                     <Image source={{ uri: fotos[m.profile_id] }} style={s.memberFoto} />
                   ) : (
-                    <Text style={[s.memberInitials, { color: statusColor(m.status) }]}>{m.nome[0]}{m.sobrenome?.[0] ?? ''}</Text>
+                    <Text style={[s.memberInitials, { color: statusColor(statusEfetivo(m)) }]}>{m.nome[0]}{m.sobrenome?.[0] ?? ''}</Text>
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
@@ -1519,14 +1623,18 @@ export default function MembrosScreen() {
                     <Text style={[s.memberSub, { color: C.accent, fontWeight: '700' }]}>
                       Dia: {String(diaDoNascimento(m.data_nascimento)).padStart(2, '0')}
                     </Text>
+                  ) : filterStatus === 'lider' && m.profile_id && lideraGrupos[m.profile_id]?.length ? (
+                    <Text style={[s.memberSub, { color: C.accent, fontWeight: '600' }]}>
+                      {t('membros.lidera')}: {lideraGrupos[m.profile_id].map(g => g.startsWith('area:') ? g.slice(5) : NOME_GRUPO_CHAVE[g] ? t(NOME_GRUPO_CHAVE[g]) : g).join(', ')}
+                    </Text>
                   ) : (
                     <Text style={s.memberSub}>{m.ministerio ? `${m.ministerio} · ` : ''}{m.telefone}</Text>
                   )}
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                  <View style={[s.statusBadge, { backgroundColor: statusColor(m.responsavel_id ? 'crianca' : m.status) + '18' }]}>
-                    <Text style={[s.statusBadgeText, { color: statusColor(m.responsavel_id ? 'crianca' : m.status) }]}>
-                      {t(statusChave(m.responsavel_id ? 'crianca' : m.status))}
+                  <View style={[s.statusBadge, { backgroundColor: statusColor(m.responsavel_id ? 'crianca' : statusEfetivo(m)) + '18' }]}>
+                    <Text style={[s.statusBadgeText, { color: statusColor(m.responsavel_id ? 'crianca' : statusEfetivo(m)) }]}>
+                      {t(statusChave(m.responsavel_id ? 'crianca' : statusEfetivo(m)))}
                     </Text>
                   </View>
                   {/* Bolo e gotinha numa linha só, abaixo da etiqueta: no meio do
@@ -1625,6 +1733,8 @@ export default function MembrosScreen() {
         onDelete={() => detailMembro && handleDelete(detailMembro.id)}
         onRemoverDaArea={() => detailMembro && handleRemoverDaArea(detailMembro)}
         foto={detailMembro?.profile_id ? fotos[detailMembro.profile_id] : null}
+        ehAdminConta={!!detailMembro?.profile_id && papeis[detailMembro.profile_id] === 'admin'}
+        onAlternarAdmin={() => detailMembro && alternarAdmin(detailMembro)}
       />
     </SafeAreaView>
   );

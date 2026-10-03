@@ -1321,7 +1321,21 @@
     "removerDaAreaCerteza": "Êtes-vous sûr ? Confirmez pour passer en visiteur :",
     "removerDaAreaSim": "Oui, passer en visiteur",
     "removerDaAreaFeito": "{{nome}} est maintenant visiteur et a été retiré(e) des groupes et plannings.",
-    "continuar": "Continuer"
+    "continuar": "Continuer",
+    "tornarAdmin": "Nommer administrateur",
+    "removerAdmin": "Retirer administrateur",
+    "tornarAdminDica": "Accès aux onglets Admin et Membres et à tous les groupes.",
+    "removerAdminDica": "Redevient membre (ou responsable) normal.",
+    "tornarAdminConfirma": "{{nome}} verra les onglets Admin et Membres, avec les données personnelles de tous, et pourra gérer tous les groupes, le Groupe de louange et les plannings.\n\nIl faut fermer et rouvrir l'app pour que cela s'applique.",
+    "removerAdminConfirma": "{{nome}} ne sera plus administrateur et perd l'accès aux onglets Admin et Membres.",
+    "tornarAdminSim": "Oui, nommer admin",
+    "removerAdminSim": "Oui, retirer admin",
+    "tornarAdminFeito": "{{nome}} est maintenant administrateur. Demandez-lui de fermer et rouvrir l'app.",
+    "removerAdminFeito": "{{nome}} n'est plus administrateur.",
+    "lidera": "Responsable de",
+    "penielKids": "Peniel Kids",
+    "liderDaBanda": "Responsable du Groupe de louange",
+    "bandaPeniel": "Groupe de louange Peniel"
   },
   "meses": {
     "janeiro": "Janvier",

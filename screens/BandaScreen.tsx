@@ -3576,12 +3576,19 @@ function BandaMain() {
   useEffect(() => {
     if (!user?.id) { setMeuPerfil(null); return; }
     let vivo = true;
-    supabase.from('profiles').select('full_name, role').eq('id', user.id).single()
-      .then(({ data }) => {
+    Promise.all([
+      supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
+      supabase.from('banda_lideres').select('profile_id').eq('profile_id', user.id),
+    ]).then(([{ data }, { data: lider }]) => {
         if (!vivo) return;
         // Resolve mesmo sem nome cadastrado — o que importa é saber que a
         // consulta terminou, pra não travar o chat pra sempre.
-        setMeuPerfil({ nome: (data?.full_name ?? '').trim(), admin: data?.role === 'admin' });
+        // `admin` aqui = poderes de liderança DENTRO da Banda: admin do app
+        // ou líder da banda (banda_lideres) — rascunhos, moderação, apagar culto.
+        setMeuPerfil({
+          nome: (data?.full_name ?? '').trim(),
+          admin: data?.role === 'admin' || (lider ?? []).length > 0,
+        });
       });
     return () => { vivo = false; };
   }, [user?.id]);

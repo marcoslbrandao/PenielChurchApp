@@ -1321,7 +1321,21 @@
     "removerDaAreaCerteza": "Tem certeza? Confirme para tornar visitante:",
     "removerDaAreaSim": "Sim, tornar visitante",
     "removerDaAreaFeito": "{{nome}} agora é visitante e foi removido(a) dos grupos e das escalas.",
-    "continuar": "Continuar"
+    "continuar": "Continuar",
+    "tornarAdmin": "Tornar administrador",
+    "removerAdmin": "Remover administrador",
+    "tornarAdminDica": "Acesso às abas Admin e Membros e a todos os grupos.",
+    "removerAdminDica": "Volta a ser membro (ou líder) comum.",
+    "tornarAdminConfirma": "{{nome}} passa a ver as abas Admin e Membros, com os dados pessoais de todos, e pode gerenciar todos os grupos, a Banda e as escalas.\n\nPara valer, a pessoa precisa fechar e abrir o app de novo.",
+    "removerAdminConfirma": "{{nome}} deixa de ser administrador e perde o acesso às abas Admin e Membros.",
+    "tornarAdminSim": "Sim, tornar admin",
+    "removerAdminSim": "Sim, remover admin",
+    "tornarAdminFeito": "{{nome}} agora é administrador. Peça para fechar e abrir o app.",
+    "removerAdminFeito": "{{nome}} não é mais administrador.",
+    "lidera": "Lidera",
+    "penielKids": "Peniel Kids",
+    "liderDaBanda": "Líder da Banda",
+    "bandaPeniel": "Banda Peniel"
   },
   "meses": {
     "janeiro": "Janeiro",

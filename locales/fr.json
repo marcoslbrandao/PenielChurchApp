@@ -1130,6 +1130,7 @@
     "aba_mensagens": "Messages",
     "aba_contato": "Contact",
     "aba_oracao": "Prière",
+    "aba_textos": "Textes",
     "aba_agenda": "Agenda",
     "aba_shorts": "Shorts",
     "aba_ofertas": "Offrandes",
@@ -1244,6 +1245,10 @@
     "obs": "Obs.",
     "removerMembro": "Supprimer le Membre",
     "desejaRemoverEsteMembro": "Supprimer ce membre ?",
+    "removerDaArea": "Passer en visiteur (a quitté l'église)",
+    "removerDaAreaConfirma": "{{nome}} ne sera plus membre et restera dans l'app en tant que visiteur.\n\nAutomatiquement :\n• quitte tous les groupes et responsabilités\n• quitte les plannings à venir (zones et Groupe de louange)\n• perd l'accès au Groupe de louange et aux équipes\n\nLa fiche reste dans le filtre Visiteur. S'il revient, utilisez « Rendre membre », mais groupes et plannings seront à refaire.",
+    "contasSemFicha": "Comptes de l'app sans fiche",
+    "contasSemFichaDica": "Ont créé un compte dans l'app en tant que visiteurs et n'ont pas encore de fiche dans l'annuaire.",
     "membros": "Membres",
     "acessoRestrito": "Accès restreint",
     "novo": "Nouveau",
@@ -1306,7 +1311,12 @@
     "infoResponsavelPlaceholder": "Ce que le parent a voulu que l'église sache",
     "filhosCadastrados": "Enfants enregistrés",
     "responsavel": "Responsable",
-    "ministro": "Ministre de louange"
+    "ministro": "Ministre de louange",
+    "removerDaAreaDica": "Retire de tous les groupes et plannings. Seul l'admin voit ce bouton.",
+    "removerDaAreaCerteza": "Êtes-vous sûr ? Confirmez pour passer en visiteur :",
+    "removerDaAreaSim": "Oui, passer en visiteur",
+    "removerDaAreaFeito": "{{nome}} est maintenant visiteur et a été retiré(e) des groupes et plannings.",
+    "continuar": "Continuer"
   },
   "meses": {
     "janeiro": "Janvier",

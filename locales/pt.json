@@ -1130,6 +1130,7 @@
     "aba_mensagens": "Mensagens",
     "aba_contato": "Contato",
     "aba_oracao": "Oração",
+    "aba_textos": "Textos",
     "aba_agenda": "Agenda",
     "aba_shorts": "Shorts",
     "aba_ofertas": "Ofertas",
@@ -1244,6 +1245,10 @@
     "obs": "Obs.",
     "removerMembro": "Remover Membro",
     "desejaRemoverEsteMembro": "Deseja remover este membro?",
+    "removerDaArea": "Tornar visitante (saiu da igreja)",
+    "removerDaAreaConfirma": "{{nome}} deixa de ser membro e continua no app como visitante.\n\nAutomaticamente:\n• sai de todos os grupos e lideranças\n• sai das escalas futuras (áreas e Banda)\n• perde o acesso à Banda e às equipes\n\nA ficha fica guardada no filtro Visitante. Se a pessoa voltar, use \"Tornar membro\", mas os grupos e escalas terão de ser refeitos.",
+    "contasSemFicha": "Contas no app sem ficha",
+    "contasSemFichaDica": "Criaram conta no app como visitantes e ainda não têm cadastro no diretório.",
     "membros": "Membros",
     "acessoRestrito": "Acesso restrito",
     "novo": "Novo",
@@ -1306,7 +1311,12 @@
     "infoResponsavelPlaceholder": "O que o pai ou a mãe quis que a igreja soubesse",
     "filhosCadastrados": "Filhos cadastrados",
     "responsavel": "Responsável",
-    "ministro": "Ministro(a) de louvor"
+    "ministro": "Ministro(a) de louvor",
+    "removerDaAreaDica": "Tira de todos os grupos e escalas. Só o admin vê este botão.",
+    "removerDaAreaCerteza": "Tem certeza? Confirme para tornar visitante:",
+    "removerDaAreaSim": "Sim, tornar visitante",
+    "removerDaAreaFeito": "{{nome}} agora é visitante e foi removido(a) dos grupos e das escalas.",
+    "continuar": "Continuar"
   },
   "meses": {
     "janeiro": "Janeiro",

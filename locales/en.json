@@ -1130,6 +1130,7 @@
     "aba_mensagens": "Messages",
     "aba_contato": "Contact",
     "aba_oracao": "Prayer",
+    "aba_textos": "Texts",
     "aba_agenda": "Schedule",
     "aba_shorts": "Shorts",
     "aba_ofertas": "Offerings",
@@ -1244,6 +1245,10 @@
     "obs": "Notes",
     "removerMembro": "Remove Member",
     "desejaRemoverEsteMembro": "Remove this member?",
+    "removerDaArea": "Make visitor (left the church)",
+    "removerDaAreaConfirma": "{{nome}} will no longer be a member and stays in the app as a visitor.\n\nAutomatically:\n• leaves every group and leadership role\n• leaves future rotas (areas and Band)\n• loses access to the Band and teams\n\nThe record stays under the Visitor filter. If they come back, use \"Make member\", but groups and rotas must be set up again.",
+    "contasSemFicha": "App accounts without a record",
+    "contasSemFichaDica": "Created an app account as visitors and have no directory record yet.",
     "membros": "Members",
     "acessoRestrito": "Restricted access",
     "novo": "New",
@@ -1306,7 +1311,12 @@
     "infoResponsavelPlaceholder": "What the parent wanted the church to know",
     "filhosCadastrados": "Children",
     "responsavel": "Parent or guardian",
-    "ministro": "Worship leader"
+    "ministro": "Worship leader",
+    "removerDaAreaDica": "Removes them from every group and rota. Only admins see this button.",
+    "removerDaAreaCerteza": "Are you sure? Confirm to make visitor:",
+    "removerDaAreaSim": "Yes, make visitor",
+    "removerDaAreaFeito": "{{nome}} is now a visitor and was removed from groups and rotas.",
+    "continuar": "Continue"
   },
   "meses": {
     "janeiro": "January",

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Modal, Alert, StatusBar, Platform,
   KeyboardAvoidingView, ActivityIndicator, RefreshControl,
+  Linking, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +12,7 @@ import { apagarLinha } from '../lib/db';
 import { useAuth } from '../lib/useAuth';
 import { PAISES, Pais, bandeira, formatarNumeroLocal, montarTelefone, splitTelefone, paisPorNome, paisPorIso2, paisPadraoDdi } from '../lib/paises';
 import { useTranslation } from 'react-i18next';
+import { isoParaDataBR } from '../lib/datas';
 
 const C = {
   bg: '#F7F4EE', surface: '#FFFFFF', surfaceAlt: '#F0EDE8',
@@ -940,8 +942,9 @@ const fm = StyleSheet.create({
 });
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
-function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
+function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete, onRemoverDaArea, foto }: {
   membro: Membro | null; membros: Membro[]; onClose: () => void; onEdit: () => void; onDelete: () => void;
+  onRemoverDaArea: () => void; foto?: string | null;
 }) {
   const { t } = useTranslation();
   if (!membro) return null;
@@ -991,8 +994,12 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
           </View>
           <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={dd.content}>
             <View style={dd.avatarRow}>
-              <View style={dd.avatar}>
-                <Text style={dd.avatarInitials}>{membro.nome[0]}{membro.sobrenome[0] ?? ''}</Text>
+              <View style={[dd.avatar, { overflow: 'hidden' }]}>
+                {foto ? (
+                  <Image source={{ uri: foto }} style={{ width: 64, height: 64 }} />
+                ) : (
+                  <Text style={dd.avatarInitials}>{membro.nome[0]}{membro.sobrenome?.[0] ?? ''}</Text>
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={dd.name}>{membro.nome} {membro.sobrenome}</Text>
@@ -1131,6 +1138,18 @@ function MembroDetailModal({ membro, membros, onClose, onEdit, onDelete }: {
               {!!membro.observacoes && <Row icon="document-text-outline" label={t('membros.obs')} value={membro.observacoes} />}
               {!!membro.info_responsavel && <Row icon="information-circle-outline" label={t('membros.infoResponsavel')} value={membro.info_responsavel} />}
             </View>
+            {/* Saiu da igreja: deixa de ser membro e continua no app como
+                visitante. Fica no fim da ficha, com texto, longe dos ícones
+                do topo, para não ser tocado sem querer. Só admin chega aqui. */}
+            {membro.status !== 'visitante' && !membro.responsavel_id && (
+              <TouchableOpacity onPress={onRemoverDaArea} style={dd.saiuBtn} activeOpacity={0.8}>
+                <Ionicons name="exit-outline" size={18} color={C.danger} />
+                <View style={{ flex: 1 }}>
+                  <Text style={dd.saiuBtnText}>{t('membros.removerDaArea')}</Text>
+                  <Text style={dd.saiuBtnSub}>{t('membros.removerDaAreaDica')}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
           </ScrollView>
         </View>
       </View>
@@ -1146,6 +1165,9 @@ const dd = StyleSheet.create({
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
   actionBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: 20, paddingBottom: 40 },
+  saiuBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: C.danger + '50', backgroundColor: C.danger + '0D' },
+  saiuBtnText: { fontSize: 14, fontWeight: '800', color: C.danger },
+  saiuBtnSub: { fontSize: 11, color: C.textMuted, marginTop: 2 },
   avatarRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: 20 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
   avatarInitials: { fontSize: 22, fontWeight: '800', color: '#fff' },
@@ -1185,6 +1207,12 @@ export default function MembrosScreen() {
   const [formVisible, setFormVisible] = useState(false);
   const [editingMembro, setEditingMembro] = useState<Membro | null>(null);
   const [detailMembro, setDetailMembro] = useState<Membro | null>(null);
+  // Contas do app com papel 'visitante' (RPC listar_contas_visitantes, só
+  // admin). As que não têm ficha no diretório aparecem no filtro Visitante.
+  const [contasVisitantes, setContasVisitantes] = useState<{ id: string; nome: string | null; email: string | null; criado_em: string; avatar_url?: string | null }[]>([]);
+  // Foto do perfil do app (profiles.avatar_url), por profile_id da ficha.
+  const [fotos, setFotos] = useState<Record<string, string>>({});
+  const [promovendoId, setPromovendoId] = useState<string | null>(null);
 
   // Esta tela mostra telefone, e-mail e endereço de todo mundo — só
   // admin/líder podem acessar (a tabela `members` também tem RLS reforçando
@@ -1200,7 +1228,19 @@ export default function MembrosScreen() {
       .from('members')
       .select('*')
       .order('nome', { ascending: true });
-    if (!error && data) setMembros(data as Membro[]);
+    if (!error && data) {
+      setMembros(data as Membro[]);
+      const ids = (data as Membro[]).map(m => m.profile_id).filter(Boolean) as string[];
+      if (ids.length) {
+        const { data: perfis } = await supabase.from('profiles').select('id, avatar_url').in('id', ids).not('avatar_url', 'is', null);
+        const mapa: Record<string, string> = {};
+        (perfis ?? []).forEach((p: any) => { if (p.avatar_url) mapa[p.id] = p.avatar_url; });
+        setFotos(mapa);
+      }
+    }
+    const { data: contas, error: erroContas } = await supabase.rpc('listar_contas_visitantes');
+    if (erroContas) console.warn('listar_contas_visitantes', erroContas.message);
+    setContasVisitantes((contas as any[]) ?? []);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -1208,6 +1248,49 @@ export default function MembrosScreen() {
   useEffect(() => {
     if (role === 'admin') fetchMembros();
   }, [role, fetchMembros]);
+
+  // "Saiu da igreja": a ficha vira 'visitante' e o gatilho
+  // members_sincroniza_papel muda a conta para visitante (sem Banda, sem
+  // grupos, sem liderança). A conta e a ficha continuam existindo.
+  const handleRemoverDaArea = (m: Membro) => {
+    const nome = `${m.nome} ${m.sobrenome ?? ''}`.trim();
+    const executar = async () => {
+      const { data, error } = await supabase.rpc('tornar_membro_visitante', { p_member_id: m.id });
+      const res = data as { success?: boolean; error?: string } | null;
+      if (error || !res?.success) { Alert.alert(t('common.erro'), error?.message ?? res?.error ?? ''); return; }
+      setDetailMembro(null);
+      fetchMembros();
+      Alert.alert(t('membros.removerDaArea'), t('membros.removerDaAreaFeito', { nome }));
+    };
+    // Dois passos de propósito: a mudança tira a pessoa de todos os grupos e
+    // escalas de uma vez, e voltar atrás não devolve esses lugares.
+    Alert.alert(
+      t('membros.removerDaArea'),
+      t('membros.removerDaAreaConfirma', { nome }),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        { text: t('membros.continuar', { defaultValue: 'Continuar' }), style: 'destructive', onPress: () => {
+          Alert.alert(
+            t('membros.removerDaAreaCerteza'),
+            nome,
+            [
+              { text: t('common.cancelar'), style: 'cancel' },
+              { text: t('membros.removerDaAreaSim'), style: 'destructive', onPress: executar },
+            ],
+          );
+        } },
+      ],
+    );
+  };
+
+  const tornarMembro = async (contaId: string) => {
+    setPromovendoId(contaId);
+    const { data, error } = await supabase.rpc('tornar_visitante_membro', { p_profile_id: contaId });
+    setPromovendoId(null);
+    const res = data as { success?: boolean; error?: string } | null;
+    if (error || !res?.success) { Alert.alert(t('common.erro'), error?.message ?? res?.error ?? ''); return; }
+    fetchMembros();
+  };
 
   const handleDelete = (id: string) => {
     // `members.responsavel_id` é ON DELETE CASCADE (migração 20260917220000):
@@ -1238,6 +1321,13 @@ export default function MembrosScreen() {
   // de volta, e o filtro de aniversário sempre mostra todo mundo — que é o
   // ponto de ter a criança no cadastro.
   const adultos = membros.filter(m => !m.responsavel_id);
+  const perfisComFicha = new Set(membros.map(m => m.profile_id).filter(Boolean));
+  const contasSemFicha = contasVisitantes.filter(c => {
+    if (perfisComFicha.has(c.id)) return false;
+    const q = search.toLowerCase();
+    return !q || (c.nome ?? '').toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q);
+  });
+  const mostraContasSemFicha = filterStatus === 'visitante' && filterMes === null && contasSemFicha.length > 0;
   const mesAtual = mesAtualEmLondres();
 
   const filtered = membros.filter(m => {
@@ -1322,11 +1412,11 @@ export default function MembrosScreen() {
           // não deve inflar "quantos membros a igreja tem".
           { label: 'Membros', value: adultos.filter(m => m.status === 'membro').length, color: C.success },
           { label: t('membros.lideres'), value: adultos.filter(m => m.status === 'lider').length, color: C.accent },
-          { label: t('membros.visitantes'), value: adultos.filter(m => m.status === 'visitante').length, color: C.textMuted },
+          { label: t('membros.visitantes'), value: adultos.filter(m => m.status === 'visitante').length + contasVisitantes.filter(c => !perfisComFicha.has(c.id)).length, color: C.textMuted, visitantes: true },
           { label: t('membros.anivMes'), value: birthdayCount, color: '#7C4DFF', aniversario: true },
         ].map(stat => (
           <TouchableOpacity key={stat.label} style={s.statCard}
-            onPress={() => stat.aniversario && setFilterMes(m => (m === null ? mesAtual : null))}>
+            onPress={() => { if (stat.aniversario) setFilterMes(m => (m === null ? mesAtual : null)); else if ((stat as any).visitantes) setFilterStatus('visitante'); }}>
             <Text style={[s.statValue, { color: stat.color }]}>{stat.value}</Text>
             <Text style={s.statLabel}>{stat.label}</Text>
           </TouchableOpacity>
@@ -1389,7 +1479,7 @@ export default function MembrosScreen() {
           contentContainerStyle={s.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchMembros(); }} />}
         >
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && !mostraContasSemFicha ? (
             <View style={s.empty}>
               <Ionicons name="people-outline" size={40} color={C.textDim} />
               <Text style={s.emptyText}>{membros.length === 0 ? 'Nenhum membro cadastrado ainda' : 'Nenhum membro encontrado'}</Text>
@@ -1398,7 +1488,11 @@ export default function MembrosScreen() {
             filtered.map(m => (
               <TouchableOpacity key={m.id} style={s.memberCard} onPress={() => setDetailMembro(m)} activeOpacity={0.75}>
                 <View style={[s.memberAvatar, { backgroundColor: statusColor(m.status) + '22' }]}>
-                  <Text style={[s.memberInitials, { color: statusColor(m.status) }]}>{m.nome[0]}{m.sobrenome?.[0] ?? ''}</Text>
+                  {m.profile_id && fotos[m.profile_id] ? (
+                    <Image source={{ uri: fotos[m.profile_id] }} style={s.memberFoto} />
+                  ) : (
+                    <Text style={[s.memberInitials, { color: statusColor(m.status) }]}>{m.nome[0]}{m.sobrenome?.[0] ?? ''}</Text>
+                  )}
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -1417,6 +1511,58 @@ export default function MembrosScreen() {
                 </View>
               </TouchableOpacity>
             ))
+          )}
+
+          {mostraContasSemFicha && (
+            <View style={{ marginTop: filtered.length > 0 ? 18 : 0 }}>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: C.textMuted, letterSpacing: 0.5, marginBottom: 4 }}>
+                {t('membros.contasSemFicha').toUpperCase()}
+              </Text>
+              <Text style={{ fontSize: 11, color: C.textDim, marginBottom: 10 }}>{t('membros.contasSemFichaDica')}</Text>
+              {contasSemFicha.map(c => (
+                <TouchableOpacity key={c.id} activeOpacity={0.75} style={[s.memberCard, { alignItems: 'center', marginBottom: 8 }]}
+                  onPress={() => Alert.alert(
+                    c.nome?.trim() || '—',
+                    `E-mail: ${c.email ?? '—'}\nConta criada em: ${isoParaDataBR(c.criado_em?.slice(0, 10))}`,
+                    [
+                      ...(c.email ? [{ text: 'Enviar e-mail', onPress: () => { Linking.openURL(`mailto:${c.email}`); } }] : []),
+                      { text: 'Fechar', style: 'cancel' as const },
+                    ],
+                  )}>
+                  <View style={[s.memberAvatar, { backgroundColor: C.textMuted + '22' }]}>
+                    {c.avatar_url ? (
+                      <Image source={{ uri: c.avatar_url }} style={s.memberFoto} />
+                    ) : (c.nome?.trim() ? (
+                      <Text style={[s.memberInitials, { color: C.textMuted }]}>
+                        {c.nome.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase()}
+                      </Text>
+                    ) : (
+                      <Ionicons name="phone-portrait-outline" size={18} color={C.textMuted} />
+                    ))}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.memberName}>{c.nome?.trim() || '—'}</Text>
+                    {!!c.email && (
+                      <TouchableOpacity onPress={() => Linking.openURL(`mailto:${c.email}`)}>
+                        <Text style={[s.memberSub, { color: C.primary }]}>{c.email}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => Alert.alert(t('admin.tornarMembro'), t('admin.tornarMembroConfirma', { nome: c.nome?.trim() || c.email || '' }), [
+                      { text: t('common.cancelar'), style: 'cancel' },
+                      { text: t('admin.tornarMembro'), onPress: () => tornarMembro(c.id) },
+                    ])}
+                    disabled={promovendoId === c.id}
+                    style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: C.success + '18', borderWidth: 1, borderColor: C.success + '50' }}
+                  >
+                    {promovendoId === c.id ? <ActivityIndicator size="small" color={C.success} /> : (
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: C.success }}>{t('admin.tornarMembro')}</Text>
+                    )}
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </ScrollView>
       )}
@@ -1450,6 +1596,8 @@ export default function MembrosScreen() {
           }, 350);
         }}
         onDelete={() => detailMembro && handleDelete(detailMembro.id)}
+        onRemoverDaArea={() => detailMembro && handleRemoverDaArea(detailMembro)}
+        foto={detailMembro?.profile_id ? fotos[detailMembro.profile_id] : null}
       />
     </SafeAreaView>
   );
@@ -1496,8 +1644,9 @@ const s = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 14, color: C.textMuted, textAlign: 'center' },
   memberCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.surface, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.border },
-  memberAvatar: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
-  memberInitials: { fontSize: 17, fontWeight: '800' },
+  memberAvatar: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  memberFoto: { width: 54, height: 54, borderRadius: 27 },
+  memberInitials: { fontSize: 19, fontWeight: '800' },
   memberName: { fontSize: 14, fontWeight: '700', color: C.text },
   memberSub: { fontSize: 12, color: C.textMuted, marginTop: 2 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },

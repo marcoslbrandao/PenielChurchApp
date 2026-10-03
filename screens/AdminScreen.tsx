@@ -2013,6 +2013,86 @@ function TraducaoAoVivoAdminPanel() {
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
+// ─── Textos editáveis (tabela textos_app) ────────────────────────────────────
+// Mensagens que o admin corrige sem novo build. {nome} vira o nome da pessoa.
+const TEXTOS_EDITAVEIS: { chave: string; titulo: string; dica: string }[] = [
+  { chave: 'aniversario_membro', titulo: '🎂 Aniversário de membro',
+    dica: 'Aparece na Home de todos os membros no dia e vai no push da manhã (7h). Visitantes não veem.' },
+  { chave: 'aniversario_visitante', titulo: '🎈 Aniversário de visitante',
+    dica: 'Só o próprio visitante vê, na Home dele e num push às 7h do dia do aniversário.' },
+];
+
+function TextosAppEditor() {
+  const [textos, setTextos] = useState<Record<string, string>>({});
+  const [originais, setOriginais] = useState<Record<string, string>>({});
+  const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    const { data, error } = await supabase.from('textos_app').select('chave, texto');
+    if (!error && data) {
+      const mapa: Record<string, string> = {};
+      (data as { chave: string; texto: string }[]).forEach(r => { mapa[r.chave] = r.texto; });
+      setTextos(mapa); setOriginais(mapa);
+    }
+    setCarregando(false);
+  }, []);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const salvar = async (chave: string) => {
+    const texto = (textos[chave] ?? '').trim();
+    if (!texto) { Alert.alert('Texto vazio', 'Escreva a mensagem antes de salvar.'); return; }
+    setSalvando(chave);
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from('textos_app')
+      .update({ texto, atualizado_em: new Date().toISOString(), atualizado_por: u.user?.id ?? null })
+      .eq('chave', chave);
+    setSalvando(null);
+    if (error) { Alert.alert('Erro', error.message); return; }
+    setOriginais(o => ({ ...o, [chave]: texto }));
+    Alert.alert('Salvo', 'A mensagem nova já vale a partir de agora.');
+  };
+
+  if (carregando) return <ActivityIndicator color={C.primary} style={{ marginTop: 30 }} />;
+
+  return (
+    <>
+      <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 14, lineHeight: 17 }}>
+        Use {'{nome}'} onde deve entrar o nome da pessoa. Com dois aniversariantes no mesmo dia, os nomes são juntados ("Ana e João").
+      </Text>
+      {TEXTOS_EDITAVEIS.map(item => {
+        const mudou = (textos[item.chave] ?? '') !== (originais[item.chave] ?? '');
+        return (
+          <View key={item.chave} style={{ backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 14, marginBottom: 14 }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{item.titulo}</Text>
+            <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 4, marginBottom: 10 }}>{item.dica}</Text>
+            <TextInput
+              value={textos[item.chave] ?? ''}
+              onChangeText={v => setTextos(t => ({ ...t, [item.chave]: v }))}
+              multiline
+              style={{ minHeight: 110, textAlignVertical: 'top', borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 10, fontSize: 14, color: C.text, backgroundColor: C.bg }}
+              placeholder="Mensagem"
+              placeholderTextColor={C.textDim}
+            />
+            <Text style={{ fontSize: 11, color: C.textDim, marginTop: 8 }}>
+              Prévia: {(textos[item.chave] ?? '').split('{nome}').join('Maria')}
+            </Text>
+            <TouchableOpacity
+              disabled={!mudou || salvando === item.chave}
+              onPress={() => salvar(item.chave)}
+              style={{ marginTop: 12, alignSelf: 'flex-end', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 10, backgroundColor: mudou ? C.primary : C.border }}
+            >
+              {salvando === item.chave
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={{ color: mudou ? '#fff' : C.textMuted, fontWeight: '700' }}>Salvar</Text>}
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+    </>
+  );
+}
+
 export default function AdminScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -2052,7 +2132,7 @@ export default function AdminScreen() {
   const [areaGerenciarVisible, setAreaGerenciarVisible] = useState<EscalaArea | null>(null);
   const [gerarEscalaModalVisible, setGerarEscalaModalVisible] = useState(false);
   const [editarEscalaVisible, setEditarEscalaVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao'>('convites');
+  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao' | 'textos'>('convites');
   // São 9 abas e só ~3 cabem na tela por vez — sem esse indicador, dava a
   // impressão de que a lista de abas estava cortada/quebrada (só aparecia
   // uma lasquinha do ícone da 4ª aba na borda). A setinha "→" avisa que dá
@@ -2199,6 +2279,17 @@ export default function AdminScreen() {
     Linking.openURL(`mailto:${msg.email}?subject=${encodeURIComponent(assunto)}`).catch(() => {});
   };
 
+  const removerPedidoOracao = (pedido: PrayerRequest) => {
+    Alert.alert('Remover pedido de oração', `Remover "${pedido.titulo}"? Não dá para desfazer.`, [
+      { text: t('common.cancelar'), style: 'cancel' },
+      { text: 'Remover', style: 'destructive', onPress: async () => {
+        const { error, count } = await supabase.from('prayer_requests').delete({ count: 'exact' }).eq('id', pedido.id);
+        if (error || count === 0) { Alert.alert(t('common.erro'), error?.message ?? 'Não foi possível remover.'); return; }
+        setPedidosOracao(lista => lista.filter(p => p.id !== pedido.id));
+      } },
+    ]);
+  };
+
   const avancarStatusOracao = async (pedido: PrayerRequest) => {
     const proximo = pedido.status === 'aberto' ? 'em_oracao' : 'respondido';
     await supabase.from('prayer_requests').update({ status: proximo, updated_at: new Date().toISOString() }).eq('id', pedido.id);
@@ -2311,7 +2402,7 @@ export default function AdminScreen() {
   const ehAdmin = role === 'admin';
   // Quem só lidera área de escala começa (e fica) na aba Escalas.
   const abasVisiveis = ehAdmin
-    ? (['convites', 'avisos', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'stats'] as const)
+    ? (['convites', 'avisos', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'textos', 'stats'] as const)
     : (['escalas'] as const);
   const abaAtual = abasVisiveis.includes(activeTab as any) ? activeTab : 'escalas';
 
@@ -2341,7 +2432,7 @@ export default function AdminScreen() {
           <Text style={s.headerTitle}>{t('admin.painelAdmin')}</Text>
           <Text style={s.headerSub}>{ehAdmin ? t('admin.administrador') : t('admin.liderDeEscala')}</Text>
         </View>
-        {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && (
+        {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && abaAtual !== 'textos' && (
           <TouchableOpacity
             style={s.newBtn}
             onPress={() => {
@@ -2383,7 +2474,7 @@ export default function AdminScreen() {
               onPress={() => setActiveTab(tab)}
             >
               <Ionicons
-                name={tab === 'convites' ? 'ticket-outline' : tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : 'bar-chart-outline'}
+                name={tab === 'convites' ? 'ticket-outline' : tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : tab === 'textos' ? 'create-outline' : 'bar-chart-outline'}
                 size={14}
                 color={abaAtual === tab ? C.purple : C.textMuted}
               />
@@ -2746,18 +2837,24 @@ export default function AdminScreen() {
                         </View>
                       </View>
                     </View>
-                    {p.status !== 'respondido' && (
-                      <View style={s.inviteActions}>
+                    <View style={s.inviteActions}>
+                      {p.status !== 'respondido' && (
                         <TouchableOpacity style={[s.actionBtn, { borderColor: C.success + '40' }]} onPress={() => avancarStatusOracao(p)}>
                           <Ionicons name={p.status === 'aberto' ? 'heart-half-outline' : 'checkmark-circle-outline'} size={16} color={C.success} />
                         </TouchableOpacity>
-                      </View>
-                    )}
+                      )}
+                      <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => removerPedidoOracao(p)}>
+                        <Ionicons name="trash-outline" size={16} color={C.danger} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))
               )}
             </>
           )}
+
+          {/* ══ TEXTOS ═══════════════════════════════════════════════════════ */}
+          {abaAtual === 'textos' && <TextosAppEditor />}
 
           {/* ══ AGENDA ════════════════════════════════════════════════════════ */}
           {abaAtual === 'agenda' && (

@@ -80,6 +80,9 @@ export function destinoDaNotificacao(
       // membro e toca num push de ontem cairia numa aba que não existe mais
       // para ele, e o React Navigation simplesmente não navegaria.
       return podeMembros ? abaMembros('Banda') : SININHO;
+    case 'aniversario_visitante':
+      // Parabéns do próprio visitante: o cartão está na Home.
+      return abaPrincipal('Inicio');
     case 'birthday':
       // Rota do Stack (modal), como Devocionais. A lista é servida pela RPC
       // `aniversariantes_do_mes`, que devolve vazio sem sessão — então quem

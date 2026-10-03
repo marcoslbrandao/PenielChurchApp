@@ -1130,6 +1130,7 @@
     "aba_mensagens": "Mensajes",
     "aba_contato": "Contacto",
     "aba_oracao": "Oración",
+    "aba_textos": "Textos",
     "aba_agenda": "Agenda",
     "aba_shorts": "Shorts",
     "aba_ofertas": "Ofrendas",
@@ -1244,6 +1245,10 @@
     "obs": "Obs.",
     "removerMembro": "Eliminar Miembro",
     "desejaRemoverEsteMembro": "¿Eliminar este miembro?",
+    "removerDaArea": "Convertir en visitante (dejó la iglesia)",
+    "removerDaAreaConfirma": "{{nome}} deja de ser miembro y sigue en la app como visitante.\n\nAutomáticamente:\n• sale de todos los grupos y liderazgos\n• sale de los turnos futuros (áreas y Banda)\n• pierde el acceso a la Banda y a los equipos\n\nLa ficha queda en el filtro Visitante. Si vuelve, use \"Hacer miembro\", pero habrá que rehacer grupos y turnos.",
+    "contasSemFicha": "Cuentas en la app sin ficha",
+    "contasSemFichaDica": "Crearon una cuenta en la app como visitantes y aún no tienen ficha en el directorio.",
     "membros": "Miembros",
     "acessoRestrito": "Acceso restringido",
     "novo": "Nuevo",
@@ -1306,7 +1311,12 @@
     "infoResponsavelPlaceholder": "Lo que el padre o la madre quiso que la iglesia supiera",
     "filhosCadastrados": "Hijos registrados",
     "responsavel": "Responsable",
-    "ministro": "Ministro(a) de alabanza"
+    "ministro": "Ministro(a) de alabanza",
+    "removerDaAreaDica": "Lo quita de todos los grupos y turnos. Solo el admin ve este botón.",
+    "removerDaAreaCerteza": "¿Seguro? Confirme para convertir en visitante:",
+    "removerDaAreaSim": "Sí, convertir en visitante",
+    "removerDaAreaFeito": "{{nome}} ahora es visitante y fue quitado(a) de los grupos y turnos.",
+    "continuar": "Continuar"
   },
   "meses": {
     "janeiro": "Enero",

@@ -5,7 +5,10 @@
 //   • VÉSPERA → só a liderança (admin e líderes de grupo). Serve para
 //     preparar: ligar, escrever o cartão, avisar o grupo. Chegar no próprio
 //     dia já é tarde para tudo isso.
-//   • DIA     → a igreja (todo mundo que não é visitante), como sempre foi.
+//   • DIA     → a igreja (todo mundo que não é visitante). O texto vem de
+//               `textos_app.aniversario_membro` (editável em Admin › Textos).
+//               Aniversariante VISITANTE não entra neste envio.
+//   • VISITANTE → só o próprio visitante, com `textos_app.aniversario_visitante`.
 //
 // CRON: `0 6,7 * * *` (UTC). Duas horas de propósito — Londres é UTC+0 no
 // inverno e UTC+1 no verão, e um cron de hora fixa muda de horário local
@@ -110,16 +113,63 @@ Deno.serve(async (req) => {
     // Uma leitura só do diretório serve aos dois envios.
     const { data: pessoas, error: pessoasErro } = await supabase
       .from('members')
-      .select('nome, sobrenome, data_nascimento, responsavel_id, mostrar_aniversario')
+      .select('nome, sobrenome, data_nascimento, responsavel_id, mostrar_aniversario, status, profile_id')
       .not('data_nascimento', 'is', null);
     if (pessoasErro) throw pessoasErro;
 
     const visiveis = (pessoas ?? []).filter((m: any) => m.mostrar_aniversario !== false);
     const resultado: Record<string, unknown> = {};
 
+    // Textos editáveis pelo Admin. Se a tabela ainda não existir, cai no
+    // texto antigo — o push não pode parar por causa disso.
+    const { data: textos } = await supabase.from('textos_app').select('chave, texto');
+    const texto = (chave: string) => (textos ?? []).find((t: any) => t.chave === chave)?.texto as string | undefined;
+    const ehVisitante = (m: any) => m.status === 'visitante' && !m.responsavel_id;
+
+    // ── Visitante: parabéns só para ele ──────────────────────────────────
+    {
+      const hojeISO = alvos[0].dataISO;
+      const visitantesHoje = visiveis.filter((m: any) => {
+        const dm = diaEMes(m.data_nascimento);
+        return ehVisitante(m) && m.profile_id && dm && dm.dia === hoje.dia && dm.mes === hoje.mes;
+      });
+      if (visitantesHoje.length === 0) {
+        resultado.visitante = 'ninguém';
+      } else {
+        const { error: logErro } = await supabase
+          .from('aniversario_push_log')
+          .insert({ data: hojeISO, tipo: 'visitante', enviados: 0 });
+        if (logErro) {
+          resultado.visitante = `já enviado hoje (${logErro.code ?? 'conflito'})`;
+        } else {
+          const modelo = texto('aniversario_visitante') ?? 'Feliz aniversário, {nome}! 🎂 A Peniel Church se alegra com você neste dia.';
+          const msgs: unknown[] = [];
+          for (const v of visitantesHoje) {
+            const { data: tks } = await supabase.from('push_tokens').select('token').eq('user_id', v.profile_id);
+            for (const t of tks ?? []) {
+              msgs.push({
+                to: (t as any).token,
+                title: '🎂 Feliz aniversário!',
+                body: modelo.split('{nome}').join(v.nome),
+                sound: 'default',
+                data: { type: 'aniversario_visitante' },
+              });
+            }
+          }
+          const { enviados, falhas } = await enviarEmLotes(msgs);
+          await supabase.from('aniversario_push_log').update({ enviados })
+            .eq('data', hojeISO).eq('tipo', 'visitante');
+          resultado.visitante = { visitantes: visitantesHoje.length, enviados, falhas };
+        }
+      }
+    }
+
     for (const alvo of alvos) {
       const aniversariantes = visiveis.filter((m: any) => {
         const dm = diaEMes(m.data_nascimento);
+        // No dia, a igreja só recebe aniversário de quem é da igreja; a
+        // liderança, na véspera, fica sabendo de todo mundo.
+        if (alvo.tipo === 'dia' && ehVisitante(m)) return false;
         return dm && dm.dia === alvo.dia && dm.mes === alvo.mes;
       });
 
@@ -172,14 +222,18 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const nomes = aniversariantes.map(nomeCompleto).join(', ');
+      const nomes = aniversariantes
+        .map((m: any) => alvo.tipo === 'vespera' && ehVisitante(m) ? `${nomeCompleto(m)} (visitante)` : nomeCompleto(m))
+        .join(', ');
       const quantos = aniversariantes.length;
       const titulo = alvo.tipo === 'vespera'
         ? (quantos === 1 ? '🎁 Aniversário amanhã' : `🎁 ${quantos} aniversários amanhã`)
         : (quantos === 1 ? '🎂 Aniversário hoje!' : `🎂 ${quantos} aniversários hoje!`);
       const corpo = alvo.tipo === 'vespera'
         ? `${nomes} ${quantos === 1 ? 'faz' : 'fazem'} aniversário amanhã. Dá tempo de preparar o cumprimento.`
-        : `${nomes} ${quantos === 1 ? 'faz' : 'fazem'} aniversário hoje. Não esqueça de parabenizar! 🙏`;
+        : (texto('aniversario_membro')
+            ? texto('aniversario_membro')!.split('{nome}').join(nomes)
+            : `${nomes} ${quantos === 1 ? 'faz' : 'fazem'} aniversário hoje. Não esqueça de parabenizar! 🙏`);
 
       const mensagens = tokens.map((t: any) => ({
         to: t.token,

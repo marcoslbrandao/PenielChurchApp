@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/useAuth';
 import { useNotifications } from '../lib/useNotifications';
-import { useBirthdays } from '../lib/useBirthdays';
+import { useAniversarioHoje } from '../lib/useAniversarioHoje';
 import { getUltimaVisita, marcarComoVistoAgora, getIdsDispensados, dispensarAviso } from '../lib/notificacoesLidas';
 import { linhaCompartilharApp } from '../lib/appLinks';
 import { liveSemCota, liveComApi, urlDoVideo, YOUTUBE_CANAL_URL, YOUTUBE_LIVES_URL, type LiveAtual } from '../lib/youtubeCanal';
@@ -590,7 +590,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     if (ehMembro) { navigation?.navigate('Membros', params); return; }
     navigation?.navigate(isLoggedIn ? 'AtivarMembro' : 'Auth');
   };
-  const { todayBirthdays } = useBirthdays();
+  const { aniversariantes: todayBirthdays, mensagemIgreja, meuParabens } = useAniversarioHoje();
   useNotifications(user?.id);
 
   // Animação pisca do botão LIVE
@@ -987,7 +987,16 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
 
         {/* ── Banner aniversário ───────────────────────────────────────────── */}
         {isLoggedIn && todayBirthdays.length > 0 && (
-          <BirthdayBanner birthdays={todayBirthdays} />
+          <BirthdayBanner birthdays={todayBirthdays} mensagem={mensagemIgreja} />
+        )}
+
+        {/* ── Parabéns do visitante (só ele vê, no dia dele) ──────────────── */}
+        {isLoggedIn && !!meuParabens && (
+          <View style={{ backgroundColor: '#1A1740', borderRadius: 16, marginBottom: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(245,200,66,0.3)' }}>
+            <Text style={{ fontSize: 28, marginBottom: 6 }}>🎂</Text>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#F5C842', marginBottom: 6 }}>Feliz aniversário!</Text>
+            <Text style={{ fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.9)' }}>{meuParabens}</Text>
+          </View>
         )}
 
         {/* ── Versículo do dia ─────────────────────────────────────────────── */}

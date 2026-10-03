@@ -7,9 +7,11 @@ import { BirthdayMember } from '../lib/useBirthdays';
 
 interface BirthdayBannerProps {
   birthdays: BirthdayMember[];
+  /** Mensagem da igreja (Admin › Textos › Aniversário de membro). */
+  mensagem?: string | null;
 }
 
-export default function BirthdayBanner({ birthdays }: BirthdayBannerProps) {
+export default function BirthdayBanner({ birthdays, mensagem }: BirthdayBannerProps) {
   const [dismissed, setDismissed] = useState(false);
 
   if (dismissed || birthdays.length === 0) return null;
@@ -53,6 +55,8 @@ export default function BirthdayBanner({ birthdays }: BirthdayBannerProps) {
         </TouchableOpacity>
       </View>
 
+      {!!mensagem && <Text style={s.mensagem}>{mensagem}</Text>}
+
       {/* Lista de aniversariantes */}
       {birthdays.map((member, idx) => (
         <View
@@ -69,7 +73,7 @@ export default function BirthdayBanner({ birthdays }: BirthdayBannerProps) {
           {/* Info */}
           <View style={{ flex: 1 }}>
             <Text style={s.memberName}>{member.nome} {member.sobrenome}</Text>
-            <Text style={s.memberAge}>🎉 {member.idade} anos hoje!</Text>
+            <Text style={s.memberAge}>{member.idade > 0 ? `🎉 ${member.idade} anos hoje!` : '🎉 Aniversário hoje!'}</Text>
           </View>
 
           {/* WhatsApp */}
@@ -113,6 +117,10 @@ const s = StyleSheet.create({
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center', justifyContent: 'center',
+  },
+  mensagem: {
+    fontSize: 13, lineHeight: 19, color: 'rgba(255,255,255,0.85)',
+    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4,
   },
   memberRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

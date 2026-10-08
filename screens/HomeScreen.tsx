@@ -364,14 +364,16 @@ function diaMesDeISO(iso: string, lang: string = 'pt'): { dia: number; mes: stri
 // em qualquer idioma.
 const eventosRecorrentes = [
   { id: 1, nomeKey: 'eventoCultoDominical', diaSemana: 0, horario: '18h', local: 'Abbey Square, Reading', tipo: 'presencial' },
-  // A Sala de Oração é aberta à igreja inteira, então o link mora aqui mesmo,
-  // visível para qualquer um — inclusive visitante sem conta. O link do Estudo
-  // Bíblico NÃO vem para cá de propósito: ele é do grupo, e fica em
-  // `grupo_eventos`, protegido pela RLS. O card do estudo divulga o horário;
-  // quem entra na sala é quem foi adicionado ao grupo.
-  { id: 2, nomeKey: 'eventoSalaDeOracao',    diaSemana: 3, horario: '21h', local: 'Zoom',                  tipo: 'online',
+  // Oração e Estudo Bíblico são abertos à igreja inteira, então os links moram
+  // aqui mesmo, visíveis para qualquer um — inclusive visitante sem conta.
+  // 08/10: a oração passou para TERÇA 21h e o estudo para QUARTA 20h, e o
+  // Marcos decidiu que o link do estudo também fica clicável para todos (antes
+  // só quem era do grupo via). O mesmo link está em `agenda_eventos` e na
+  // `grupo_recorrencias` — se mudar, são três lugares.
+  { id: 2, nomeKey: 'eventoSalaDeOracao',    diaSemana: 2, horario: '21h', local: 'Zoom',                  tipo: 'online',
     link: 'https://us02web.zoom.us/j/89123221983?pwd=m6qRFHxC1Qaq6mETTzTrrYdwLXnG41.1' },
-  { id: 3, nomeKey: 'eventoEstudoBiblico',   diaSemana: 5, horario: '20h', local: 'Zoom',                  tipo: 'online'     },
+  { id: 3, nomeKey: 'eventoEstudoBiblico',   diaSemana: 3, horario: '20h', local: 'Zoom',                  tipo: 'online',
+    link: 'https://us02web.zoom.us/j/88370473540?pwd=rWbKlHoav2d5Oxc8pOFaGby5pbdmwR.1' },
   { id: 4, nome: 'Peniel Alive',             diaSemana: 6, horario: '19h', localKey: 'localNasCasas',      tipo: 'jovens'     },
 ];
 
@@ -676,12 +678,14 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   }, []);
 
   // ── Devocional em destaque (publicado pelo Admin) ─────────────────────────
-  const [devocional, setDevocional] = useState<{ id: string; titulo: string; versiculo: string; referencia: string; texto: string } | null>(null);
+  const [devocional, setDevocional] = useState<{ id: string; titulo: string; versiculo: string; referencia: string; texto: string; data: string; imagem_url: string | null } | null>(null);
   const [devocionalAberto, setDevocionalAberto] = useState(false);
   const devocionalTituloTraduzido = useCampoTraduzido(devocional?.titulo, 'devocionais', devocional?.id, 'titulo');
   const devocionalVersiculoTraduzido = useCampoTraduzido(devocional?.versiculo, 'devocionais', devocional?.id, 'versiculo');
   const devocionalReferenciaTraduzida = useCampoTraduzido(devocional?.referencia, 'devocionais', devocional?.id, 'referencia');
   const devocionalTextoTraduzido = useCampoTraduzido(devocional?.texto, 'devocionais', devocional?.id, 'texto');
+  // "Novo" nas primeiras 36 horas — os devocionais saem às 6h, seg/qua/sex.
+  const devocionalNovo = !!devocional?.data && Date.now() - new Date(devocional.data).getTime() < 36 * 3600 * 1000;
 
   // useFocusEffect (não useEffect simples) — assim o card sempre mostra o
   // devocional mais recente ao voltar pra Home, mesmo se o admin publicou um
@@ -691,7 +695,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     useCallback(() => {
       supabase
         .from('devocionais')
-        .select('id, titulo, versiculo, referencia, texto')
+        .select('id, titulo, versiculo, referencia, texto, data, imagem_url')
         .is('grupo', null)
         .order('data', { ascending: false })
         .limit(1)
@@ -931,7 +935,10 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     const quando = real
       ? diaMesDeISO(real.data, i18n.language)
       : proximaData(e.diaSemana, i18n.language);
-    const hojeISO = new Date().toISOString().slice(0, 10);
+    // Data local, não `toISOString` (UTC): entre 0h e 1h no horário de verão
+    // britânico o UTC ainda é ontem, e o selo "Hoje" sumia do estudo.
+    const agora = new Date();
+    const hojeISO = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
     return {
       ...e,
       ...quando,
@@ -1059,6 +1066,27 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
             activeOpacity={0.85}
             onPress={() => setDevocionalAberto(!devocionalAberto)}
           >
+            {/* Foto do tema (08/10). Quem escolhe é o BANCO, na hora em que o
+                devocional é inserido: gatilho `devocional_define_imagem`, fotos
+                em `devocional_imagens` (bucket `devocionais`). Foto nova entra
+                sem OTA. Devocional antigo, sem foto, fica como era. */}
+            {!!devocional.imagem_url && (
+            <View style={styles.devocionalImagemWrap}>
+              <Image source={{ uri: devocional.imagem_url }} style={styles.devocionalImagem} resizeMode="cover" />
+              {/* Escurecimento em degraus na base da foto, para ela se fundir
+                  com o card (o app não tem expo-linear-gradient). */}
+              <View pointerEvents="none" style={styles.devocionalImagemFade}>
+                {[0.08, 0.18, 0.3, 0.45, 0.62, 0.8].map(o => (
+                  <View key={o} style={{ flex: 1, backgroundColor: `rgba(36,29,92,${o})` }} />
+                ))}
+              </View>
+              {devocionalNovo && (
+                <View style={styles.devocionalNovoPill}>
+                  <Text style={styles.devocionalNovoTexto}>{t('home.devocionalNovo')}</Text>
+                </View>
+              )}
+            </View>
+            )}
             <View style={styles.devocionalHeader}>
               <View style={styles.devocionalIcone}>
                 <Ionicons name="book" size={16} color="#F5C842" />
@@ -1217,7 +1245,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
                     )}
                     <Text style={styles.eventoNome} numberOfLines={1}>{ev.nomeKey ? t(`home.${ev.nomeKey}`) : ev.nome}</Text>
                   </View>
-                  <Text style={styles.eventoMeta}>{ev.diaSemana === 0 ? t('home.diaDomingo') : ev.diaSemana === 3 ? t('home.diaQuarta') : ev.diaSemana === 5 ? t('home.diaSexta') : t('home.diaSabado')} · {ev.horario} · {ev.localKey ? t(`home.${ev.localKey}`) : ev.local}</Text>
+                  <Text style={styles.eventoMeta}>{ev.diaSemana === 0 ? t('home.diaDomingo') : ev.diaSemana === 2 ? t('home.diaTerca') : ev.diaSemana === 3 ? t('home.diaQuarta') : ev.diaSemana === 5 ? t('home.diaSexta') : t('home.diaSabado')} · {ev.horario} · {ev.localKey ? t(`home.${ev.localKey}`) : ev.local}</Text>
                 </View>
                 <View style={[styles.eventoTag, { backgroundColor: tag.bg }]}>
                   <Text style={[styles.eventoTagTexto, { color: tag.text }]}>{tag.label}</Text>
@@ -1325,7 +1353,12 @@ function buildStyles(C: PaletaHome) { return StyleSheet.create({
   mensagemResumo: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 19, marginTop: 6 },
   mensagemLerMais: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
   mensagemLerMaisTexto: { fontSize: 12, fontWeight: '700', color: '#F5C842' },
-  devocionalCard: { backgroundColor: '#241D5C', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,200,66,0.2)' },
+  devocionalCard: { backgroundColor: '#241D5C', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,200,66,0.2)', overflow: 'hidden' },
+  devocionalImagemWrap: { marginTop: -16, marginHorizontal: -16, marginBottom: 4 },
+  devocionalImagem: { width: '100%', aspectRatio: 2, backgroundColor: '#1A1740' },
+  devocionalImagemFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '35%' },
+  devocionalNovoPill: { position: 'absolute', top: 12, left: 12, backgroundColor: '#F5C842', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  devocionalNovoTexto: { fontSize: 10, fontWeight: '800', color: '#1A1740', letterSpacing: 0.8, textTransform: 'uppercase' },
   devocionalHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   devocionalIcone: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(245,200,66,0.15)', alignItems: 'center', justifyContent: 'center' },
   devocionalLabel: { fontSize: 10, fontWeight: '700', color: '#F5C842', textTransform: 'uppercase', letterSpacing: 1 },

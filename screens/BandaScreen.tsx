@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, FlatList, Linking, Alert, KeyboardAvoidingView, Image,
-  Platform, StatusBar, Animated, Modal, ActivityIndicator, RefreshControl, Keyboard,
+  Platform, StatusBar, Animated, Modal, ActivityIndicator, RefreshControl, Keyboard, AppState,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -3649,7 +3650,10 @@ function BandaMain() {
       })
     );
     setCultos(cultosWithEntries);
-    if (cultosWithEntries.length > 0) setExpandedCulto(cultosWithEntries[0].id);
+    // Só abre o primeiro na carga inicial: agora a lista recarrega sozinha
+    // (foco da aba, volta do segundo plano, culto novo no banco) e não pode
+    // fechar o culto que a pessoa estava olhando.
+    if (cultosWithEntries.length > 0) setExpandedCulto(prev => prev ?? cultosWithEntries[0].id);
     setLoadingCultos(false);
     setRefreshing(false);
   }, []);
@@ -3683,11 +3687,42 @@ function BandaMain() {
       })
     );
     setEnsaios(ensaiosWithEntries);
-    if (ensaiosWithEntries.length > 0) setExpandedEnsaio(ensaiosWithEntries[0].id);
+    if (ensaiosWithEntries.length > 0) setExpandedEnsaio(prev => prev ?? ensaiosWithEntries[0].id);
     setLoadingEnsaios(false);
   }, []);
 
   useEffect(() => { fetchSongs(); fetchCultos(); fetchEnsaios(); fetchMembros(); fetchFuncoes(); }, [fetchSongs, fetchCultos, fetchEnsaios, fetchMembros, fetchFuncoes]);
+
+  // CULTO NOVO QUE NÃO APARECIA (08/10): cultos e ensaios eram buscados UMA
+  // vez, quando a aba montava. A aba fica montada enquanto o app vive — então
+  // quem já tinha aberto a Banda antes de o culto ser criado continuava vendo
+  // a lista velha até puxar pra atualizar ou matar o app. Agora recarrega:
+  //  1. quando a aba volta a ficar em foco (inclusive vindo do push);
+  //  2. quando o app volta do segundo plano;
+  //  3. em tempo real, quando alguém cria/publica/apaga culto ou ensaio.
+  const primeiroFoco = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (primeiroFoco.current) { primeiroFoco.current = false; return; }
+      fetchCultos(); fetchEnsaios();
+    }, [fetchCultos, fetchEnsaios])
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', estado => {
+      if (estado === 'active') { fetchCultos(); fetchEnsaios(); }
+    });
+    return () => sub.remove();
+  }, [fetchCultos, fetchEnsaios]);
+
+  useEffect(() => {
+    const canal = supabase
+      .channel('banda-cultos-ensaios')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cultos' }, () => fetchCultos())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ensaios' }, () => fetchEnsaios())
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [fetchCultos, fetchEnsaios]);
 
   const handleRefresh = () => { setRefreshing(true); fetchSongs(); fetchCultos(); fetchEnsaios(); fetchMembros(); fetchFuncoes(); fetchPresencas(); fetchIndisponibilidades(); fetchTimes(); fetchVersoes(); };
 
@@ -3914,7 +3949,13 @@ function BandaMain() {
     tipo === 'culto' ? fetchCultos() : fetchEnsaios();
   };
 
-  const cultoDoDia = cultosVisiveis.find(c => c.date === today) ?? cultosVisiveis[0] ?? null;
+  // A lista vem do mais novo pro mais antigo, então `cultosVisiveis[0]` era o
+  // culto MAIS DISTANTE, não o próximo: com dois domingos cadastrados, o
+  // banner mostrava o de daqui a duas semanas. Agora: o de hoje; senão o
+  // próximo que ainda vai acontecer; senão o último que já passou.
+  const cultoDoDia = cultosVisiveis.find(c => c.date === today)
+    ?? [...cultosVisiveis].filter(c => c.date > today).sort((a, b) => a.date.localeCompare(b.date))[0]
+    ?? cultosVisiveis[0] ?? null;
   const filteredSongs = (filter === 'repertoire' ? songs.filter(sg => sg.in_repertoire) : songs)
     .filter(sg => casaBusca(sg, buscaRepertorio));
 
@@ -4270,6 +4311,23 @@ function BandaMain() {
                         <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={C.textMuted} />
                       </View>
                     </TouchableOpacity>
+                    {/* Rascunho esquecido (08/10): o culto de 04/10 foi montado com 7
+                        músicas e nunca publicado — só quem criou e o admin viam;
+                        o resto da banda não. A etiqueta pequena e o olhinho não
+                        bastavam. Agora quem pode publicar vê o aviso e o botão. */}
+                    {!culto.publicado && podeGerirCulto(culto) && (
+                      <View style={s.rascunhoAviso}>
+                        <Ionicons name="eye-off-outline" size={15} color={C.gold} />
+                        <Text style={s.rascunhoAvisoTexto}>{t('banda.rascunhoAviso')}</Text>
+                        <TouchableOpacity
+                          style={s.rascunhoAvisoBtn}
+                          onPress={() => alternarPublicado('culto', culto.id, true)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={s.rascunhoAvisoBtnTexto}>{t('banda.publicar')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     {isOpen && (
                       <View style={s.cultoSongs}>
                         <View style={s.acoesRow}>
@@ -4540,6 +4598,23 @@ function BandaMain() {
                         <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color={C.textMuted} />
                       </View>
                     </TouchableOpacity>
+                    {/* Rascunho esquecido (08/10): o culto de 04/10 foi montado com 7
+                        músicas e nunca publicado — só quem criou e o admin viam;
+                        o resto da banda não. A etiqueta pequena e o olhinho não
+                        bastavam. Agora quem pode publicar vê o aviso e o botão. */}
+                    {!ensaio.publicado && podeGerirEnsaio(ensaio) && (
+                      <View style={s.rascunhoAviso}>
+                        <Ionicons name="eye-off-outline" size={15} color={C.gold} />
+                        <Text style={s.rascunhoAvisoTexto}>{t('banda.rascunhoAviso')}</Text>
+                        <TouchableOpacity
+                          style={s.rascunhoAvisoBtn}
+                          onPress={() => alternarPublicado('ensaio', ensaio.id, true)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={s.rascunhoAvisoBtnTexto}>{t('banda.publicar')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     {isOpen && (
                       <View style={s.cultoSongs}>
                         <View style={s.acoesRow}>
@@ -5088,6 +5163,10 @@ const buildS = (C: BandaColors) => StyleSheet.create({
   cultoLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 7, flexWrap: 'wrap' },
   rascunhoTag: { backgroundColor: C.goldBg, borderWidth: 1, borderColor: C.gold, borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 },
   rascunhoTagText: { fontSize: 9, fontWeight: '800', color: C.gold, letterSpacing: 0.5, textTransform: 'uppercase' },
+  rascunhoAviso: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginBottom: 12, padding: 10, borderRadius: 10, backgroundColor: C.goldBg, borderWidth: 1, borderColor: C.gold },
+  rascunhoAvisoTexto: { flex: 1, fontSize: 12, lineHeight: 16, color: C.text },
+  rascunhoAvisoBtn: { backgroundColor: C.gold, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+  rascunhoAvisoBtnTexto: { fontSize: 12, fontWeight: '800', color: '#1A1740' },
   cultoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14 },
   cultoHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   cultoDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.primary },

@@ -73,7 +73,8 @@ export default function BirthdayBanner({ birthdays, mensagem }: BirthdayBannerPr
           {/* Info */}
           <View style={{ flex: 1 }}>
             <Text style={s.memberName}>{member.nome} {member.sobrenome}</Text>
-            <Text style={s.memberAge}>{member.idade > 0 ? `🎉 ${member.idade} anos hoje!` : '🎉 Aniversário hoje!'}</Text>
+            {/* Sem a idade, a pedido do Marcos (08/10): idade não é para o mural. */}
+            <Text style={s.memberAge}>🎉 Aniversário hoje!</Text>
           </View>
 
           {/* WhatsApp */}

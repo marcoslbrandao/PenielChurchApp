@@ -32,19 +32,37 @@ type PaletaBiblia = ReturnType<typeof paletaBiblia>;
 // app/views/languages.json). Bônus: a Bolls tem tradução em francês
 // disponível (FRLSG), então o francês volta a ter Bíblia completa no app —
 // antes só tinha o versículo do dia estático (ver lib/versiculoDoDia.ts).
-const versoes = [
-  // A NVI saiu em 08/10/2026: a Biblica (dona dos direitos) proibiu o
-  // bolls.life de servir o texto, e a API passou a devolver, no lugar de cada
-  // versiculo, um texto de protesto do autor do site. Nao existe fonte gratuita
-  // e autorizada da NVI. A NAA entra como padrao (linguagem atual, como a NVI).
-  { sigla: 'NAA', nome: 'Nova Almeida Atualizada',      idioma: '🇧🇷 Português', apiId: 'NAA'   },
-  { sigla: 'NTLH', nome: 'Nova Tradução na Linguagem de Hoje', idioma: '🇧🇷 Português', apiId: 'NTLH' },
-  { sigla: 'ARA', nome: 'Almeida Revista e Atualizada', idioma: '🇧🇷 Português', apiId: 'ARA'   },
-  { sigla: 'ACF', nome: 'Almeida Corrigida Fiel',       idioma: '🇧🇷 Português', apiId: 'ACF11' },
-  { sigla: 'KJV', nome: 'King James Version',           idioma: '🇬🇧 English',   apiId: 'KJV'   },
-  { sigla: 'WEB', nome: 'World English Bible',          idioma: '🇬🇧 English',   apiId: 'WEB'   },
-  { sigla: 'RVR', nome: 'Reina Valera',                 idioma: '🇪🇸 Español',   apiId: 'RV1960'},
-  { sigla: 'LSG', nome: 'Louis Segond',                 idioma: '🇫🇷 Français',  apiId: 'FRLSG' },
+// Duas fontes:
+//  - 'yv'    = YouVersion Platform, licenciado oficialmente pelas editoras
+//              (conta "Peniel Church", 08/10/2026). Passa pela Edge Function
+//              `biblia-youversion`, que guarda a App Key. `yvId` = id da Biblia.
+//  - 'bolls' = bolls.life (gratuito, sem contrato com as editoras). A NVI saiu
+//              de la em 08/10/2026 porque a Biblica proibiu o site de servi-la;
+//              por isso a NVI agora vem do YouVersion.
+type Versao = {
+  sigla: string; nome: string; idioma: string; apiId: string;
+  fonte: 'yv' | 'bolls'; yvId?: number;
+};
+const versoes: Versao[] = [
+  { sigla: 'NVI', nome: 'Nova Versão Internacional',    idioma: '🇧🇷 Português', apiId: 'YV129',  fonte: 'yv', yvId: 129 },
+  { sigla: 'NBV', nome: 'Nova Bíblia Viva',             idioma: '🇧🇷 Português', apiId: 'YV1966', fonte: 'yv', yvId: 1966 },
+  { sigla: 'NAA', nome: 'Nova Almeida Atualizada',      idioma: '🇧🇷 Português', apiId: 'NAA',    fonte: 'bolls' },
+  { sigla: 'NTLH', nome: 'Nova Tradução na Linguagem de Hoje', idioma: '🇧🇷 Português', apiId: 'NTLH', fonte: 'bolls' },
+  { sigla: 'ARA', nome: 'Almeida Revista e Atualizada', idioma: '🇧🇷 Português', apiId: 'ARA',    fonte: 'bolls' },
+  { sigla: 'ACF', nome: 'Almeida Corrigida Fiel',       idioma: '🇧🇷 Português', apiId: 'ACF11',  fonte: 'bolls' },
+  { sigla: 'BLT', nome: 'Bíblia Livre Para Todos',      idioma: '🇧🇷 Português', apiId: 'YV3254', fonte: 'yv', yvId: 3254 },
+  { sigla: 'NIV', nome: 'New International Version',    idioma: '🇬🇧 English',   apiId: 'YV111',  fonte: 'yv', yvId: 111 },
+  { sigla: 'KJV', nome: 'King James Version',           idioma: '🇬🇧 English',   apiId: 'KJV',    fonte: 'bolls' },
+  { sigla: 'NVI-S', nome: 'Nueva Versión Internacional', idioma: '🇪🇸 Español',  apiId: 'YV128',  fonte: 'yv', yvId: 128 },
+  { sigla: 'RVR', nome: 'Reina Valera',                 idioma: '🇪🇸 Español',   apiId: 'RV1960', fonte: 'bolls' },
+  { sigla: 'LSG', nome: 'Louis Segond',                 idioma: '🇫🇷 Français',  apiId: 'FRLSG',  fonte: 'bolls' },
+];
+
+// Codigos USFM dos 66 livros, na ordem de livrosAT + livrosNT (a mesma do
+// bookIdBolls). O YouVersion identifica o capitulo como "JHN.3".
+const USFM = [
+  'GEN','EXO','LEV','NUM','DEU','JOS','JDG','RUT','1SA','2SA','1KI','2KI','1CH','2CH','EZR','NEH','EST','JOB','PSA','PRO','ECC','SNG','ISA','JER','LAM','EZK','DAN','HOS','JOL','AMO','OBA','JON','MIC','NAM','HAB','ZEP','HAG','ZEC','MAL',
+  'MAT','MRK','LUK','JHN','ACT','ROM','1CO','2CO','GAL','EPH','PHP','COL','1TH','2TH','1TI','2TI','TIT','PHM','HEB','JAS','1PE','2PE','1JN','2JN','3JN','JUD','REV',
 ];
 
 
@@ -123,7 +141,7 @@ function formatarReferenciaVersos(nums: number[]): string {
 
 // ─── Leitor Modal ─────────────────────────────────────────────────────────────
 function LeitorModal({ livro, versao, capInicial, onClose }: {
-  livro: Livro | null; versao: typeof versoes[0]; capInicial?: number; onClose: () => void;
+  livro: Livro | null; versao: Versao; capInicial?: number; onClose: () => void;
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -132,6 +150,8 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [doCache, setDoCache] = useState(false);
+  // Atribuicao exigida pela licenca do YouVersion (mostrada no fim do capitulo).
+  const [copyright, setCopyright] = useState('');
   // Seleção de versículos pra compartilhar só um trecho, não o capítulo
   // inteiro — toca no(s) versículo(s) desejado(s) pra marcar/desmarcar.
   // Vazio = comportamento antigo (compartilha o capítulo todo).
@@ -186,6 +206,31 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
     // não-ok/corpo inválido) — os dois casos caindo no mesmo catch mostravam
     // "sem conexão", o que confundia quando o problema era do provedor da
     // Bíblia, não da internet do usuário.
+    setCopyright('');
+    // YouVersion: texto licenciado, via Edge Function (a App Key fica no
+    // servidor). Sem cache no aparelho: a licenca nao da direito a guardar o
+    // texto offline.
+    if (versao.fonte === 'yv' && versao.yvId) {
+      try {
+        const ref = `${USFM[bookIdBolls(livro) - 1]}.${cap}`;
+        const { data, error: erroFn } = await supabase.functions.invoke('biblia-youversion', {
+          body: { bible: versao.yvId, ref },
+        });
+        if (erroFn || !data || !Array.isArray(data.verses) || data.verses.length === 0) {
+          setError(t('biblia.servicoIndisponivel'));
+        } else {
+          setVersos(data.verses.map((v: any) => ({
+            book_name: nomeExibido, chapter: cap, verse: v.verse, text: String(v.text ?? ''),
+          })));
+          setCopyright(String(data.copyright ?? ''));
+          registrarLeitura(nomeExibido, cap);
+        }
+      } catch {
+        setError(t('biblia.semConexao'));
+      }
+      setLoading(false);
+      return;
+    }
     let recebeuAlgumaResposta = false;
     try {
       const bookId = bookIdBolls(livro);
@@ -363,6 +408,9 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
               </TouchableOpacity>
             );
           })}
+          {!loading && !error && !!copyright && (
+            <Text style={lr.copyright}>{copyright}</Text>
+          )}
           <View style={{ height: 40 }} />
         </ScrollView>
       </View>
@@ -398,6 +446,7 @@ const lr = StyleSheet.create({
   versoNum: { fontSize: 11, color: '#F5C842', fontWeight: '700', width: 22, paddingTop: 2 },
   versoNumSelecionado: { color: '#1A1740', backgroundColor: '#F5C842', borderRadius: 8, overflow: 'hidden', textAlign: 'center' },
   versoText: { flex: 1, fontSize: 17, color: 'rgba(255,255,255,0.9)', lineHeight: 28, marginBottom: 8 },
+  copyright: { fontSize: 11, color: 'rgba(255,255,255,0.45)', lineHeight: 16, marginTop: 18, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.12)' },
   selecaoBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#241F5E', paddingHorizontal: 16, paddingVertical: 8,

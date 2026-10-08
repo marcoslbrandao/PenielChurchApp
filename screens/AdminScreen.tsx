@@ -2615,7 +2615,7 @@ export default function AdminScreen() {
                   <View key={a.id} style={s.inviteCard}>
                     <View style={s.inviteLeft}>
                       <Text style={s.inviteCode}>{a.titulo}</Text>
-                      <Text style={[s.inviteEmail, { marginTop: 4 }]} numberOfLines={2}>{a.texto}</Text>
+                      <Text style={[s.inviteEmail, { marginTop: 4 }]}>{a.texto}</Text>
                       <View style={s.inviteMetaRow}>
                         <View style={[s.statusBadge, {
                           backgroundColor: a.tipo === 'urgente' ? C.danger + '18' : a.tipo === 'evento' ? C.purple + '18' : C.success + '18',

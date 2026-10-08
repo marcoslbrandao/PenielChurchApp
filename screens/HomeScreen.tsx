@@ -158,7 +158,8 @@ function NotifAvisoCard({ aviso, onRemover }: { aviso: AvisoResult; onRemover: (
         </View>
         <View style={{ flex: 1 }}>
           <Text style={sm.notifTitulo}>{titulo}</Text>
-          <Text style={sm.notifTexto} numberOfLines={3}>{texto}</Text>
+          {/* Texto inteiro: cortar em 3 linhas escondia justamente o horario do aviso. */}
+          <Text style={sm.notifTexto}>{texto}</Text>
           <Text style={sm.notifData}>{new Date(aviso.data).toLocaleDateString(locale, { day: '2-digit', month: 'short' })}</Text>
           <BotaoAviso avisoId={aviso.id} texto={aviso.cta_texto} url={aviso.cta_url} cor="#4A1AA8" />
         </View>

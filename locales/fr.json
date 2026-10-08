@@ -1466,7 +1466,7 @@
     "equipesTitulo": "Équipes",
     "equipeAcolhimento": "Accueil",
     "equipeRecepcao": "Réception",
-    "equipeAjudaRecepcao": "La réception peut enregistrer des visiteurs à la porte, mais ne voit ni la liste ni les téléphones. Les membres, responsables et administrateurs peuvent déjà enregistrer sans faire partie de cette équipe."
+    "equipeAjudaRecepcao": "La réception enregistre les visiteurs à la porte, mais ne voit ni la liste ni les téléphones. La liste des visiteurs est réservée aux administrateurs."
   },
   "kids": {
     "titulo": "Peniel Kids",

@@ -192,24 +192,71 @@ function EventoCard({ evento, hoje, aberto, onToggleDetalhes, onAbrirZoom, onAbr
 }
 
 // Card de evento especial — nome e descrição também traduzidos.
-function EventoEspecialCard({ evento }: { evento: { id: string; nome: string; descricao: string; cor: string; data: string } }) {
+// Antes era um TouchableOpacity sem `onPress`: tinha a seta de "abrir" e não
+// fazia nada, e só mostrava a data se o evento tivesse uma data fixa (um
+// especial recorrente aparecia sem dia, sem hora e sem link). Agora mostra
+// dia/hora/local sempre e, ao tocar, abre a descrição e o botão do Zoom ou do
+// mapa.
+type EspecialUI = {
+  id: string; nome: string; descricao: string; cor: string; data: string;
+  horario: string; local: string; tipo: string;
+  linkZoom: string | null; mapUrl: string | null;
+};
+
+function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbrirLink: (url: string, tipo: 'zoom' | 'mapa') => void }) {
+  const { t } = useTranslation();
   const nome = useCampoTraduzido(evento.nome, 'agenda_eventos', evento.id, 'nome');
   const descricao = useCampoTraduzido(evento.descricao, 'agenda_eventos', evento.id, 'descricao');
   const { isDark } = useTheme();
   const C = useMemo(() => paletaAgenda(isDark), [isDark]);
   const styles = useMemo(() => buildStyles(C), [C]);
+  const [aberto, setAberto] = useState(false);
+  const temMais = !!descricao || !!evento.linkZoom || !!evento.mapUrl;
+  const quando = [evento.data, evento.horario].filter(Boolean).join(' · ');
   return (
-    <TouchableOpacity style={styles.especialCard}>
+    <TouchableOpacity
+      style={styles.especialCard}
+      activeOpacity={temMais ? 0.75 : 1}
+      onPress={() => temMais && setAberto(a => !a)}
+    >
       <View style={[styles.especialCorFaixa, { backgroundColor: evento.cor }]} />
       <View style={styles.especialCorpo}>
         <Text style={styles.especialNome}>{nome}</Text>
-        <View style={styles.eventoInfoRow}>
-          <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
-          <Text style={styles.eventoInfoTexto}>{evento.data}</Text>
-        </View>
-        <Text style={styles.eventoDescricao}>{descricao}</Text>
+        {!!quando && (
+          <View style={styles.eventoInfoRow}>
+            <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
+            <Text style={styles.eventoInfoTexto}>{quando}</Text>
+          </View>
+        )}
+        {!!evento.local && (
+          <View style={styles.eventoInfoRow}>
+            <Ionicons name={evento.tipo === 'online' ? 'videocam-outline' : 'location-outline'} size={13} color={C.textMuted} />
+            <Text style={styles.eventoInfoTexto}>{evento.local}</Text>
+          </View>
+        )}
+        {aberto && (
+          <>
+            {!!descricao && <Text style={styles.eventoDescricao}>{descricao}</Text>}
+            {!!evento.linkZoom && (
+              <View style={styles.botoesRow}>
+                <TouchableOpacity style={styles.btnZoom} onPress={() => onAbrirLink(evento.linkZoom!, 'zoom')}>
+                  <Ionicons name="videocam-outline" size={14} color="#fff" />
+                  <Text style={styles.btnZoomTexto}>{t('agenda.entrarZoom')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {!!evento.mapUrl && (
+              <TouchableOpacity style={[styles.eventoBtn, { marginTop: 8 }]} onPress={() => onAbrirLink(evento.mapUrl!, 'mapa')}>
+                <Ionicons name="map-outline" size={14} color={C.accentText} />
+                <Text style={styles.eventoBtnTexto}>{t('agenda.comoChegar')}</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={C.textMuted} style={{ marginRight: 12 }} />
+      {temMais && (
+        <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color={C.textMuted} style={{ marginRight: 12 }} />
+      )}
     </TouchableOpacity>
   );
 }
@@ -257,10 +304,24 @@ export default function AgendaScreen() {
     };
   });
 
-  const eventosEspeciais = eventosEspeciaisDB.map(e => ({
-    id: e.id, nome: e.nome, descricao: e.descricao ?? '', cor: e.cor ?? '#E84B1A',
-    data: e.data ? formatDataEspecifica(e.data, MESES, MESES_LONGOS, DATA_DE).label : '',
-  }));
+  // Especial com data já passada sai da lista (ficava para sempre). O
+  // recorrente mostra o dia da semana e a próxima data.
+  const hojeISO = new Date().toLocaleDateString('en-CA');
+  const eventosEspeciais: EspecialUI[] = eventosEspeciaisDB
+    .filter(e => e.recorrente || !e.data || e.data >= hojeISO)
+    .map(e => {
+      let data = '';
+      if (e.data) data = formatDataEspecifica(e.data, MESES, MESES_LONGOS, DATA_DE).label;
+      else if (e.recorrente && e.dia_semana !== null) {
+        const p = proximaData(e.dia_semana, MESES);
+        data = `${DIAS_SEMANA[e.dia_semana]} · ${p.dia} ${p.mes}`;
+      }
+      return {
+        id: e.id, nome: e.nome, descricao: e.descricao ?? '', cor: e.cor ?? '#E84B1A', data,
+        horario: e.horario ?? '', local: e.local ?? '', tipo: e.tipo,
+        linkZoom: e.link_zoom, mapUrl: e.map_url,
+      };
+    });
 
   const eventosFiltrados = filtro === 'todos'
     ? eventosComData
@@ -376,7 +437,7 @@ export default function AgendaScreen() {
         )}
 
         {eventosEspeciais.map((e) => (
-          <EventoEspecialCard key={e.id} evento={e} />
+          <EventoEspecialCard key={e.id} evento={e} onAbrirLink={(url, tipo) => (tipo === 'zoom' ? abrirZoom(url) : abrirMapa(url))} />
         ))}
 
         <View style={{ height: 30 }} />

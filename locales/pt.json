@@ -1466,7 +1466,7 @@
     "equipesTitulo": "Equipes",
     "equipeAcolhimento": "Acolhimento",
     "equipeRecepcao": "Recepção",
-    "equipeAjudaRecepcao": "A recepção pode registrar visitantes na porta, mas não vê a lista nem os telefones. Membros, líderes e administradores já podem registrar sem estar nesta equipe."
+    "equipeAjudaRecepcao": "A recepção registra os visitantes na porta, mas não vê a lista nem os telefones. A lista de visitantes é só do administrador."
   },
   "kids": {
     "titulo": "Peniel Kids",

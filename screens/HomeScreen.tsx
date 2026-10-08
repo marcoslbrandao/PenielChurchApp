@@ -1179,23 +1179,35 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
 
         {/* ── Acesso rápido ─────────────────────────────────────────────────── */}
         <Text style={styles.secaoTitulo}>{t('home.acessoRapido')}</Text>
+        {/* Cada atalho com a sua cor da paleta do app, e a Oferta em destaque
+            (cartão tingido, coração cheio): ela se perdia no meio dos outros
+            três, todos lilás. */}
         <View style={styles.quickGrid}>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => navigation?.navigate('Biblia')}>
-            <Ionicons name="book-outline" size={22} color={C.accentText} />
-            <Text style={styles.quickTexto}>{t('home.quickBiblia')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => navigation?.navigate('Agenda')}>
-            <Ionicons name="calendar-outline" size={22} color={C.accentText} />
-            <Text style={styles.quickTexto}>{t('home.quickAgenda')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => navigation?.navigate('Oferta')}>
-            <Ionicons name="heart-outline" size={22} color={C.accentText} />
-            <Text style={styles.quickTexto}>{t('home.quickOferta')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => abrirAreaMembro({ screen: 'Grupos' })}>
-            <Ionicons name="people-outline" size={22} color={C.accentText} />
-            <Text style={styles.quickTexto}>{t('home.quickGrupos')}</Text>
-          </TouchableOpacity>
+          {([
+            { key: 'biblia', icone: 'book', cor: '#7C4DFF', label: t('home.quickBiblia'), onPress: () => navigation?.navigate('Biblia') },
+            { key: 'agenda', icone: 'calendar', cor: '#D99A00', label: t('home.quickAgenda'), onPress: () => navigation?.navigate('Agenda') },
+            { key: 'oferta', icone: 'heart', cor: '#E84B1A', label: t('home.quickOferta'), onPress: () => navigation?.navigate('Oferta'), destaque: true },
+            { key: 'grupos', icone: 'people', cor: '#27AE60', label: t('home.quickGrupos'), onPress: () => abrirAreaMembro({ screen: 'Grupos' }) },
+          ] as const).map(a => {
+            const destaque = 'destaque' in a && a.destaque;
+            return (
+              <TouchableOpacity
+                key={a.key}
+                style={[styles.quickBtn, destaque && { backgroundColor: a.cor + (isDark ? '26' : '12'), borderColor: a.cor + '66', borderWidth: 1 }]}
+                onPress={a.onPress}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.quickIcone, { backgroundColor: destaque ? a.cor : a.cor + (isDark ? '33' : '1A') }]}>
+                  <Ionicons
+                    name={(destaque ? a.icone : `${a.icone}-outline`) as any}
+                    size={19}
+                    color={destaque ? '#fff' : a.cor}
+                  />
+                </View>
+                <Text style={[styles.quickTexto, { color: destaque ? a.cor : C.textPrimary }, destaque && { fontWeight: '700' }]}>{a.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* ── Card Peniel Alive ─────────────────────────────────────────────── */}
@@ -1399,8 +1411,9 @@ function buildStyles(C: PaletaHome) { return StyleSheet.create({
   liveMeta: { fontSize: 11, color: C.textMuted, marginTop: 2 },
   // Quick grid
   quickGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  quickBtn: { flex: 1, backgroundColor: C.cardBg, borderRadius: 12, padding: 12, alignItems: 'center', gap: 5, borderWidth: 0.5, borderColor: C.cardBorder },
+  quickBtn: { flex: 1, backgroundColor: C.cardBg, borderRadius: 12, padding: 10, alignItems: 'center', gap: 6, borderWidth: 0.5, borderColor: C.cardBorder },
   quickTexto: { fontSize: 10, fontWeight: '500', color: C.accentText },
+  quickIcone: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   // Peniel Alive card
   aliveCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E0A4A', borderRadius: 16, marginBottom: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#4A1AA8' },
   aliveImage: { width: 70, height: 70 },

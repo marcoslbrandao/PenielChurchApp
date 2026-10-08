@@ -2194,7 +2194,7 @@ export default function AdminScreen() {
     if (offeringsData) setOfferings(offeringsData as unknown as Offering[]);
     // Avisos
     const { data: avisosData } = await supabase
-      .from('avisos').select('*').is('grupo', null).order('created_at', { ascending: false }).limit(50);
+      .from('avisos').select('*').is('grupo', null).is('origem', null).order('created_at', { ascending: false }).limit(50);
     if (avisosData) setAvisos(avisosData as Aviso[]);
     // Devocionais — geral (grupo = null, aparece em destaque na Home) e os
     // de cada grupo (admin vê e gerencia todos, RLS permite).

@@ -106,10 +106,10 @@ export default function VisitantesScreen() {
   const { papel } = useAcesso();
   const ehAdmin = papel === 'admin';
   const [equipeAberta, setEquipeAberta] = useState(false);
-  // Duas equipes com permissões diferentes: acolhimento LÊ a lista e faz o
-  // follow-up; recepção REGISTRA na porta. São pessoas diferentes numa igreja,
-  // e juntar as duas daria à recepção acesso ao telefone de todo mundo.
-  const [qualEquipe, setQualEquipe] = useState<'acolhimento' | 'recepcao'>('acolhimento');
+  // Regra do Marcos (08/10): a LISTA de visitantes é só do admin, e quem
+  // REGISTRA na porta é a equipe da Recepção. A equipe de acolhimento deixou
+  // de dar acesso à lista, então aqui só se gerencia a Recepção.
+  const [qualEquipe, setQualEquipe] = useState<'acolhimento' | 'recepcao'>('recepcao');
   const [equipe, setEquipe] = useState<PerfilLite[]>([]);
   const [buscaPessoa, setBuscaPessoa] = useState('');
   const [achados, setAchados] = useState<PerfilLite[]>([]);
@@ -437,7 +437,7 @@ export default function VisitantesScreen() {
             </View>
 
             <View style={s.equipeTabs}>
-              {(['acolhimento', 'recepcao'] as const).map(e => (
+              {(['recepcao'] as ('acolhimento' | 'recepcao')[]).map(e => (
                 <TouchableOpacity
                   key={e}
                   style={[s.equipeTab, qualEquipe === e && s.equipeTabAtiva]}

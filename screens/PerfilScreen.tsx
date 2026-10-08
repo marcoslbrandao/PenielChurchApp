@@ -859,12 +859,11 @@ export default function ProfileScreen() {
         // fechou junto (migração 20260918200000): esconder só a entrada seria
         // segurança por obscuridade.
         ...(papel === 'admin' ? [{ icon: 'gift-outline' as const, label: t('perfil.aniversariantes'), onPress: () => navigation.navigate('Aniversariantes' as never) }] : []),
-        // Registrar visitante: membro, líder, admin e a equipe da Recepção —
-        // alguém pode servir na porta sem ser membro formal, e é justamente
-        // quem mais registra. A regra de verdade é a policy de insert; isto
-        // aqui só evita oferecer um caminho que terminaria em erro.
+        // Registrar visitante: só a equipe da Recepção (e o admin), decisão do
+        // Marcos em 08/10. A regra de verdade é `pode_registrar_visitante()`
+        // no banco; isto aqui só evita oferecer um caminho que daria erro.
         ...(podeRegistrarVisitante ? [{ icon: 'person-add-outline' as const, label: t('perfil.registrarVisitante'), onPress: () => navigation.navigate('RegistrarVisitante' as never) }] : []),
-        // A LISTA, com telefone e anotações, é do acolhimento e do admin.
+        // A LISTA, com telefone e anotações, é só do admin (`eh_acolhimento()`).
         ...(ehAcolhimento ? [{ icon: 'hand-left-outline' as const, label: t('perfil.visitantes'), onPress: () => navigation.navigate('Visitantes' as never) }] : []),
       ],
     },

@@ -1466,7 +1466,7 @@
     "equipesTitulo": "Teams",
     "equipeAcolhimento": "Welcome team",
     "equipeRecepcao": "Front desk",
-    "equipeAjudaRecepcao": "The front desk can register visitors at the door, but doesn't see the list or the phone numbers. Members, leaders and administrators can already register without being on this team."
+    "equipeAjudaRecepcao": "The front desk registers visitors at the door, but doesn't see the list or the phone numbers. The visitor list is for administrators only."
   },
   "kids": {
     "titulo": "Peniel Kids",

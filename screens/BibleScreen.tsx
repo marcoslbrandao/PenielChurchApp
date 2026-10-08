@@ -33,7 +33,12 @@ type PaletaBiblia = ReturnType<typeof paletaBiblia>;
 // disponível (FRLSG), então o francês volta a ter Bíblia completa no app —
 // antes só tinha o versículo do dia estático (ver lib/versiculoDoDia.ts).
 const versoes = [
-  { sigla: 'NVI', nome: 'Nova Versão Internacional',    idioma: '🇧🇷 Português', apiId: 'NVIPT' },
+  // A NVI saiu em 08/10/2026: a Biblica (dona dos direitos) proibiu o
+  // bolls.life de servir o texto, e a API passou a devolver, no lugar de cada
+  // versiculo, um texto de protesto do autor do site. Nao existe fonte gratuita
+  // e autorizada da NVI. A NAA entra como padrao (linguagem atual, como a NVI).
+  { sigla: 'NAA', nome: 'Nova Almeida Atualizada',      idioma: '🇧🇷 Português', apiId: 'NAA'   },
+  { sigla: 'NTLH', nome: 'Nova Tradução na Linguagem de Hoje', idioma: '🇧🇷 Português', apiId: 'NTLH' },
   { sigla: 'ARA', nome: 'Almeida Revista e Atualizada', idioma: '🇧🇷 Português', apiId: 'ARA'   },
   { sigla: 'ACF', nome: 'Almeida Corrigida Fiel',       idioma: '🇧🇷 Português', apiId: 'ACF11' },
   { sigla: 'KJV', nome: 'King James Version',           idioma: '🇬🇧 English',   apiId: 'KJV'   },

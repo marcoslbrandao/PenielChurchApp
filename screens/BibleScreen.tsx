@@ -17,10 +17,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 function paletaBiblia(isDark: boolean) {
   return isDark ? {
     bg: '#0E0B22', cardBg: '#1C1940', cardBorder: '#332D5C', chipBg: '#241F4D',
-    textPrimary: '#F1EFFA', textMuted: '#A69FD6',
+    textPrimary: '#F1EFFA', textMuted: '#A69FD6', accent: '#B9AEFF', placeholder: '#C9C3EE',
   } : {
     bg: '#F9F8FF', cardBg: '#FFFFFF', cardBorder: 'rgba(83,74,183,0.13)', chipBg: '#EEEDFE',
-    textPrimary: '#1A1740', textMuted: '#8B83D4',
+    textPrimary: '#1A1740', textMuted: '#8B83D4', accent: '#534AB7', placeholder: '#5F5893',
   };
 }
 type PaletaBiblia = ReturnType<typeof paletaBiblia>;
@@ -684,11 +684,11 @@ export default function BibleScreen() {
             no cabecalho, longe da lista que ela filtra). */}
         <View style={styles.abasContainer}>
           <View style={styles.busca}>
-            <Ionicons name="search-outline" size={16} color={C.textMuted} />
+            <Ionicons name="search" size={18} color={C.accent} />
             <TextInput
               style={styles.buscaInput}
               placeholder={t('biblia.buscarLivro')}
-              placeholderTextColor={C.textMuted}
+              placeholderTextColor={C.placeholder}
               value={busca}
               onChangeText={setBusca}
             />
@@ -757,8 +757,10 @@ function buildStyles(C: PaletaBiblia) { return StyleSheet.create({
   versaoBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(245,200,66,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   bandeiraBadge: { fontSize: 16 },
   versaoTexto: { fontSize: 12, fontWeight: '500', color: '#F5C842' },
-  busca: { backgroundColor: C.cardBg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 0.5, borderColor: C.cardBorder, marginBottom: 10 },
-  buscaInput: { flex: 1, fontSize: 13, color: C.textPrimary },
+  // Contorno na cor de destaque e texto de exemplo escuro: com borda fina e
+  // placeholder lilas claro, o campo quase sumia no fundo.
+  busca: { backgroundColor: C.cardBg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: C.accent, marginBottom: 12 },
+  buscaInput: { flex: 1, fontSize: 15, fontWeight: '500', color: C.textPrimary },
   modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard: { flexShrink: 1, backgroundColor: C.cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },

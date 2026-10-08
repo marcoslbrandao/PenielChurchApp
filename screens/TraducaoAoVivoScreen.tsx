@@ -31,10 +31,17 @@
 //    — não é dona do player.
 
 import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { traducaoAudioService, type IdiomaTraducao } from '../lib/traducaoAoVivoAudio';
+
+// Tela aberta como modal (presentation: 'modal'): no iOS ela ja comeca abaixo
+// da barra de status, mas a area segura continua informando a altura do
+// entalhe — somar as duas deixava um vao vazio grande em cima do titulo.
+function topoDoModal(insetTop: number) {
+  return Platform.OS === 'ios' ? 16 : insetTop + 12;
+}
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Textos fixos por idioma de destino — ver comentário do topo do arquivo
@@ -239,7 +246,7 @@ export default function TraducaoAoVivoScreen({ navigation }: { navigation?: any 
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: topoDoModal(insets.top) }]}>
         <View>
           <Text style={styles.headerTitulo}>{t.headerTitulo}</Text>
         </View>

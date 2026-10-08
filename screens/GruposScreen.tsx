@@ -208,26 +208,20 @@ function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar, onAbrir,
         </View>
       </View>
       {!semDescricao && !!descricao && <Text style={s.eventoDesc}>{descricao}</Text>}
-      <View style={s.eventoMeta}>
-        <View style={s.eventoMetaItem}>
-          <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
-          <Text style={s.eventoMetaText}>{dataLabel}</Text>
-        </View>
-        <View style={s.eventoMetaItem}>
-          <Ionicons name="time-outline" size={13} color={C.textMuted} />
-          <Text style={s.eventoMetaText}>{evento.horario}</Text>
-        </View>
-        <View style={s.eventoMetaItem}>
-          <Ionicons name="location-outline" size={13} color={C.textMuted} />
+      {/* Padrao do card (pedido do Marcos, 08/10): titulo, subtitulo curto,
+          "dia + data · horario" numa linha e o local embaixo. O ID e a senha
+          do Zoom sairam da descricao: o botao Entrar no Zoom ja leva o link
+          com a senha embutida. */}
+      <View style={s.eventoMetaItem}>
+        <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
+        <Text style={s.eventoMetaText}>{[dataLabel, evento.horario].filter(Boolean).join(' · ')}</Text>
+      </View>
+      {!!evento.local && (
+        <View style={[s.eventoMetaItem, { marginTop: 6 }]}>
+          <Ionicons name={evento.linkOnline ? 'videocam-outline' : 'location-outline'} size={13} color={C.textMuted} />
           <Text style={s.eventoMetaText}>{evento.local}</Text>
         </View>
-        {evento.linkOnline ? (
-          <View style={s.eventoMetaItem}>
-            <Ionicons name="videocam-outline" size={13} color={C.textMuted} />
-            <Text style={s.eventoMetaText}>{t('grupos.aula.temLink')}</Text>
-          </View>
-        ) : null}
-      </View>
+      )}
 
       {podeChamada && (
         <TouchableOpacity

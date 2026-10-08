@@ -138,10 +138,15 @@ export default function MidiaScreen() {
     // agora também guarda os espelhos automáticos do conteúdo de grupo (novo
     // material, nova conversa no chat…). Esses pertencem ao sininho da Home,
     // não a este mural — aqui virariam ruído.
+    // Mural mostra so os avisos dos ultimos 30 dias (mais o que estiver em
+    // destaque na Home). Aviso de maio continuava aparecendo em outubro: o
+    // mural virava arquivo morto. Nada e apagado — so sai da vitrine.
+    const corte = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const { data } = await supabase
       .from('avisos')
       .select('*')
       .is('origem', null)
+      .or(`created_at.gte.${corte},destaque_home.eq.true`)
       .order('created_at', { ascending: false })
       .limit(20);
     if (data) setAvisos(data as Aviso[]);

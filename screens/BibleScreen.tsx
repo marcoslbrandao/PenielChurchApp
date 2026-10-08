@@ -550,21 +550,6 @@ export default function BibleScreen() {
             <Ionicons name="chevron-down" size={12} color="#F5C842" />
           </TouchableOpacity>
         </View>
-        <View style={styles.busca}>
-          <Ionicons name="search-outline" size={16} color="rgba(255,255,255,0.4)" />
-          <TextInput
-            style={styles.buscaInput}
-            placeholder={t('biblia.buscarLivro')}
-            placeholderTextColor="rgba(255,255,255,0.35)"
-            value={busca}
-            onChangeText={setBusca}
-          />
-          {!!busca && (
-            <TouchableOpacity onPress={() => setBusca('')}>
-              <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.4)" />
-            </TouchableOpacity>
-          )}
-        </View>
       </View>
 
       {/* Modal versões */}
@@ -695,8 +680,24 @@ export default function BibleScreen() {
           )}
         </View>
 
-        {/* Abas AT / NT */}
+        {/* Abas AT / NT — a busca de livro fica logo acima delas (antes ficava
+            no cabecalho, longe da lista que ela filtra). */}
         <View style={styles.abasContainer}>
+          <View style={styles.busca}>
+            <Ionicons name="search-outline" size={16} color={C.textMuted} />
+            <TextInput
+              style={styles.buscaInput}
+              placeholder={t('biblia.buscarLivro')}
+              placeholderTextColor={C.textMuted}
+              value={busca}
+              onChangeText={setBusca}
+            />
+            {!!busca && (
+              <TouchableOpacity onPress={() => setBusca('')}>
+                <Ionicons name="close-circle" size={16} color={C.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
           {!busca && (
             <View style={styles.abas}>
               <TouchableOpacity style={[styles.aba, aba === 'AT' && styles.abaAtiva]} onPress={() => setAba('AT')}>
@@ -750,14 +751,14 @@ export default function BibleScreen() {
 function buildStyles(C: PaletaBiblia) { return StyleSheet.create({
   container: { flex: 1, backgroundColor: C.bg },
   header: { backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18 },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)' },
   headerTitulo: { fontSize: 18, fontWeight: '500', color: '#fff', marginTop: 2 },
   versaoBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(245,200,66,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   bandeiraBadge: { fontSize: 16 },
   versaoTexto: { fontSize: 12, fontWeight: '500', color: '#F5C842' },
-  busca: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.15)' },
-  buscaInput: { flex: 1, fontSize: 13, color: '#fff' },
+  busca: { backgroundColor: C.cardBg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 0.5, borderColor: C.cardBorder, marginBottom: 10 },
+  buscaInput: { flex: 1, fontSize: 13, color: C.textPrimary },
   modalFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard: { flexShrink: 1, backgroundColor: C.cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },

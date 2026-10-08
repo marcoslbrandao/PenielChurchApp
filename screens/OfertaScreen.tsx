@@ -1,10 +1,17 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../lib/theme';
 import { usePaymentSheet } from '@stripe/stripe-react-native';
 import { supabase } from '../lib/supabase';
+
+// Tela aberta como modal (presentation: 'modal'): no iOS ela ja comeca abaixo
+// da barra de status, mas a area segura continua informando a altura do
+// entalhe — somar as duas deixava um vao vazio grande em cima do titulo.
+function topoDoModal(insetTop: number) {
+  return Platform.OS === 'ios' ? 16 : insetTop + 12;
+}
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Paleta local — header, card do valor e card do versículo já são roxo
@@ -141,7 +148,7 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.header, { paddingTop: topoDoModal(insets.top) }]}>
         <View>
           <Text style={styles.headerSub}>{t('oferta.contribuaComAObra')}</Text>
           <Text style={styles.headerTitulo}>{t('oferta.titulo')}</Text>

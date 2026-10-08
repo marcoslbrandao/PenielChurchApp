@@ -45,7 +45,10 @@ type Offering = {
 
 type ProfileLite = { id: string; full_name: string | null };
 
-type Aviso = { id: string; titulo: string; texto: string; data: string; tipo: string; destaque_home: boolean };
+type Aviso = {
+  id: string; titulo: string; texto: string; data: string; tipo: string; destaque_home: boolean;
+  cta_texto: string | null; cta_url: string | null;
+};
 
 type DevocionalGeral = {
   id: string; titulo: string; versiculo: string; referencia: string;
@@ -403,8 +406,11 @@ function NovaOfertaModal({ visible, onClose, onSaved, adminId }: {
 }
 
 // ─── Novo Aviso Modal ──────────────────────────────────────────────────────────
-function NovoAvisoModal({ visible, onClose, onSaved }: {
-  visible: boolean; onClose: () => void; onSaved: () => void;
+// `aviso` preenchido = modo edicao: grava com UPDATE, que NAO dispara push
+// (o gatilho de notificacao e so AFTER INSERT). Corrigir um erro de digitacao
+// nao manda notificacao de novo para a igreja inteira.
+function NovoAvisoModal({ visible, onClose, onSaved, aviso }: {
+  visible: boolean; onClose: () => void; onSaved: () => void; aviso?: Aviso | null;
 }) {
   const { t } = useTranslation();
   const [titulo, setTitulo] = useState('');
@@ -414,9 +420,16 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
   const [ctaUrl, setCtaUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
+  const editando = !!aviso;
+
   useEffect(() => {
-    if (!visible) { setTitulo(''); setTexto(''); setTipo('geral'); setCtaTexto(''); setCtaUrl(''); }
-  }, [visible]);
+    if (!visible) { setTitulo(''); setTexto(''); setTipo('geral'); setCtaTexto(''); setCtaUrl(''); return; }
+    if (aviso) {
+      setTitulo(aviso.titulo ?? ''); setTexto(aviso.texto ?? '');
+      setTipo((['geral', 'evento', 'urgente'].includes(aviso.tipo) ? aviso.tipo : 'geral') as 'geral' | 'evento' | 'urgente');
+      setCtaTexto(aviso.cta_texto ?? ''); setCtaUrl(aviso.cta_url ?? '');
+    }
+  }, [visible, aviso]);
 
   const handleSave = async () => {
     if (!titulo.trim() || !texto.trim()) { Alert.alert(t('common.atencao'), t('admin.preenchaOTituloEO')); return; }
@@ -424,11 +437,14 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
     // O botão é tudo ou nada: sem link não há botão, e com link sem rótulo o
     // app cai em "Abrir link". Gravar um rótulo órfão só criaria um botão
     // invisível que ninguém entende depois.
-    const { error } = await supabase.from('avisos').insert({
-      titulo: titulo.trim(), texto: texto.trim(), tipo, data: new Date().toISOString(), grupo: null,
+    const campos = {
+      titulo: titulo.trim(), texto: texto.trim(), tipo,
       cta_texto: ctaUrl.trim() ? (ctaTexto.trim() || null) : null,
       cta_url: ctaUrl.trim() || null,
-    });
+    };
+    const { error } = aviso
+      ? await supabase.from('avisos').update(campos).eq('id', aviso.id)
+      : await supabase.from('avisos').insert({ ...campos, data: new Date().toISOString(), grupo: null });
     setSaving(false);
     if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
@@ -442,7 +458,7 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
           <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
-              <Text style={mo.title}>{t('admin.novoAviso')}</Text>
+              <Text style={mo.title}>{editando ? t('admin.editarAviso') : t('admin.novoAviso')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
@@ -509,7 +525,7 @@ function NovoAvisoModal({ visible, onClose, onSaved }: {
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="megaphone-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.publicarAviso')}</Text></>
+                <><Ionicons name={editando ? 'checkmark' : 'megaphone-outline'} size={18} color="#fff" /><Text style={mo.saveBtnText}>{editando ? t('admin.salvarAlteracoes') : t('admin.publicarAviso')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -2120,6 +2136,7 @@ export default function AdminScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [ofertaModalVisible, setOfertaModalVisible] = useState(false);
   const [avisoModalVisible, setAvisoModalVisible] = useState(false);
+  const [avisoEditando, setAvisoEditando] = useState<Aviso | null>(null);
   const [devocionalModalVisible, setDevocionalModalVisible] = useState(false);
   const [eventoModalVisible, setEventoModalVisible] = useState(false);
   const [contasVisitantesVisible, setContasVisitantesVisible] = useState(false);
@@ -2622,6 +2639,12 @@ export default function AdminScreen() {
                         onPress={() => toggleDestaqueHomeGenerico('avisos', a.id, a.destaque_home)}
                       >
                         <Ionicons name={a.destaque_home ? 'home' : 'home-outline'} size={16} color={a.destaque_home ? C.accent : C.textMuted} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[s.actionBtn, { borderColor: C.textDim + '40' }]}
+                        onPress={() => { setAvisoEditando(a); setAvisoModalVisible(true); }}
+                      >
+                        <Ionicons name="create-outline" size={16} color={C.textMuted} />
                       </TouchableOpacity>
                       <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteAviso(a.id)}>
                         <Ionicons name="trash-outline" size={16} color={C.danger} />
@@ -3189,8 +3212,9 @@ export default function AdminScreen() {
       />
       <NovoAvisoModal
         visible={avisoModalVisible}
-        onClose={() => setAvisoModalVisible(false)}
+        onClose={() => { setAvisoModalVisible(false); setAvisoEditando(null); }}
         onSaved={fetchData}
+        aviso={avisoEditando}
       />
       <NovoDevocionalModal
         visible={devocionalModalVisible}

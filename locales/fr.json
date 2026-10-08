@@ -967,6 +967,8 @@
     "dataAaaaMmDd": "Date (JJ/MM/AAAA)",
     "preenchaOTituloEO": "Renseignez le titre et le texte de l'annonce.",
     "novoAviso": "Nouvelle Annonce",
+    "editarAviso": "Modifier l'Annonce",
+    "salvarAlteracoes": "Enregistrer",
     "titulo": "Titre",
     "exCultoEspecialDeAcao": "Ex : Culte spécial d'action de grâce",
     "texto": "Texte",

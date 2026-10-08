@@ -12,8 +12,10 @@ import { supabase } from './supabase';
 // um componente re-renderiza com o mesmo texto.
 const memCache = new Map<string, string>();
 
-function chaveCache(table: string, rowId: string, field: string, lang: string) {
-  return `${table}:${rowId}:${field}:${lang}`;
+// O texto entra na chave: se o admin editar um aviso, a traducao antiga
+// (desta sessao) deixa de servir e o app pede a nova.
+function chaveCache(table: string, rowId: string, field: string, lang: string, texto: string) {
+  return `${table}:${rowId}:${field}:${lang}:${texto}`;
 }
 
 /**
@@ -45,7 +47,7 @@ export function useCampoTraduzido(
       return;
     }
 
-    const chave = chaveCache(table, String(rowId), field, lang);
+    const chave = chaveCache(table, String(rowId), field, lang, texto);
     const cacheado = memCache.get(chave);
     if (cacheado) { setTraduzido(cacheado); return; }
 

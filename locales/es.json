@@ -967,6 +967,8 @@
     "dataAaaaMmDd": "Fecha (DD/MM/AAAA)",
     "preenchaOTituloEO": "Completa el título y el texto del aviso.",
     "novoAviso": "Nuevo Aviso",
+    "editarAviso": "Editar Aviso",
+    "salvarAlteracoes": "Guardar cambios",
     "titulo": "Título",
     "exCultoEspecialDeAcao": "Ej: Culto especial de Acción de Gracias",
     "texto": "Texto",

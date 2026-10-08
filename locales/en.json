@@ -967,6 +967,8 @@
     "dataAaaaMmDd": "Date (DD/MM/YYYY)",
     "preenchaOTituloEO": "Fill in the notice title and text.",
     "novoAviso": "New Notice",
+    "editarAviso": "Edit Notice",
+    "salvarAlteracoes": "Save changes",
     "titulo": "Title",
     "exCultoEspecialDeAcao": "Ex: Thanksgiving special service",
     "texto": "Text",

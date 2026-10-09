@@ -9,8 +9,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-async function criarSessao(valor: number, moeda: string) {
+// Para onde o Stripe devolve a pessoa depois do pagamento. O site manda a
+// propria pagina em `retorno`; so aceitamos enderecos da igreja (site novo de
+// teste e dominio oficial). Sem `retorno` valido, volta para a Home oficial.
+const RETORNO_PADRAO = 'https://penielchurch.org.uk/';
+const ORIGENS_PERMITIDAS = [
+  'https://penielchurch.org.uk',
+  'https://www.penielchurch.org.uk',
+  'https://marcoslbrandao.github.io',
+];
+
+function paginaDeRetorno(bruto: string | null | undefined): string {
+  if (!bruto) return RETORNO_PADRAO;
+  try {
+    const u = new URL(bruto);
+    if (!ORIGENS_PERMITIDAS.includes(u.origin)) return RETORNO_PADRAO;
+    return `${u.origin}${u.pathname}`;
+  } catch {
+    return RETORNO_PADRAO;
+  }
+}
+
+async function criarSessao(valor: number, moeda: string, retorno?: string | null) {
   const valorEmCentavos = Math.round(valor * 100);
+  const pagina = paginaDeRetorno(retorno);
   return stripe.checkout.sessions.create({
     mode: 'payment',
     line_items: [
@@ -26,8 +48,8 @@ async function criarSessao(valor: number, moeda: string) {
     payment_method_types: ['card'],
     // Apple Pay e Google Pay aparecem automaticamente no Checkout hospedado
     // do Stripe quando habilitados na conta — não precisa listar aqui.
-    success_url: 'https://penielchurchreading.wpcomstaging.com/?oferta=sucesso#oferta',
-    cancel_url: 'https://penielchurchreading.wpcomstaging.com/#oferta',
+    success_url: `${pagina}?oferta=sucesso#oferta`,
+    cancel_url: `${pagina}#oferta`,
     metadata: {
       origem: 'site_peniel_church',
     },
@@ -53,16 +75,17 @@ Deno.serve(async (req) => {
       const url = new URL(req.url);
       const valor = Number(url.searchParams.get('valor'));
       const moeda = url.searchParams.get('moeda') || 'gbp';
+      const retorno = url.searchParams.get('retorno');
 
       if (!valor || valor <= 0) {
         return new Response('Valor inválido', { status: 400, headers: corsHeaders });
       }
 
-      const session = await criarSessao(valor, moeda);
+      const session = await criarSessao(valor, moeda, retorno);
       return Response.redirect(session.url!, 302);
     }
 
-    const { valor, moeda } = await req.json();
+    const { valor, moeda, retorno } = await req.json();
 
     if (!valor || valor <= 0) {
       return new Response(
@@ -71,7 +94,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const session = await criarSessao(valor, moeda);
+    const session = await criarSessao(valor, moeda, retorno);
 
     return new Response(
       JSON.stringify({ url: session.url }),

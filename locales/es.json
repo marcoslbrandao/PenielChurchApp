@@ -239,7 +239,10 @@
     "visitantes": "Visitantes",
     "dataAniversario": "Fecha de cumpleaños",
     "dataAniversarioDica": "En tu cumpleaños la iglesia te enviará un mensaje. Solo tú lo ves.",
-    "dataAniversarioInvalida": "Escribe una fecha válida en el formato DD/MM/AAAA."
+    "dataAniversarioInvalida": "Escribe una fecha válida en el formato DD/MM/AAAA.",
+    "notificacoesBloqueadasTitulo": "Notificaciones desactivadas en el móvil",
+    "notificacoesBloqueadasTexto": "Para recibir los avisos de Peniel, activa las notificaciones de la app en los Ajustes de tu móvil.",
+    "abrirAjustes": "Abrir Ajustes"
   },
   "grupos": {
     "titulo": "Grupos",
@@ -1507,5 +1510,51 @@
     "baixe": "Descarga la app en la App Store: {{url}}",
     "googlePlayEmBreve": "Muy pronto en Google Play",
     "googlePlay": "Android (Google Play): {{url}}"
+  },
+  "notificacoes": {
+    "lembreteTitulo": "Mantente al día",
+    "lembreteTexto": "Activa las notificaciones para recibir avisos, mensajes del chat, turnos y cumpleaños.",
+    "ativar": "Activar notificaciones",
+    "agoraNao": "Ahora no",
+    "cartaoDesligadas": "Notificaciones desactivadas",
+    "cartaoTexto": "Actívalas para no perderte los avisos de la iglesia.",
+    "cartaoAtivar": "Activar"
+  },
+  "chatGeral": {
+    "titulo": "Chat de la Iglesia",
+    "subtitulo": "Solo miembros · los mensajes se borran a los 15 días",
+    "cardVazio": "Nadie ha escrito todavía. ¡Empieza la conversación!",
+    "aviso15dias": "Los mensajes, fotos y audios se borran automáticamente a los 15 días.",
+    "placeholder": "Mensaje",
+    "vazio": "Aún no hay mensajes.\n¡Empieza la conversación!",
+    "hoje": "Hoy",
+    "ontem": "Ayer",
+    "voce": "Tú",
+    "foto": "📷 Foto",
+    "audio": "🎤 Mensaje de voz",
+    "video": "🎬 Vídeo",
+    "responder": "Responder",
+    "apagar": "Borrar",
+    "denunciar": "Denunciar",
+    "silenciar": "Silenciar a {{nome}}",
+    "liberar": "Quitar silencio a {{nome}}",
+    "apagarTitulo": "Borrar mensaje",
+    "apagarTexto": "¿Eliminar este mensaje para todos?",
+    "denunciarTitulo": "Denunciar mensaje",
+    "denunciarTexto": "El Admin verá este mensaje. ¿Quieres denunciarlo?",
+    "denunciada": "Gracias. El Admin lo revisará.",
+    "jaDenunciada": "Ya denunciaste este mensaje.",
+    "denuncias": "Denunciado ({{n}})",
+    "silenciarTitulo": "Silenciar en el chat",
+    "silenciarTexto": "{{nome}} no podrá escribir en el Chat de la Iglesia hasta que lo permitas.",
+    "silenciado": "No puedes escribir en el Chat de la Iglesia por ahora.",
+    "respondendoA": "Respondiendo a {{nome}}",
+    "mensagemAnterior": "Mensaje anterior",
+    "erroEnviar": "No se pudo enviar",
+    "erroEnviarTexto": "Revisa tu conexión e inténtalo de nuevo.",
+    "galeria": "Foto o GIF de la galería",
+    "camera": "Hacer una foto",
+    "permissaoCamera": "Permite el acceso a la cámara en los Ajustes del móvil.",
+    "permissaoFotos": "Permite el acceso a las fotos en los Ajustes del móvil."
   }
 }

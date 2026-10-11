@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, StatusBar, ScrollView, Image,
 } from 'react-native';
@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../lib/useAuth';
 import { useTheme } from '../lib/theme';
+import { permissaoDoSistema } from '../lib/useNotifications';
+import LembreteNotificacoes from '../components/LembreteNotificacoes';
 
 // ─── Boas-vindas ─────────────────────────────────────────────────────────────
 // Aberta uma vez, logo depois de confirmar o e-mail. De propósito NÃO pergunta
@@ -39,6 +41,17 @@ export default function BemVindoScreen() {
   const { isDark } = useTheme();
   const C = useMemo(() => paletaBemVindo(isDark), [isDark]);
   const s = useMemo(() => buildStyles(C), [C]);
+
+  // Ao tocar em "Explorar", quem ainda não recebe notificações vê o lembrete
+  // antes de entrar no app (pedido do Marcos, 10/10/2026). Quem já deu a
+  // permissão segue direto.
+  const [lembreteAberto, setLembreteAberto] = useState(false);
+  const explorar = async () => {
+    const permissao = await permissaoDoSistema().catch(() => 'concedida' as const);
+    if (permissao === 'concedida') { navigation.goBack(); return; }
+    setLembreteAberto(true);
+  };
+  const fecharLembrete = () => { setLembreteAberto(false); navigation.goBack(); };
 
   const nomeCompleto = (user?.user_metadata as any)?.full_name ?? '';
   const primeiroNome = nomeCompleto.split(' ')[0] ?? '';
@@ -76,11 +89,12 @@ export default function BemVindoScreen() {
           <Text style={s.notaMembroTexto}>{t('bemVindo.notaMembro')}</Text>
         </View>
 
-        <TouchableOpacity style={s.botao} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+        <TouchableOpacity style={s.botao} onPress={explorar} activeOpacity={0.85}>
           <Text style={s.botaoTexto}>{t('bemVindo.explorar')}</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" />
         </TouchableOpacity>
       </ScrollView>
+      <LembreteNotificacoes visible={lembreteAberto} userId={user?.id} onFechar={fecharLembrete} />
     </SafeAreaView>
   );
 }

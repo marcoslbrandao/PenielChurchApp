@@ -11,7 +11,7 @@ import { urlDoAudio, formatarTempo } from '../lib/chatAudio';
 // O player só é criado no primeiro toque — criar um por mensagem ao abrir o
 // chat baixaria todos os áudios da conversa sem ninguém pedir.
 export default function AudioMensagem({
-  caminho, duracaoMs, ativo, onAtivar, onTerminar, corTexto, corTrilho, corProgresso, onLongPress,
+  caminho, duracaoMs, ativo, onAtivar, onTerminar, corTexto, corTrilho, corProgresso, onLongPress, obterUrl,
 }: {
   caminho: string;
   duracaoMs: number | null;
@@ -22,6 +22,9 @@ export default function AudioMensagem({
   corTrilho: string;
   corProgresso: string;
   onLongPress?: () => void;
+  /** De onde vem a URL assinada. Padrão: bucket `chat-audio` (grupos). O
+   *  Chat da Igreja passa a dele (bucket `chat-geral`). */
+  obterUrl?: (caminho: string) => Promise<string>;
 }) {
   const playerRef = useRef<AudioPlayer | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -56,7 +59,7 @@ export default function AudioMensagem({
       // saída para o alto-falante depois de uma gravação (senão vai pro fone
       // de ouvido, baixinho).
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
-      const url = await urlDoAudio(caminho);
+      const url = await (obterUrl ?? urlDoAudio)(caminho);
       const novo = createAudioPlayer({ uri: url }, { updateInterval: 250 });
       playerRef.current = novo;
       novo.addListener('playbackStatusUpdate', st => {

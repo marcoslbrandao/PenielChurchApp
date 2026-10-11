@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Switch, Image, Alert, StatusBar, ActivityIndicator,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Linking, AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +21,7 @@ import { useAcesso } from '../lib/acesso';
 import { mascaraDataBR, dataBRparaISO, isoParaDataBR } from '../lib/datas';
 import { IDIOMAS, trocarIdioma } from '../lib/i18n';
 import { useTheme, ThemeMode } from '../lib/theme';
-import { pushEstaAtivo, definirPush, removerTokenDesteAparelho } from '../lib/useNotifications';
+import { pushEstaAtivo, definirPush, removerTokenDesteAparelho, ativarNotificacoesComAjuda } from '../lib/useNotifications';
 
 // Versão real do app.json (não mais um texto fixo desatualizado), + info de
 // qual atualização OTA (EAS Update) está rodando agora — útil pra confirmar
@@ -660,7 +660,15 @@ export default function ProfileScreen() {
     return () => { vivo = false; };
   }, [isLoggedIn]);
 
-  useEffect(() => { pushEstaAtivo().then(setNotificationsEnabled); }, []);
+  // Relê ao abrir e sempre que o app volta ao primeiro plano: quem foi aos
+  // Ajustes do celular ligar as notificações volta e já vê a chave ligada.
+  useEffect(() => {
+    pushEstaAtivo().then(setNotificationsEnabled);
+    const sub = AppState.addEventListener('change', estado => {
+      if (estado === 'active') pushEstaAtivo().then(setNotificationsEnabled);
+    });
+    return () => sub.remove();
+  }, []);
 
   const alternarNotificacoes = async (ativo: boolean) => {
     // Otimista na tela, mas o estado volta se a operação falhar — senão o
@@ -668,7 +676,15 @@ export default function ProfileScreen() {
     setNotificationsEnabled(ativo);
     setSalvandoNotificacoes(true);
     try {
-      await definirPush(ativo, user?.id);
+      if (!ativo) {
+        await definirPush(false, user?.id);
+      } else {
+        // Se o celular bloqueia, `ativarNotificacoesComAjuda` explica e
+        // oferece "Abrir Ajustes"; a chave fica desligada até a pessoa voltar
+        // de lá com a permissão dada (o AppState acima relê).
+        const r = await ativarNotificacoesComAjuda(user?.id);
+        setNotificationsEnabled(r === 'ligado');
+      }
     } catch {
       setNotificationsEnabled(!ativo);
       Alert.alert(t('common.erro'), t('perfil.notificacoesFalha'));

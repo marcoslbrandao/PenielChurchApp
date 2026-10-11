@@ -239,7 +239,10 @@
     "visitantes": "Visitors",
     "dataAniversario": "Birthday",
     "dataAniversarioDica": "On your birthday the church will send you a message. Only you see it.",
-    "dataAniversarioInvalida": "Enter a valid date as DD/MM/YYYY."
+    "dataAniversarioInvalida": "Enter a valid date as DD/MM/YYYY.",
+    "notificacoesBloqueadasTitulo": "Notifications are off on your phone",
+    "notificacoesBloqueadasTexto": "To get updates from Peniel, turn on notifications for the app in your phone's Settings.",
+    "abrirAjustes": "Open Settings"
   },
   "grupos": {
     "titulo": "Groups",
@@ -1507,5 +1510,51 @@
     "baixe": "Download the app on the App Store: {{url}}",
     "googlePlayEmBreve": "Coming soon to Google Play",
     "googlePlay": "Android (Google Play): {{url}}"
+  },
+  "notificacoes": {
+    "lembreteTitulo": "Stay in the loop",
+    "lembreteTexto": "Turn on notifications to get announcements, chat messages, rotas and birthdays.",
+    "ativar": "Turn on notifications",
+    "agoraNao": "Not now",
+    "cartaoDesligadas": "Notifications are off",
+    "cartaoTexto": "Turn them on so you don't miss church updates.",
+    "cartaoAtivar": "Turn on"
+  },
+  "chatGeral": {
+    "titulo": "Church Chat",
+    "subtitulo": "Members only · messages disappear after 15 days",
+    "cardVazio": "No one has written yet. Start the conversation!",
+    "aviso15dias": "Messages, photos and voice notes are deleted automatically after 15 days.",
+    "placeholder": "Message",
+    "vazio": "No messages yet.\nStart the conversation!",
+    "hoje": "Today",
+    "ontem": "Yesterday",
+    "voce": "You",
+    "foto": "📷 Photo",
+    "audio": "🎤 Voice message",
+    "video": "🎬 Video",
+    "responder": "Reply",
+    "apagar": "Delete",
+    "denunciar": "Report",
+    "silenciar": "Mute {{nome}}",
+    "liberar": "Unmute {{nome}}",
+    "apagarTitulo": "Delete message",
+    "apagarTexto": "Remove this message for everyone?",
+    "denunciarTitulo": "Report message",
+    "denunciarTexto": "The Admin will see this message. Report it?",
+    "denunciada": "Thank you. The Admin will review it.",
+    "jaDenunciada": "You have already reported this message.",
+    "denuncias": "Reported ({{n}})",
+    "silenciarTitulo": "Mute in chat",
+    "silenciarTexto": "{{nome}} won't be able to write in the Church Chat until you unmute them.",
+    "silenciado": "You can't write in the Church Chat right now.",
+    "respondendoA": "Replying to {{nome}}",
+    "mensagemAnterior": "Earlier message",
+    "erroEnviar": "Couldn't send",
+    "erroEnviarTexto": "Check your connection and try again.",
+    "galeria": "Photo or GIF from gallery",
+    "camera": "Take a photo",
+    "permissaoCamera": "Allow camera access in your phone's Settings.",
+    "permissaoFotos": "Allow photo access in your phone's Settings."
   }
 }

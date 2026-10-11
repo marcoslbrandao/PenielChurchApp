@@ -239,7 +239,10 @@
     "visitantes": "Visiteurs",
     "dataAniversario": "Date d'anniversaire",
     "dataAniversarioDica": "Le jour de votre anniversaire, l'église vous enverra un message. Vous seul le voyez.",
-    "dataAniversarioInvalida": "Saisissez une date valide au format JJ/MM/AAAA."
+    "dataAniversarioInvalida": "Saisissez une date valide au format JJ/MM/AAAA.",
+    "notificacoesBloqueadasTitulo": "Notifications désactivées sur le téléphone",
+    "notificacoesBloqueadasTexto": "Pour recevoir les annonces de Peniel, activez les notifications de l'app dans les Réglages de votre téléphone.",
+    "abrirAjustes": "Ouvrir les Réglages"
   },
   "grupos": {
     "titulo": "Groupes",
@@ -1507,5 +1510,51 @@
     "baixe": "Téléchargez l'app sur l'App Store : {{url}}",
     "googlePlayEmBreve": "Bientôt disponible sur Google Play",
     "googlePlay": "Android (Google Play) : {{url}}"
+  },
+  "notificacoes": {
+    "lembreteTitulo": "Restez informé",
+    "lembreteTexto": "Activez les notifications pour recevoir les annonces, les messages du chat, les plannings et les anniversaires.",
+    "ativar": "Activer les notifications",
+    "agoraNao": "Pas maintenant",
+    "cartaoDesligadas": "Notifications désactivées",
+    "cartaoTexto": "Activez-les pour ne rien manquer de l'église.",
+    "cartaoAtivar": "Activer"
+  },
+  "chatGeral": {
+    "titulo": "Chat de l'Église",
+    "subtitulo": "Membres uniquement · messages effacés après 15 jours",
+    "cardVazio": "Personne n'a encore écrit. Lancez la conversation !",
+    "aviso15dias": "Les messages, photos et vocaux sont effacés automatiquement après 15 jours.",
+    "placeholder": "Message",
+    "vazio": "Aucun message pour l'instant.\nLancez la conversation !",
+    "hoje": "Aujourd'hui",
+    "ontem": "Hier",
+    "voce": "Vous",
+    "foto": "📷 Photo",
+    "audio": "🎤 Message vocal",
+    "video": "🎬 Vidéo",
+    "responder": "Répondre",
+    "apagar": "Supprimer",
+    "denunciar": "Signaler",
+    "silenciar": "Rendre muet {{nome}}",
+    "liberar": "Réactiver {{nome}}",
+    "apagarTitulo": "Supprimer le message",
+    "apagarTexto": "Supprimer ce message pour tout le monde ?",
+    "denunciarTitulo": "Signaler le message",
+    "denunciarTexto": "L'Admin verra ce message. Le signaler ?",
+    "denunciada": "Merci. L'Admin va le vérifier.",
+    "jaDenunciada": "Vous avez déjà signalé ce message.",
+    "denuncias": "Signalé ({{n}})",
+    "silenciarTitulo": "Rendre muet dans le chat",
+    "silenciarTexto": "{{nome}} ne pourra plus écrire dans le Chat de l'Église jusqu'à ce que vous le réactiviez.",
+    "silenciado": "Vous ne pouvez pas écrire dans le Chat de l'Église pour le moment.",
+    "respondendoA": "Réponse à {{nome}}",
+    "mensagemAnterior": "Message précédent",
+    "erroEnviar": "Envoi impossible",
+    "erroEnviarTexto": "Vérifiez votre connexion et réessayez.",
+    "galeria": "Photo ou GIF de la galerie",
+    "camera": "Prendre une photo",
+    "permissaoCamera": "Autorisez l'accès à l'appareil photo dans les Réglages.",
+    "permissaoFotos": "Autorisez l'accès aux photos dans les Réglages."
   }
 }

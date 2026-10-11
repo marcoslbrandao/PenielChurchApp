@@ -12,6 +12,8 @@ import { linhaCompartilharApp } from '../lib/appLinks';
 import { liveSemCota, liveComApi, urlDoVideo, YOUTUBE_CANAL_URL, YOUTUBE_LIVES_URL, type LiveAtual } from '../lib/youtubeCanal';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import BirthdayBanner from '../components/BirthdayBanner';
+import ChatGeralCard from '../components/ChatGeralCard';
+import CartaoNotificacoes from '../components/CartaoNotificacoes';
 import MensagemDetalheModal, { Mensagem } from '../components/MensagemDetalheModal';
 import { livrosAT, livrosNT, Livro } from '../lib/bibliaLivros';
 import { useVersiculoDoDia, parseReferencia, getTextoVersiculo, getReferenciaVersiculo, getVersaoVersiculo } from '../lib/versiculoDoDia';
@@ -576,7 +578,7 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
 export default function HomeScreen({ navigation, route }: { navigation?: any; route?: any }) {
   const { t, i18n } = useTranslation();
   const { user, isLoggedIn } = useAuth();
-  const { ehMembro, carregando: carregandoPapel } = useAcesso();
+  const { ehMembro, ehAdmin, carregando: carregandoPapel } = useAcesso();
   const { isDark } = useTheme();
   const C = useMemo(() => paletaHome(isDark), [isDark]);
   const styles = useMemo(() => buildStyles(C), [C]);
@@ -1005,6 +1007,14 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
             <Text style={{ fontSize: 16, fontWeight: '800', color: '#F5C842', marginBottom: 6 }}>Feliz aniversário!</Text>
             <Text style={{ fontSize: 14, lineHeight: 20, color: 'rgba(255,255,255,0.9)' }}>{meuParabens}</Text>
           </View>
+        )}
+
+        {/* ── Notificações desligadas (lembrete discreto) ───────────────────── */}
+        {isLoggedIn && <CartaoNotificacoes userId={user?.id} cores={C} />}
+
+        {/* ── Chat da Igreja (só membros) ──────────────────────────────────── */}
+        {isLoggedIn && ehMembro && !!user?.id && (
+          <ChatGeralCard userId={user.id} ehAdmin={ehAdmin} cores={C} />
         )}
 
         {/* ── Versículo do dia ─────────────────────────────────────────────── */}

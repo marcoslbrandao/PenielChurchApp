@@ -90,7 +90,11 @@ export default function GrupoChatModal({
   // No Android o modal já começa abaixo da barra de status, então somar o
   // inset ali criaria um vão; o padding fixo basta.
   const insets = useSafeAreaInsets();
-  const padTop = Platform.OS === 'ios' ? Math.max(insets.top, 20) : 12;
+  // Android com edge-to-edge (app.json `edgeToEdgeEnabled`): o <Modal> também
+  // desenha por baixo da barra de status e da barra de navegação do sistema.
+  // Com respiro fixo, a barra de digitar/gravar ficava escondida atrás dos
+  // botões do Android (11/10/2026). Agora os dois sistemas usam o inset real.
+  const padTop = Platform.OS === 'ios' ? Math.max(insets.top, 20) : Math.max(insets.top, 12);
 
   // Com o teclado aberto, o KeyboardAvoidingView já empurra a barra pra cima —
   // manter o respiro da faixa inferior aí deixaria um vão vazio de uns 34px
@@ -104,9 +108,7 @@ export default function GrupoChatModal({
     return () => { s1.remove(); s2.remove(); };
   }, []);
 
-  const padBottom = tecladoAberto
-    ? 0
-    : (Platform.OS === 'ios' ? Math.max(insets.bottom, 10) : 10);
+  const padBottom = tecladoAberto ? 0 : Math.max(insets.bottom, 10);
   const C = useMemo(() => paletaChat(isDark), [isDark]);
   const cs = useMemo(() => buildStyles(C), [C]);
 

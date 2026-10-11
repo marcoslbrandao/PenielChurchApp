@@ -43,6 +43,8 @@ import { WebView } from 'react-native-webview';
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { supabase } from '../lib/supabase';
 import { useTheme } from '../lib/theme';
+import { useAuth } from '../lib/useAuth';
+import GrupoChatModal from '../components/GrupoChatModal';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -308,6 +310,13 @@ export default function PenielKidsScreen() {
   const [atualizando, setAtualizando] = useState(false);
   const [podeVerFicha, setPodeVerFicha] = useState(false);
   const [fichaAberta, setFichaAberta] = useState(false);
+  // Chat do Ministério Infantil (11/10/2026): o mesmo chat dos outros grupos,
+  // com grupo = 'infantil'. Quem entra é decidido pelo banco
+  // (`tem_acesso_grupo`: admin, líderes e participantes do grupo infantil) —
+  // é a equipe do ministério, não os pais.
+  const { user } = useAuth();
+  const [podeVerChat, setPodeVerChat] = useState(false);
+  const [chatAberto, setChatAberto] = useState(false);
 
   // ── Quem sou eu, e quem são meus filhos ───────────────────────────────────
   const carregarCriancas = useCallback(async () => {
@@ -316,6 +325,8 @@ export default function PenielKidsScreen() {
     // de ler `group_leaders` no cliente: a função é a permissão.
     const { data: podeEditar } = await supabase.rpc('pode_editar_kids');
     setPodeVerFicha(!!podeEditar);
+    const { data: acessoChat } = await supabase.rpc('tem_acesso_grupo', { p_grupo: 'infantil' });
+    setPodeVerChat(acessoChat === true);
 
     if (!meuId) { setCriancas([]); return; }
     const { data } = await supabase
@@ -372,15 +383,26 @@ export default function PenielKidsScreen() {
           <Ionicons name="chevron-back" size={26} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={s.headerTitulo}>{t('kids.titulo')}</Text>
-        {podeVerFicha ? (
-          <TouchableOpacity
-            onPress={() => setFichaAberta(true)}
-            style={s.headerBtn}
-            accessibilityLabel={t('kids.fichaTitulo')}
-          >
-            <Ionicons name="clipboard-outline" size={22} color={C.accent} />
-          </TouchableOpacity>
-        ) : <View style={s.headerBtn} />}
+        <View style={{ flexDirection: 'row' }}>
+          {podeVerChat && !!user && (
+            <TouchableOpacity
+              onPress={() => setChatAberto(true)}
+              style={s.headerBtn}
+              accessibilityLabel={t('grupos.chat')}
+            >
+              <Ionicons name="chatbubbles-outline" size={22} color={C.accent} />
+            </TouchableOpacity>
+          )}
+          {podeVerFicha ? (
+            <TouchableOpacity
+              onPress={() => setFichaAberta(true)}
+              style={s.headerBtn}
+              accessibilityLabel={t('kids.fichaTitulo')}
+            >
+              <Ionicons name="clipboard-outline" size={22} color={C.accent} />
+            </TouchableOpacity>
+          ) : !podeVerChat ? <View style={s.headerBtn} /> : null}
+        </View>
       </View>
 
       {carregando ? (
@@ -569,6 +591,18 @@ export default function PenielKidsScreen() {
         C={C}
         t={t as (k: string) => string}
       />
+      {user && (
+        <GrupoChatModal
+          visible={chatAberto}
+          grupo="infantil"
+          grupoNome="Ministério Infantil"
+          cor="#E8890C"
+          userId={user.id}
+          userNome={(user.user_metadata as any)?.full_name ?? ''}
+          podeModerar={podeVerFicha}
+          onClose={() => setChatAberto(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }

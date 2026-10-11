@@ -100,11 +100,20 @@ export default function GravadorAudio({
   }, [gravando, estado.durationMillis]);
 
   // Fechar o chat no meio de uma gravação descarta.
+  //
+  // NÃO perguntar ao `recorder` aqui: o `useAudioRecorder` declara o efeito
+  // dele ANTES deste, e no desmonte o React limpa na ordem de declaração —
+  // quando esta função roda, o gravador nativo já foi liberado. Ler
+  // `recorder.isRecording` num objeto liberado lança erro, e erro solto em
+  // produção FECHA O APP. Acontecia toda vez que o botão do microfone saía da
+  // tela — ou seja, ao digitar a primeira letra no chat (11/10/2026).
+  // Por isso o "estava gravando?" vem de uma ref nossa, e tudo vai em try.
+  const gravandoRef = useRef(false);
+  useEffect(() => { gravandoRef.current = gravando; }, [gravando]);
   useEffect(() => () => {
-    if (!finalizando.current && recorder.isRecording) {
-      recorder.stop().catch(() => {});
-      devolverSaidaDeSom();
-    }
+    if (finalizando.current || !gravandoRef.current) return;
+    try { recorder.stop().catch(() => {}); } catch { /* já liberado */ }
+    devolverSaidaDeSom();
   }, []);
 
   const redondo = { width: tamanho, height: tamanho, borderRadius: tamanho / 2 };

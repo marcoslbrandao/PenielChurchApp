@@ -81,6 +81,7 @@ export default function ChatGeralModal({
   const inputRef = useRef<TextInput>(null);
 
   const euSilenciado = silenciados.has(userId);
+  const mostrarMic = podeGravar && (gravando || !texto.trim());
 
   // Safe area à mão dentro do <Modal> (ver GrupoChatModal: o SafeAreaView
   // mede a view nativa do modal e volta 0 no iOS).
@@ -553,21 +554,27 @@ export default function ChatGeralModal({
                   maxLength={2000}
                 />
               )}
+              {/* Campo vazio: o botão vira microfone, como no WhatsApp. O
+                  gravador fica SEMPRE montado (só escondido) — montar e
+                  desmontar a cada letra criava e liberava o gravador nativo
+                  a cada toque, e foi no desmonte que o app fechava. */}
+              {podeGravar && (
+                <View style={(mostrarMic && !enviando) ? (gravando ? { flex: 1 } : undefined) : { display: 'none' }}>
+                  <GravadorAudio
+                    cor={COR}
+                    corTexto={C.text}
+                    corFundo={C.inputBg}
+                    onComecar={() => { setAudioAtivo(null); Keyboard.dismiss(); }}
+                    onGravado={enviarGravacao}
+                    onGravandoMudou={setGravando}
+                  />
+                </View>
+              )}
               {enviando ? (
                 <View style={[cs.sendBtn, { opacity: 0.6 }]}>
                   <ActivityIndicator size="small" color="#fff" />
                 </View>
-              ) : podeGravar && (gravando || !texto.trim()) ? (
-                // Campo vazio: o botão vira microfone, como no WhatsApp.
-                <GravadorAudio
-                  cor={COR}
-                  corTexto={C.text}
-                  corFundo={C.inputBg}
-                  onComecar={() => { setAudioAtivo(null); Keyboard.dismiss(); }}
-                  onGravado={enviarGravacao}
-                  onGravandoMudou={setGravando}
-                />
-              ) : (
+              ) : mostrarMic ? null : (
                 <TouchableOpacity
                   style={[cs.sendBtn, { opacity: texto.trim() ? 1 : 0.5 }]}
                   onPress={enviarTexto}

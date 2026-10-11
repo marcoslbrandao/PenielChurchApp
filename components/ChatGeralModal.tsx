@@ -778,7 +778,7 @@ function buildStyles(C: PaletaChat) { return StyleSheet.create({
   respondendoFaixa: { width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: COR },
   respondendoNome: { fontSize: 12.5, fontWeight: '700', color: COR },
   respondendoTexto: { fontSize: 12.5, color: C.textMuted, marginTop: 1 },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 10, borderTopWidth: 1, borderTopColor: C.inputBarBorder, backgroundColor: C.inputBarBg },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.inputBarBorder, backgroundColor: C.inputBarBg },
   anexarBtn: { height: 38, justifyContent: 'center' },
   // Linha, e não coluna: a barra do gravador tem `flex: 1` e, dentro de uma
   // coluna sem altura, ficava com altura ZERO — o play, o tempo e o regravar

@@ -377,7 +377,9 @@ function Onda({
 const st = StyleSheet.create({
   botaoRedondo: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   botaoContorno: { borderWidth: 2, backgroundColor: 'transparent' },
-  barra: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 999, paddingLeft: 6 },
+  // Altura mínima e respiro em cima e embaixo: os botões (lixeira, play,
+  // enviar) não podem encostar na borda do rodapé (11/10/2026).
+  barra: { flex: 1, minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 27, paddingLeft: 8, paddingRight: 4, paddingVertical: 8 },
   lixeira: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(229,57,53,0.14)', alignItems: 'center', justifyContent: 'center' },
   onda: { flex: 1, height: ALTURA, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   meio: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },

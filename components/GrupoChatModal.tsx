@@ -330,7 +330,7 @@ function buildStyles(C: PaletaChat) { return StyleSheet.create({
   bubbleOther: { backgroundColor: C.bubbleOtherBg, borderWidth: 1, borderColor: C.bubbleOtherBorder },
   autorNome: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
   bubbleText: { fontSize: 14, color: C.text, lineHeight: 19 },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 10, borderTopWidth: 1, borderTopColor: C.inputBarBorder, backgroundColor: C.inputBarBg },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.inputBarBorder, backgroundColor: C.inputBarBg },
   input: { flex: 1, maxHeight: 100, backgroundColor: C.inputBg, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 9, fontSize: 14, color: C.text },
   sendBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
 }); }

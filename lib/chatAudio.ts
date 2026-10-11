@@ -28,6 +28,9 @@ export const OPCOES_GRAVACAO: RecordingOptions = {
   numberOfChannels: 1,
   bitRate: 64000,
   sampleRate: 44100,
+  // Nível do microfone no status do gravador: é o que desenha a onda ao vivo
+  // e o resumo da gravação na hora de ouvir antes de enviar.
+  isMeteringEnabled: true,
 };
 
 function uuid() {

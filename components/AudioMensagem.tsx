@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
+import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { aplicarSaida, alternarSaida, useSaidaAudio } from '../lib/saidaAudio';
 import { urlDoAudio, formatarTempo } from '../lib/chatAudio';
 
 // Bolha de mensagem de voz: play/pausa, barra de progresso e tempo.
@@ -32,6 +33,7 @@ export default function AudioMensagem({
   const [atual, setAtual] = useState(0);
   const [total, setTotal] = useState((duracaoMs ?? 0) / 1000);
   const [erro, setErro] = useState(false);
+  const saida = useSaidaAudio();
 
   const soltar = () => {
     const p = playerRef.current;
@@ -58,7 +60,8 @@ export default function AudioMensagem({
       // áudio "toca" mudo e parece defeito. `allowsRecording: false` devolve a
       // saída para o alto-falante depois de uma gravação (senão vai pro fone
       // de ouvido, baixinho).
-      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
+      // Alto-falante ou ouvido, conforme o botão da bolha (lib/saidaAudio).
+      await aplicarSaida();
       const url = await (obterUrl ?? urlDoAudio)(caminho);
       const novo = createAudioPlayer({ uri: url }, { updateInterval: 250 });
       playerRef.current = novo;
@@ -108,6 +111,17 @@ export default function AudioMensagem({
             : formatarTempo(tocando || atual > 0 ? atual : total)}
         </Text>
       </View>
+      {tocando && (
+        // Alto-falante ↔ ouvido, enquanto toca (como no WhatsApp).
+        <TouchableOpacity
+          onPress={alternarSaida}
+          hitSlop={10}
+          style={[st.saida, { borderColor: corTexto }]}
+          accessibilityLabel={saida === 'ouvido' ? 'Ouvir no alto-falante' : 'Ouvir no ouvido'}
+        >
+          <Ionicons name={saida === 'ouvido' ? 'ear' : 'volume-high'} size={15} color={corTexto} />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
@@ -118,4 +132,5 @@ const st = StyleSheet.create({
   trilho: { height: 4, borderRadius: 2, overflow: 'hidden' },
   progresso: { height: 4, borderRadius: 2 },
   tempo: { fontSize: 11, fontVariant: ['tabular-nums'] },
+  saida: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center', opacity: 0.85 },
 });

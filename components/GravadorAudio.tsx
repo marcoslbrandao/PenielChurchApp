@@ -8,6 +8,7 @@ import {
   createAudioPlayer, type AudioPlayer,
 } from 'expo-audio';
 import { OPCOES_GRAVACAO, AUDIO_MAX_SEGUNDOS, formatarTempo } from '../lib/chatAudio';
+import { aplicarSaida, alternarSaida, useSaidaAudio } from '../lib/saidaAudio';
 
 // Botão de microfone + barra de gravação dos chats (grupos, Banda, Igreja).
 //
@@ -55,6 +56,7 @@ export default function GravadorAudio({
   const playerRef = useRef<AudioPlayer | null>(null);
   const [tocando, setTocando] = useState(false);
   const [posicao, setPosicao] = useState(0);
+  const saida = useSaidaAudio();
 
   // Níveis do microfone, de 0 a 1, um por leitura (~10 por segundo).
   const niveis = useRef<number[]>([]);
@@ -84,8 +86,8 @@ export default function GravadorAudio({
     return () => anim.stop();
   }, [fase]);
 
-  const devolverSaidaDeSom = () =>
-    setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+  // Depois de gravar, devolve a saída escolhida (alto-falante ou ouvido).
+  const devolverSaidaDeSom = () => { aplicarSaida(); };
 
   const apagarArquivo = (uri: string) => { FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {}); };
 
@@ -184,7 +186,7 @@ export default function GravadorAudio({
       return;
     }
     try {
-      await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: false });
+      await aplicarSaida();
       const novo = createAudioPlayer({ uri: g.uri }, { updateInterval: 200 });
       playerRef.current = novo;
       novo.addListener('playbackStatusUpdate', st => {
@@ -299,9 +301,16 @@ export default function GravadorAudio({
       <Text style={[st.tempoPequeno, { color: corTexto }]}>
         {formatarTempo(tocando || posicao > 0 ? posicao : total)}
       </Text>
-      <TouchableOpacity onPress={regravar} hitSlop={8} accessibilityLabel="Regravar">
-        <Ionicons name="mic-outline" size={22} color={corTexto} />
-      </TouchableOpacity>
+      {tocando ? (
+        // Enquanto toca, o lugar do "regravar" vira alto-falante ↔ ouvido.
+        <TouchableOpacity onPress={alternarSaida} hitSlop={8} accessibilityLabel={saida === 'ouvido' ? 'Ouvir no alto-falante' : 'Ouvir no ouvido'}>
+          <Ionicons name={saida === 'ouvido' ? 'ear' : 'volume-high'} size={22} color={corTexto} />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity onPress={regravar} hitSlop={8} accessibilityLabel="Regravar">
+          <Ionicons name="mic-outline" size={22} color={corTexto} />
+        </TouchableOpacity>
+      )}
       <TouchableOpacity
         style={[st.botaoRedondo, redondo, { backgroundColor: cor }]}
         onPress={enviarRevisao}

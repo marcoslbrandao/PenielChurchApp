@@ -563,7 +563,7 @@ export default function ChatGeralModal({
                   desmontar a cada letra criava e liberava o gravador nativo
                   a cada toque, e foi no desmonte que o app fechava. */}
               {podeGravar && (
-                <View style={(mostrarMic && !enviando) ? (gravando ? { flex: 1 } : undefined) : { display: 'none' }}>
+                <View style={(mostrarMic && !enviando) ? (gravando ? cs.gravadorAberto : undefined) : { display: 'none' }}>
                   <GravadorAudio
                     cor={COR}
                     corTexto={C.text}
@@ -780,6 +780,10 @@ function buildStyles(C: PaletaChat) { return StyleSheet.create({
   respondendoTexto: { fontSize: 12.5, color: C.textMuted, marginTop: 1 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 10, borderTopWidth: 1, borderTopColor: C.inputBarBorder, backgroundColor: C.inputBarBg },
   anexarBtn: { height: 38, justifyContent: 'center' },
+  // Linha, e não coluna: a barra do gravador tem `flex: 1` e, dentro de uma
+  // coluna sem altura, ficava com altura ZERO — o play, o tempo e o regravar
+  // sumiam (11/10/2026). Como linha, o flex vale para a largura.
+  gravadorAberto: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   input: { flex: 1, maxHeight: 110, backgroundColor: C.inputBg, borderRadius: 19, paddingHorizontal: 14, paddingTop: 9, paddingBottom: 9, fontSize: 15, color: C.text },
   sendBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: COR },
   silenciadoTexto: { fontSize: 13, color: C.textMuted, marginLeft: 6, flexShrink: 1 },

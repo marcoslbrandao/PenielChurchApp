@@ -8,5 +8,9 @@
     <array>
       <string>merchant.org.uk.penielchurch.app</string>
     </array>
+    <key>com.apple.security.application-groups</key>
+    <array>
+      <string>group.org.uk.penielchurch.app</string>
+    </array>
   </dict>
 </plist>

@@ -1561,7 +1561,7 @@
     "arquivo": "📎 Fichier",
     "abrirErro": "Impossible d'ouvrir le fichier. Vérifiez votre connexion et réessayez.",
     "videoLongoTitulo": "Vidéo trop longue",
-    "videoLongo": "Dans le chat, la vidéo peut durer 2 minutes maximum.",
+    "videoLongo": "Dans le chat, la vidéo peut durer 5 minutes maximum.",
     "arquivoGrandeTitulo": "Fichier trop volumineux",
     "arquivoGrande": "La limite est de {{mb}} Mo.",
     "formatoNaoAceitoTitulo": "Format non accepté",

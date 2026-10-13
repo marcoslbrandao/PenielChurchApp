@@ -1561,7 +1561,7 @@
     "arquivo": "📎 File",
     "abrirErro": "Couldn't open the file. Check your connection and try again.",
     "videoLongoTitulo": "Video too long",
-    "videoLongo": "Videos in the chat can be up to 2 minutes long.",
+    "videoLongo": "Videos in the chat can be up to 5 minutes long.",
     "arquivoGrandeTitulo": "File too large",
     "arquivoGrande": "The limit is {{mb}} MB.",
     "formatoNaoAceitoTitulo": "Format not supported",

@@ -16,7 +16,7 @@ import { RecordingPresets, type RecordingOptions } from 'expo-audio';
 import { supabase } from './supabase';
 
 export const BUCKET_AUDIO = 'chat-audio';
-export const AUDIO_MAX_SEGUNDOS = 5 * 60;
+export const AUDIO_MAX_SEGUNDOS = 10 * 60;
 // Texto gravado junto com o áudio. Quem ainda roda uma versão do app que não
 // conhece áudio (e os pushes/prévias) vê isso em vez de uma bolha vazia.
 export const TEXTO_DO_AUDIO = '🎤 Mensagem de voz';

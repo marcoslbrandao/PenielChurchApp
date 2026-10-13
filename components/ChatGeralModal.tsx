@@ -284,9 +284,9 @@ export default function ChatGeralModal({
   const erroDeEnvio = (e: any) =>
     Alert.alert(t('chatGeral.erroEnviar'), e?.message ?? t('chatGeral.erroEnviarTexto'));
 
-  // Vídeo da galeria: até 2 minutos e 40 MB (limite do bucket). No iPhone o
-  // sistema já converte para H.264 720p, que toca em qualquer celular e fica
-  // bem menor que o original.
+  // Vídeo da galeria: até 5 minutos e 50 MB (limite do Supabase). No iPhone o
+  // sistema converte para H.264 em qualidade média (~480p), que toca em
+  // qualquer celular: 5 min ficam em ~20–30 MB. 720p estourava os 50 MB.
   const enviarVideo = async (asset: MidiaLocal): Promise<boolean> => {
     const duracaoMs = Math.round(asset.duration ?? 0);
     if (duracaoMs > VIDEO_MAX_SEGUNDOS * 1000 + 4000) {
@@ -308,7 +308,7 @@ export default function ChatGeralModal({
       await inserir({
         tipo: 'video', texto: legenda, midia_path: caminho,
         midia_largura: asset.width || null, midia_altura: asset.height || null,
-        duracao_ms: Math.min(125000, Math.max(1, duracaoMs || 1)),
+        duracao_ms: Math.min(VIDEO_MAX_SEGUNDOS * 1000 + 5000, Math.max(1, duracaoMs || 1)),
       });
       if (legenda) setTexto('');
       return true;
@@ -386,7 +386,7 @@ export default function ChatGeralModal({
     const r = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       quality: 0.7,
-      videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
+      videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
       videoMaxDuration: VIDEO_MAX_SEGUNDOS,
     });
     const a = !r.canceled ? r.assets?.[0] : undefined;

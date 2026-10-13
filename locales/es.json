@@ -1561,7 +1561,7 @@
     "arquivo": "📎 Archivo",
     "abrirErro": "No se pudo abrir el archivo. Revisa tu conexión e inténtalo de nuevo.",
     "videoLongoTitulo": "Video demasiado largo",
-    "videoLongo": "En el chat, el video puede durar como máximo 2 minutos.",
+    "videoLongo": "En el chat, el video puede durar como máximo 5 minutos.",
     "arquivoGrandeTitulo": "Archivo demasiado grande",
     "arquivoGrande": "El límite es de {{mb}} MB.",
     "formatoNaoAceitoTitulo": "Formato no admitido",

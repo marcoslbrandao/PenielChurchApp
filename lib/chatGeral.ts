@@ -13,9 +13,11 @@ import { supabase } from './supabase';
 
 export const BUCKET_CHAT_GERAL = 'chat-geral';
 export const DIAS_GUARDADOS = 15;
-export const VIDEO_MAX_SEGUNDOS = 120;
-/** Limite do bucket `chat-geral` (40 MB) — vale para o vídeo. */
-export const VIDEO_MAX_MB = 40;
+export const VIDEO_MAX_SEGUNDOS = 5 * 60;
+/** Limite do bucket `chat-geral` (50 MB, o máximo do Supabase no plano com
+ *  spend cap) — vale para o vídeo. No iPhone o vídeo sai comprimido (~480p),
+ *  e 5 min cabem folgado; no Android vai como foi gravado. */
+export const VIDEO_MAX_MB = 50;
 /** Anexos (tipo `arquivo`): a constraint do banco aceita até 25 MB. */
 export const ARQUIVO_MAX_MB = 25;
 export const REACOES = ['👍', '❤️', '😂', '🙏', '😮', '😢'];
@@ -190,12 +192,39 @@ export async function tamanhoLocal(uri: string): Promise<number | null> {
 export async function enviarArquivo(
   uri: string, autorId: string, ext: string, contentType: string, apagarLocal = false,
 ): Promise<string> {
-  const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
   const caminho = `${autorId}/${uuid()}.${ext}`;
-  const { error } = await supabase.storage
-    .from(BUCKET_CHAT_GERAL)
-    .upload(caminho, decode(base64), { contentType, upsert: false });
-  if (error) throw error;
+  if (uri.startsWith('file://')) {
+    // Envio direto do arquivo (streaming). Ler em base64 colocava o arquivo
+    // INTEIRO na memória do JS (+33%): um vídeo de 50 MB virava 67 MB de
+    // texto e podia fechar o app em celular mais simples.
+    const { data: sessao } = await supabase.auth.getSession();
+    const token = sessao.session?.access_token;
+    if (!token) throw new Error('Sessão expirada. Entre de novo.');
+    const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/${BUCKET_CHAT_GERAL}/${caminho}`;
+    const r = await FileSystem.uploadAsync(url, uri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+        'Content-Type': contentType,
+        'x-upsert': 'false',
+      },
+    });
+    if (r.status < 200 || r.status >= 300) {
+      let msg = `Falha no envio (${r.status})`;
+      try { msg = JSON.parse(r.body)?.message ?? msg; } catch { /* corpo não é JSON */ }
+      throw new Error(msg);
+    }
+  } else {
+    // content:// (Android, vindo do menu Compartilhar): o upload direto não
+    // lê esse tipo de endereço, então vai pelo caminho antigo.
+    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+    const { error } = await supabase.storage
+      .from(BUCKET_CHAT_GERAL)
+      .upload(caminho, decode(base64), { contentType, upsert: false });
+    if (error) throw error;
+  }
   if (apagarLocal) FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
   return caminho;
 }

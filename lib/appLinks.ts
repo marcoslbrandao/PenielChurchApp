@@ -3,13 +3,13 @@ import i18n from 'i18next';
 // Links de download do app, usados no rodapé de textos compartilhados
 // (devocional, versículo do dia, capítulo/versículos da Bíblia etc.) — assim
 // quem recebe a mensagem consegue baixar o app também, não só ler o texto.
-export const APP_STORE_URL = 'https://apps.apple.com/us/app/peniel-church-uk/id6776841788';
+export const APP_STORE_URL = 'https://apps.apple.com/app/id6776841788';
+export const GOOGLE_PLAY_URL = 'https://play.google.com/store/apps/details?id=org.uk.penielchurch.app';
 
-// Ainda não temos link público do Google Play — o app ainda está em teste
-// fechado (faixa alpha). Enquanto for null, o rodapé diz "Em breve no Google
-// Play". Quando sair pro público, colocar o link aqui: o texto compartilhado
-// passa a trazer o link no lugar do "em breve", em todos os idiomas.
-export const GOOGLE_PLAY_URL: string | null = null;
+// Link único (mesmo do QR code): no iPhone abre a App Store, no Android abre
+// o Google Play, no computador mostra a página com os dois botões.
+// Página: repositório marcoslbrandao/peniel-app (GitHub Pages).
+export const APP_LINK_URL = 'https://app.penielchurch.org.uk';
 
 /**
  * Rodapé padrão dos textos compartilhados pelo app, com link de verdade.
@@ -25,10 +25,7 @@ export function linhaCompartilharApp(idioma?: string): string {
   const semEscape = { escapeValue: false };
   const linhas = [
     '📖 Peniel Church App',
-    i18n.t('compartilharApp.baixe', { lng, url: APP_STORE_URL, interpolation: semEscape }),
-    GOOGLE_PLAY_URL
-      ? i18n.t('compartilharApp.googlePlay', { lng, url: GOOGLE_PLAY_URL, interpolation: semEscape })
-      : i18n.t('compartilharApp.googlePlayEmBreve', { lng }),
+    i18n.t('compartilharApp.baixeLink', { lng, url: APP_LINK_URL, interpolation: semEscape }),
   ];
   return linhas.join('\n');
 }

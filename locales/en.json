@@ -1507,6 +1507,7 @@
     "erroLoja": "Couldn't open the store. Search for \"Peniel Church\" on the App Store or Google Play."
   },
   "compartilharApp": {
+    "baixeLink": "Get the app (iPhone & Android): {{url}}",
     "baixe": "Download the app on the App Store: {{url}}",
     "googlePlayEmBreve": "Coming soon to Google Play",
     "googlePlay": "Android (Google Play): {{url}}"

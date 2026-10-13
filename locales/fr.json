@@ -1507,6 +1507,7 @@
     "erroLoja": "Impossible d'ouvrir le store. Cherchez « Peniel Church » sur l'App Store ou Google Play."
   },
   "compartilharApp": {
+    "baixeLink": "Téléchargez l'app (iPhone et Android) : {{url}}",
     "baixe": "Téléchargez l'app sur l'App Store : {{url}}",
     "googlePlayEmBreve": "Bientôt disponible sur Google Play",
     "googlePlay": "Android (Google Play) : {{url}}"

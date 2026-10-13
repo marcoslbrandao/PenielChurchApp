@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useCampoTraduzido } from '../lib/useTraducao';
+import { linhaCompartilharApp } from '../lib/appLinks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type Mensagem = {
@@ -49,7 +50,7 @@ export default function MensagemDetalheModal({ mensagem, onClose }: {
           </TouchableOpacity>
           <TouchableOpacity
             style={s.closeBtn}
-            onPress={() => Share.share({ message: `${titulo}\n\n${resumo}\n\n📖 Peniel Church App` })}
+            onPress={() => Share.share({ message: `${titulo}\n\n${resumo}\n\n${linhaCompartilharApp()}` })}
           >
             <Ionicons name="share-outline" size={20} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>

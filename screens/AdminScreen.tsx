@@ -16,6 +16,7 @@ import { mascaraDataBR, dataBRparaISO, isoParaDataBR } from '../lib/datas';
 import { useAuth } from '../lib/useAuth';
 import { useBirthdays } from '../lib/useBirthdays';
 import { useTranslation } from 'react-i18next';
+import { APP_LINK_URL } from '../lib/appLinks';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -151,8 +152,8 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
 
     // Compartilhar o código
     const mensagem = tipo === 'banda'
-      ? `🎵 Seu convite para a área da Banda de Louvor — Peniel Church:\n\nCódigo: ${code}\n\nAbra o app, vá em Membros → Banda, e insira este código para ativar seu acesso.\n\nVálido por ${days} dias. Uso único.`
-      : `🔑 Seu convite para o app Peniel Church:\n\nCódigo: ${code}\n\nAbra o app, vá em Membros e insira este código para ativar seu acesso.\n\nVálido por ${days} dias.`;
+      ? `🎵 Seu convite para a área da Banda de Louvor — Peniel Church:\n\nCódigo: ${code}\n\nAbra o app, vá em Membros → Banda, e insira este código para ativar seu acesso.\n\nVálido por ${days} dias. Uso único.\n\nAinda não tem o app? Baixe aqui: ${APP_LINK_URL}`
+      : `🔑 Seu convite para o app Peniel Church:\n\nCódigo: ${code}\n\nAbra o app, vá em Membros e insira este código para ativar seu acesso.\n\nVálido por ${days} dias.\n\nAinda não tem o app? Baixe aqui: ${APP_LINK_URL}`;
     await Share.share({ message: mensagem, title: 'Convite Peniel Church' });
 
     setEmail('');
@@ -2401,7 +2402,7 @@ export default function AdminScreen() {
 
   const shareInvite = async (code: string) => {
     await Share.share({
-      message: `🔑 Convite Peniel Church:\n\nCódigo: ${code}\n\nAbra o app e insira este código na Área do Membro para ativar seu acesso.`,
+      message: `🔑 Convite Peniel Church:\n\nCódigo: ${code}\n\nAbra o app e insira este código na Área do Membro para ativar seu acesso.\n\nAinda não tem o app? Baixe aqui: ${APP_LINK_URL}`,
     });
   };
 

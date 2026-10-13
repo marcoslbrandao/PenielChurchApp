@@ -1565,6 +1565,11 @@
     "arquivoGrandeTitulo": "Fichier trop volumineux",
     "arquivoGrande": "La limite est de {{mb}} Mo.",
     "formatoNaoAceitoTitulo": "Format non accepté",
-    "formatoNaoAceito": "Envoyez un audio (mp3, m4a, wav, aac), un PDF, Word, Excel, PowerPoint, texte (.txt) ou zip."
+    "formatoNaoAceito": "Envoyez un audio (mp3, m4a, wav, aac), un PDF, Word, Excel, PowerPoint, texte (.txt) ou zip.",
+    "prontoParaEnviar": "Prêt à envoyer — touchez Envoyer",
+    "compartilharTitulo": "Chat de l'Église",
+    "compartilharEntrar": "Connectez-vous avec votre compte membre pour partager dans le Chat de l'Église.",
+    "compartilharSoMembros": "Le Chat de l'Église est réservé aux membres. Parlez aux responsables pour activer votre accès.",
+    "entrar": "Se connecter"
   }
 }

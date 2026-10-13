@@ -1565,6 +1565,11 @@
     "arquivoGrandeTitulo": "Archivo demasiado grande",
     "arquivoGrande": "El límite es de {{mb}} MB.",
     "formatoNaoAceitoTitulo": "Formato no admitido",
-    "formatoNaoAceito": "Envía audio (mp3, m4a, wav, aac), PDF, Word, Excel, PowerPoint, texto (.txt) o zip."
+    "formatoNaoAceito": "Envía audio (mp3, m4a, wav, aac), PDF, Word, Excel, PowerPoint, texto (.txt) o zip.",
+    "prontoParaEnviar": "Listo para enviar — toca Enviar",
+    "compartilharTitulo": "Chat de la Iglesia",
+    "compartilharEntrar": "Inicia sesión con tu cuenta de miembro para compartir en el Chat de la Iglesia.",
+    "compartilharSoMembros": "El Chat de la Iglesia es solo para miembros. Habla con el liderazgo para activar tu acceso.",
+    "entrar": "Entrar"
   }
 }

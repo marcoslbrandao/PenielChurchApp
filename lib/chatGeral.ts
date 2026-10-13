@@ -65,6 +65,7 @@ export function formatoDaImagem(mimeType?: string | null, uri?: string): { ext: 
   if (m.includes('gif') || doUri === 'gif') return { ext: 'gif', contentType: 'image/gif' };
   if (m.includes('png') || doUri === 'png') return { ext: 'png', contentType: 'image/png' };
   if (m.includes('webp') || doUri === 'webp') return { ext: 'webp', contentType: 'image/webp' };
+  if (m.includes('heic') || m.includes('heif') || doUri === 'heic' || doUri === 'heif') return { ext: 'heic', contentType: 'image/heic' };
   return { ext: 'jpg', contentType: 'image/jpeg' };
 }
 
@@ -133,6 +134,48 @@ export async function escolherArquivo(): Promise<ArquivoEscolhido | null> {
   if (r.canceled || !r.assets?.[0]) return null;
   const a = r.assets[0];
   return { uri: a.uri, nome: a.name || 'arquivo', tamanho: a.size ?? null, mime: a.mimeType ?? null };
+}
+
+/**
+ * Conteúdo que chegou de outro app pelo menu Compartilhar do celular
+ * (components/RecebeCompartilhamento.tsx). Texto/link vai para o campo de
+ * digitar; arquivo fica "pronto para enviar" até o toque em Enviar.
+ */
+export type Compartilhado = {
+  texto?: string | null;
+  arquivo?: {
+    uri: string;
+    nome: string;
+    mime: string | null;
+    tamanho: number | null;
+    largura: number | null;
+    altura: number | null;
+    duracaoMs: number | null;
+  } | null;
+};
+
+/**
+ * Foto HEIC (padrão do iPhone) vira JPEG antes de subir: o Android não mostra
+ * HEIC. Usa o
+ * `expo-image-manipulator`, que é nativo e só existe a partir do binário 1.5.0
+ * — nos antigos a imagem sobe como veio (lá a galeria já entrega JPEG).
+ */
+export async function prepararImagem(
+  uri: string, mimeType?: string | null,
+): Promise<{ uri: string; mimeType: string | null; width?: number; height?: number }> {
+  const m = (mimeType ?? '').toLowerCase();
+  const ext = uri.split('?')[0].split('.').pop()?.toLowerCase() ?? '';
+  const ehHeic = m.includes('heic') || m.includes('heif') || ext === 'heic' || ext === 'heif';
+  if (!ehHeic) return { uri, mimeType: mimeType ?? null };
+  try {
+    if (!requireOptionalNativeModule('ExpoImageManipulator')) return { uri, mimeType: 'image/heic' };
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const IM = require('expo-image-manipulator') as typeof import('expo-image-manipulator');
+    const r = await IM.manipulateAsync(uri, [], { compress: 0.8, format: IM.SaveFormat.JPEG });
+    return { uri: r.uri, mimeType: 'image/jpeg', width: r.width, height: r.height };
+  } catch {
+    return { uri, mimeType: 'image/heic' };
+  }
 }
 
 /** Tamanho do arquivo local, quando o seletor não informou. */

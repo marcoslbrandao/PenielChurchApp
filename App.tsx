@@ -1,5 +1,6 @@
 import { StripeProvider } from '@stripe/stripe-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
+import { requireOptionalNativeModule } from 'expo';
 import { Alert, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
@@ -38,6 +39,20 @@ import AvisoDeAtualizacao from './components/AvisoDeAtualizacao';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 const navigationRef = createNavigationContainerRef();
+
+// "Compartilhar → Peniel Church": o receptor usa o `expo-share-intent`, que é
+// NATIVO (binário 1.5.0+). Um OTA também chega nos binários antigos, e lá
+// importar o módulo fecharia o app — por isso o componente só é carregado
+// quando o binário tem o módulo (mesma ideia do binarioPodeGravarAudio).
+const RecebeCompartilhamento: ComponentType<{ irParaLogin: () => void }> | null = (() => {
+  try {
+    if (!requireOptionalNativeModule('ExpoShareIntentModule')) return null;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require('./components/RecebeCompartilhamento').default;
+  } catch {
+    return null;
+  }
+})();
 
 // ─── Deep link de recuperação de senha ────────────────────────────────────────
 // O e-mail de "esqueci minha senha" abre penielchurch://reset-password com o
@@ -259,6 +274,11 @@ export default function App() {
           <AcessoProvider>
           <RoteadorDeNotificacoes navPronta={navPronta} />
           <AvisoDeAtualizacao />
+          {RecebeCompartilhamento && (
+            <RecebeCompartilhamento
+              irParaLogin={() => { if (navigationRef.isReady()) navigationRef.navigate('Auth' as never); }}
+            />
+          )}
           <NavigationContainer ref={navigationRef} onReady={() => setNavPronta(true)}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="MainTabs" component={MainTabs} />

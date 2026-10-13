@@ -3,8 +3,8 @@
     "name": "Peniel Church",
     "slug": "PenielChurchApp",
     "scheme": "penielchurch",
-    "version": "1.4.1",
-    "runtimeVersion": "1.4.0",
+    "version": "1.5.0",
+    "runtimeVersion": "1.5.0",
     "updates": {
       "url": "https://u.expo.dev/f53e9e07-9556-4ea8-80e0-da4487b38e56",
       "requestHeaders": {
@@ -78,7 +78,27 @@
           "recordAudioAndroid": true
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsImageWithMaxCount": 1,
+            "NSExtensionActivationSupportsMovieWithMaxCount": 1,
+            "NSExtensionActivationSupportsFileWithMaxCount": 1
+          },
+          "iosShareExtensionName": "Peniel",
+          "androidIntentFilters": [
+            "text/*",
+            "image/*",
+            "video/*",
+            "audio/*",
+            "application/*"
+          ]
+        }
+      ]
     ],
     "extra": {
       "eas": {

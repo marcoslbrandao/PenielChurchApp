@@ -22,6 +22,7 @@ import {
   marcarComoLido, horaCurta, chaveDoDia, rotuloDoDia,
   VIDEO_MAX_SEGUNDOS, VIDEO_MAX_MB, ARQUIVO_MAX_MB,
   formatoDoArquivo, anexoEhAudio, formatarTamanho, binarioTemSeletorDeArquivos, escolherArquivo, tamanhoLocal,
+  prepararImagem, type ArquivoEscolhido, type Compartilhado,
 } from '../lib/chatGeral';
 import { formatarTempo } from '../lib/chatAudio';
 
@@ -56,13 +57,28 @@ type Linha =
   | { tipo: 'dia'; id: string; rotulo: string }
   | { tipo: 'msg'; id: string; msg: MensagemGeral };
 
+// Foto/vídeo/arquivo que vai subir: vem da galeria, do seletor de arquivos ou
+// do menu Compartilhar do celular (components/RecebeCompartilhamento.tsx).
+type MidiaLocal = {
+  uri: string;
+  mimeType?: string | null;
+  width?: number | null;
+  height?: number | null;
+  duration?: number | null;
+  fileSize?: number | null;
+};
+
 export default function ChatGeralModal({
-  visible, userId, ehAdmin, onClose,
+  visible, userId, ehAdmin, onClose, compartilhado, onCompartilhadoUsado,
 }: {
   visible: boolean;
   userId: string;
   ehAdmin: boolean;
   onClose: () => void;
+  /** Veio de outro app pelo menu Compartilhar: fica pronto para enviar. */
+  compartilhado?: Compartilhado | null;
+  /** Avisado quando o conteúdo compartilhado já foi aplicado à tela. */
+  onCompartilhadoUsado?: () => void;
 }) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
@@ -86,7 +102,16 @@ export default function ChatGeralModal({
   const inputRef = useRef<TextInput>(null);
 
   const euSilenciado = silenciados.has(userId);
-  const mostrarMic = podeGravar && (gravando || !texto.trim());
+  // Arquivo recebido pelo menu Compartilhar, esperando o toque em Enviar.
+  const [pendente, setPendente] = useState<Compartilhado['arquivo'] | null>(null);
+  const mostrarMic = podeGravar && !pendente && (gravando || !texto.trim());
+
+  useEffect(() => {
+    if (!visible || !compartilhado) return;
+    if (compartilhado.texto) setTexto(tx => (tx.trim() ? `${tx} ${compartilhado.texto}` : compartilhado.texto!));
+    setPendente(compartilhado.arquivo ?? null);
+    onCompartilhadoUsado?.();
+  }, [visible, compartilhado]);
 
   // Safe area à mão dentro do <Modal> (ver GrupoChatModal: o SafeAreaView
   // mede a view nativa do modal e volta 0 no iOS).
@@ -165,6 +190,7 @@ export default function ChatGeralModal({
 
   const fechar = () => {
     setAudioAtivo(null);
+    setPendente(null);
     setRespondendo(null);
     setMenuDe(null);
     marcarComoLido().finally(onClose);
@@ -230,22 +256,26 @@ export default function ChatGeralModal({
     }
   };
 
-  const enviarImagem = async (asset: ImagePicker.ImagePickerAsset) => {
+  const enviarImagem = async (asset: MidiaLocal): Promise<boolean> => {
     setEnviando(true);
     let caminho: string | null = null;
     try {
-      const { ext, contentType } = formatoDaImagem(asset.mimeType, asset.uri);
-      caminho = await enviarArquivo(asset.uri, userId, ext, contentType);
+      // HEIC do iPhone vira JPEG (o Android não mostra HEIC).
+      const img = await prepararImagem(asset.uri, asset.mimeType);
+      const { ext, contentType } = formatoDaImagem(img.mimeType, img.uri);
+      caminho = await enviarArquivo(img.uri, userId, ext, contentType);
       // O que estiver escrito no campo vai junto, como legenda.
       const legenda = texto.trim();
       await inserir({
         tipo: 'imagem', texto: legenda, midia_path: caminho,
-        midia_largura: asset.width || null, midia_altura: asset.height || null,
+        midia_largura: img.width ?? asset.width ?? null, midia_altura: img.height ?? asset.height ?? null,
       });
       if (legenda) setTexto('');
+      return true;
     } catch (e: any) {
       if (caminho) apagarMidia(caminho);
       Alert.alert(t('chatGeral.erroEnviar'), e?.message ?? t('chatGeral.erroEnviarTexto'));
+      return false;
     } finally {
       setEnviando(false);
     }
@@ -257,16 +287,16 @@ export default function ChatGeralModal({
   // Vídeo da galeria: até 2 minutos e 40 MB (limite do bucket). No iPhone o
   // sistema já converte para H.264 720p, que toca em qualquer celular e fica
   // bem menor que o original.
-  const enviarVideo = async (asset: ImagePicker.ImagePickerAsset) => {
+  const enviarVideo = async (asset: MidiaLocal): Promise<boolean> => {
     const duracaoMs = Math.round(asset.duration ?? 0);
     if (duracaoMs > VIDEO_MAX_SEGUNDOS * 1000 + 4000) {
       Alert.alert(t('chatGeral.videoLongoTitulo'), t('chatGeral.videoLongo'));
-      return;
+      return false;
     }
     const tamanho = asset.fileSize ?? (await tamanhoLocal(asset.uri));
     if (tamanho && tamanho > VIDEO_MAX_MB * 1024 * 1024) {
       Alert.alert(t('chatGeral.arquivoGrandeTitulo'), t('chatGeral.arquivoGrande', { mb: VIDEO_MAX_MB }));
-      return;
+      return false;
     }
     const doUri = asset.uri.split('?')[0].split('.').pop()?.toLowerCase();
     const ehMov = doUri === 'mov' || (asset.mimeType ?? '').includes('quicktime');
@@ -281,15 +311,49 @@ export default function ChatGeralModal({
         duracao_ms: Math.min(125000, Math.max(1, duracaoMs || 1)),
       });
       if (legenda) setTexto('');
+      return true;
     } catch (e: any) {
       if (caminho) apagarMidia(caminho);
       erroDeEnvio(e);
+      return false;
     } finally {
       setEnviando(false);
     }
   };
 
   // Anexo: áudio baixado (mp3 do Presenter Diário etc.), PDF, Word, Excel...
+  const enviarDocumento = async (arq: ArquivoEscolhido, apagarLocal: boolean): Promise<boolean> => {
+    const formato = formatoDoArquivo(arq.nome, arq.mime);
+    if (!formato) {
+      Alert.alert(t('chatGeral.formatoNaoAceitoTitulo'), t('chatGeral.formatoNaoAceito'));
+      return false;
+    }
+    const tamanho = arq.tamanho ?? (await tamanhoLocal(arq.uri));
+    if (!tamanho) { erroDeEnvio(null); return false; }
+    if (tamanho > ARQUIVO_MAX_MB * 1024 * 1024) {
+      Alert.alert(t('chatGeral.arquivoGrandeTitulo'), t('chatGeral.arquivoGrande', { mb: ARQUIVO_MAX_MB }));
+      return false;
+    }
+    setEnviando(true);
+    let caminho: string | null = null;
+    try {
+      caminho = await enviarArquivo(arq.uri, userId, formato.ext, formato.contentType, apagarLocal);
+      const legenda = texto.trim();
+      await inserir({
+        tipo: 'arquivo', texto: legenda, midia_path: caminho,
+        midia_nome: arq.nome.slice(0, 200), midia_tamanho: tamanho, midia_mime: formato.contentType,
+      });
+      if (legenda) setTexto('');
+      return true;
+    } catch (e: any) {
+      if (caminho) apagarMidia(caminho);
+      erroDeEnvio(e);
+      return false;
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const anexarArquivo = async () => {
     let arq;
     try {
@@ -298,34 +362,24 @@ export default function ChatGeralModal({
       erroDeEnvio(e);
       return;
     }
-    if (!arq) return;
-    const formato = formatoDoArquivo(arq.nome, arq.mime);
-    if (!formato) {
-      Alert.alert(t('chatGeral.formatoNaoAceitoTitulo'), t('chatGeral.formatoNaoAceito'));
-      return;
-    }
-    const tamanho = arq.tamanho ?? (await tamanhoLocal(arq.uri));
-    if (!tamanho) { erroDeEnvio(null); return; }
-    if (tamanho > ARQUIVO_MAX_MB * 1024 * 1024) {
-      Alert.alert(t('chatGeral.arquivoGrandeTitulo'), t('chatGeral.arquivoGrande', { mb: ARQUIVO_MAX_MB }));
-      return;
-    }
-    setEnviando(true);
-    let caminho: string | null = null;
-    try {
-      caminho = await enviarArquivo(arq.uri, userId, formato.ext, formato.contentType, true);
-      const legenda = texto.trim();
-      await inserir({
-        tipo: 'arquivo', texto: legenda, midia_path: caminho,
-        midia_nome: arq.nome.slice(0, 200), midia_tamanho: tamanho, midia_mime: formato.contentType,
-      });
-      if (legenda) setTexto('');
-    } catch (e: any) {
-      if (caminho) apagarMidia(caminho);
-      erroDeEnvio(e);
-    } finally {
-      setEnviando(false);
-    }
+    if (arq) enviarDocumento(arq, true);
+  };
+
+  // Envia o que chegou pelo menu Compartilhar (o texto do campo vai de legenda).
+  const enviarPendente = async () => {
+    const a = pendente;
+    if (!a || enviando) return;
+    const mime = (a.mime ?? '').toLowerCase();
+    const midia: MidiaLocal = {
+      uri: a.uri, mimeType: a.mime, width: a.largura, height: a.altura,
+      duration: a.duracaoMs, fileSize: a.tamanho,
+    };
+    const ok = /^image\/(jpeg|jpg|png|gif|webp|heic|heif)$/.test(mime)
+      ? await enviarImagem(midia)
+      : mime.startsWith('video/')
+        ? await enviarVideo(midia)
+        : await enviarDocumento({ uri: a.uri, nome: a.nome, tamanho: a.tamanho, mime: a.mime }, false);
+    if (ok) setPendente(null);
   };
 
   const escolherDaGaleria = async () => {
@@ -649,6 +703,26 @@ export default function ChatGeralModal({
             />
           )}
 
+          {pendente && (
+            <View style={cs.respondendoBar}>
+              <View style={[cs.respondendoFaixa, { backgroundColor: '#2BB673' }]} />
+              <Ionicons
+                name={(pendente.mime ?? '').startsWith('image/') ? 'image' : (pendente.mime ?? '').startsWith('video/') ? 'videocam' : (pendente.mime ?? '').startsWith('audio/') ? 'musical-notes' : 'document-text'}
+                size={22}
+                color={COR}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={cs.respondendoNome} numberOfLines={1}>{t('chatGeral.prontoParaEnviar')}</Text>
+                <Text style={cs.respondendoTexto} numberOfLines={1}>
+                  {[pendente.nome, formatarTamanho(pendente.tamanho)].filter(Boolean).join(' · ')}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setPendente(null)} hitSlop={10} disabled={enviando}>
+                <Ionicons name="close" size={20} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {respondendo && (
             <View style={cs.respondendoBar}>
               <View style={cs.respondendoFaixa} />
@@ -710,9 +784,9 @@ export default function ChatGeralModal({
                 </View>
               ) : mostrarMic ? null : (
                 <TouchableOpacity
-                  style={[cs.sendBtn, { opacity: texto.trim() ? 1 : 0.5 }]}
-                  onPress={enviarTexto}
-                  disabled={!texto.trim()}
+                  style={[cs.sendBtn, { opacity: pendente || texto.trim() ? 1 : 0.5 }]}
+                  onPress={pendente ? enviarPendente : enviarTexto}
+                  disabled={!pendente && !texto.trim()}
                 >
                   <Ionicons name="send" size={17} color="#fff" />
                 </TouchableOpacity>

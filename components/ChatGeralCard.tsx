@@ -41,6 +41,7 @@ export default function ChatGeralCard({
       resumo.ultima_tipo === 'imagem' ? (resumo.ultima_texto ? `${t('chatGeral.foto')} · ${resumo.ultima_texto}` : t('chatGeral.foto')) :
       resumo.ultima_tipo === 'audio' ? t('chatGeral.audio') :
       resumo.ultima_tipo === 'video' ? t('chatGeral.video') :
+      resumo.ultima_tipo === 'arquivo' ? t('chatGeral.arquivo') :
       (resumo.ultima_texto ?? '');
     return `${resumo.ultima_autor ?? ''}: ${conteudo.replace(/\s+/g, ' ')}`;
   })();

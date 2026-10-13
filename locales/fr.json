@@ -1525,7 +1525,7 @@
     "titulo": "Chat de l'Église",
     "subtitulo": "Membres uniquement · messages effacés après 15 jours",
     "cardVazio": "Personne n'a encore écrit. Lancez la conversation !",
-    "aviso15dias": "Les messages, photos et vocaux sont effacés automatiquement après 15 jours.",
+    "aviso15dias": "Les messages, photos, vidéos, audios et fichiers sont supprimés automatiquement après 15 jours.",
     "placeholder": "Message",
     "vazio": "Aucun message pour l'instant.\nLancez la conversation !",
     "hoje": "Aujourd'hui",
@@ -1553,9 +1553,18 @@
     "mensagemAnterior": "Message précédent",
     "erroEnviar": "Envoi impossible",
     "erroEnviarTexto": "Vérifiez votre connexion et réessayez.",
-    "galeria": "Photo ou GIF de la galerie",
+    "galeria": "Photo, GIF ou vidéo de la galerie",
     "camera": "Prendre une photo",
     "permissaoCamera": "Autorisez l'accès à l'appareil photo dans les Réglages.",
-    "permissaoFotos": "Autorisez l'accès aux photos dans les Réglages."
+    "permissaoFotos": "Autorisez l'accès aux photos dans les Réglages.",
+    "arquivoOpcao": "Fichier (audio, PDF, document)",
+    "arquivo": "📎 Fichier",
+    "abrirErro": "Impossible d'ouvrir le fichier. Vérifiez votre connexion et réessayez.",
+    "videoLongoTitulo": "Vidéo trop longue",
+    "videoLongo": "Dans le chat, la vidéo peut durer 2 minutes maximum.",
+    "arquivoGrandeTitulo": "Fichier trop volumineux",
+    "arquivoGrande": "La limite est de {{mb}} Mo.",
+    "formatoNaoAceitoTitulo": "Format non accepté",
+    "formatoNaoAceito": "Envoyez un audio (mp3, m4a, wav, aac), un PDF, Word, Excel, PowerPoint, texte (.txt) ou zip."
   }
 }

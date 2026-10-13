@@ -1525,7 +1525,7 @@
     "titulo": "Church Chat",
     "subtitulo": "Members only · messages disappear after 15 days",
     "cardVazio": "No one has written yet. Start the conversation!",
-    "aviso15dias": "Messages, photos and voice notes are deleted automatically after 15 days.",
+    "aviso15dias": "Messages, photos, videos, audio and files are deleted automatically after 15 days.",
     "placeholder": "Message",
     "vazio": "No messages yet.\nStart the conversation!",
     "hoje": "Today",
@@ -1553,9 +1553,18 @@
     "mensagemAnterior": "Earlier message",
     "erroEnviar": "Couldn't send",
     "erroEnviarTexto": "Check your connection and try again.",
-    "galeria": "Photo or GIF from gallery",
+    "galeria": "Photo, GIF or video from gallery",
     "camera": "Take a photo",
     "permissaoCamera": "Allow camera access in your phone's Settings.",
-    "permissaoFotos": "Allow photo access in your phone's Settings."
+    "permissaoFotos": "Allow photo access in your phone's Settings.",
+    "arquivoOpcao": "File (audio, PDF, document)",
+    "arquivo": "📎 File",
+    "abrirErro": "Couldn't open the file. Check your connection and try again.",
+    "videoLongoTitulo": "Video too long",
+    "videoLongo": "Videos in the chat can be up to 2 minutes long.",
+    "arquivoGrandeTitulo": "File too large",
+    "arquivoGrande": "The limit is {{mb}} MB.",
+    "formatoNaoAceitoTitulo": "Format not supported",
+    "formatoNaoAceito": "Send audio (mp3, m4a, wav, aac), PDF, Word, Excel, PowerPoint, text (.txt) or zip."
   }
 }

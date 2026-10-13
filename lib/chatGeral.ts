@@ -1,6 +1,6 @@
 // Chat da Igreja — o chat geral dos membros (ver migração 20261011090000).
 //
-// Arquivos (foto, GIF, áudio e, no próximo build, vídeo) ficam no bucket
+// Arquivos (foto, GIF, áudio, vídeo e anexos) ficam no bucket
 // PRIVADO `chat-geral`, caminho `<autor>/<uuid>.<ext>`. Quem não é membro não
 // consegue nem a URL assinada (policy do Storage usa `is_membro()`).
 //
@@ -8,14 +8,19 @@
 // Edge Function `limpar-audios-chat` apaga os arquivos que ficaram órfãos.
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
+import { requireOptionalNativeModule } from 'expo';
 import { supabase } from './supabase';
 
 export const BUCKET_CHAT_GERAL = 'chat-geral';
 export const DIAS_GUARDADOS = 15;
 export const VIDEO_MAX_SEGUNDOS = 120;
+/** Limite do bucket `chat-geral` (40 MB) — vale para o vídeo. */
+export const VIDEO_MAX_MB = 40;
+/** Anexos (tipo `arquivo`): a constraint do banco aceita até 25 MB. */
+export const ARQUIVO_MAX_MB = 25;
 export const REACOES = ['👍', '❤️', '😂', '🙏', '😮', '😢'];
 
-export type TipoMensagem = 'texto' | 'imagem' | 'audio' | 'video';
+export type TipoMensagem = 'texto' | 'imagem' | 'audio' | 'video' | 'arquivo';
 
 export type MensagemGeral = {
   id: string;
@@ -27,6 +32,10 @@ export type MensagemGeral = {
   midia_largura: number | null;
   midia_altura: number | null;
   duracao_ms: number | null;
+  /** Só no tipo `arquivo`: nome original, tamanho em bytes e content-type. */
+  midia_nome?: string | null;
+  midia_tamanho?: number | null;
+  midia_mime?: string | null;
   resposta_a: string | null;
   created_at: string;
 };
@@ -57,6 +66,81 @@ export function formatoDaImagem(mimeType?: string | null, uri?: string): { ext: 
   if (m.includes('png') || doUri === 'png') return { ext: 'png', contentType: 'image/png' };
   if (m.includes('webp') || doUri === 'webp') return { ext: 'webp', contentType: 'image/webp' };
   return { ext: 'jpg', contentType: 'image/jpeg' };
+}
+
+// ─── Anexos (tipo `arquivo`) ─────────────────────────────────────────────────
+// Áudio baixado (ex.: o Presenter Diário da RTM, em mp3), PDF e documentos.
+// A lista tem que bater com a constraint `chat_geral_mensagens_conteudo_check`
+// e com o `allowed_mime_types` do bucket (migração 20261013200000).
+const FORMATOS_ARQUIVO: Record<string, string> = {
+  mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', aac: 'audio/aac', ogg: 'audio/ogg',
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  txt: 'text/plain',
+  zip: 'application/zip',
+};
+const EXT_DO_MIME: Record<string, string> = {
+  'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/x-m4a': 'm4a', 'audio/m4a': 'm4a', 'audio/mp4': 'm4a',
+  'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav', 'audio/aac': 'aac', 'audio/ogg': 'ogg',
+  'application/x-zip-compressed': 'zip',
+};
+
+/** Extensão e content-type de um anexo, ou null se o formato não é aceito. */
+export function formatoDoArquivo(nome: string, mimeType?: string | null): { ext: string; contentType: string } | null {
+  const m = (mimeType ?? '').toLowerCase();
+  let ext = nome.includes('.') ? nome.split('.').pop()!.toLowerCase() : '';
+  if (!FORMATOS_ARQUIVO[ext]) {
+    ext = EXT_DO_MIME[m] ?? Object.keys(FORMATOS_ARQUIVO).find(k => FORMATOS_ARQUIVO[k] === m) ?? '';
+  }
+  if (!FORMATOS_ARQUIVO[ext]) return null;
+  return { ext, contentType: FORMATOS_ARQUIVO[ext] };
+}
+
+/** Anexo que é áudio: a bolha mostra o player em vez do cartão. */
+export function anexoEhAudio(m: Pick<MensagemGeral, 'midia_mime' | 'midia_path'>): boolean {
+  if ((m.midia_mime ?? '').startsWith('audio/')) return true;
+  return /\.(mp3|m4a|wav|aac|ogg)$/i.test(m.midia_path ?? '');
+}
+
+export function formatarTamanho(bytes?: number | null): string {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace('.0', '')} MB`;
+}
+
+export type ArquivoEscolhido = { uri: string; nome: string; tamanho: number | null; mime: string | null };
+
+/**
+ * O seletor de arquivos (`expo-document-picker`) é NATIVO: só existe nos
+ * binários gerados a partir da 1.5.0. Um OTA chega também nos celulares com
+ * o binário antigo — lá a opção "Arquivo" fica escondida, em vez de fechar o
+ * app (mesma ideia do `binarioPodeGravarAudio`).
+ */
+export function binarioTemSeletorDeArquivos(): boolean {
+  try { return !!requireOptionalNativeModule('ExpoDocumentPicker'); } catch { return false; }
+}
+
+export async function escolherArquivo(): Promise<ArquivoEscolhido | null> {
+  // require tardio: importar no topo chamaria o módulo nativo ao abrir o app.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const DocumentPicker = require('expo-document-picker') as typeof import('expo-document-picker');
+  const r = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true, multiple: false });
+  if (r.canceled || !r.assets?.[0]) return null;
+  const a = r.assets[0];
+  return { uri: a.uri, nome: a.name || 'arquivo', tamanho: a.size ?? null, mime: a.mimeType ?? null };
+}
+
+/** Tamanho do arquivo local, quando o seletor não informou. */
+export async function tamanhoLocal(uri: string): Promise<number | null> {
+  try {
+    const info = await FileSystem.getInfoAsync(uri);
+    return info.exists && typeof (info as { size?: number }).size === 'number' ? (info as { size: number }).size : null;
+  } catch { return null; }
 }
 
 /** Sobe o arquivo e devolve o caminho no bucket. Apaga o arquivo local se `apagarLocal`. */

@@ -1525,7 +1525,7 @@
     "titulo": "Chat de la Iglesia",
     "subtitulo": "Solo miembros · los mensajes se borran a los 15 días",
     "cardVazio": "Nadie ha escrito todavía. ¡Empieza la conversación!",
-    "aviso15dias": "Los mensajes, fotos y audios se borran automáticamente a los 15 días.",
+    "aviso15dias": "Los mensajes, fotos, videos, audios y archivos se borran automáticamente después de 15 días.",
     "placeholder": "Mensaje",
     "vazio": "Aún no hay mensajes.\n¡Empieza la conversación!",
     "hoje": "Hoy",
@@ -1553,9 +1553,18 @@
     "mensagemAnterior": "Mensaje anterior",
     "erroEnviar": "No se pudo enviar",
     "erroEnviarTexto": "Revisa tu conexión e inténtalo de nuevo.",
-    "galeria": "Foto o GIF de la galería",
+    "galeria": "Foto, GIF o video de la galería",
     "camera": "Hacer una foto",
     "permissaoCamera": "Permite el acceso a la cámara en los Ajustes del móvil.",
-    "permissaoFotos": "Permite el acceso a las fotos en los Ajustes del móvil."
+    "permissaoFotos": "Permite el acceso a las fotos en los Ajustes del móvil.",
+    "arquivoOpcao": "Archivo (audio, PDF, documento)",
+    "arquivo": "📎 Archivo",
+    "abrirErro": "No se pudo abrir el archivo. Revisa tu conexión e inténtalo de nuevo.",
+    "videoLongoTitulo": "Video demasiado largo",
+    "videoLongo": "En el chat, el video puede durar como máximo 2 minutos.",
+    "arquivoGrandeTitulo": "Archivo demasiado grande",
+    "arquivoGrande": "El límite es de {{mb}} MB.",
+    "formatoNaoAceitoTitulo": "Formato no admitido",
+    "formatoNaoAceito": "Envía audio (mp3, m4a, wav, aac), PDF, Word, Excel, PowerPoint, texto (.txt) o zip."
   }
 }

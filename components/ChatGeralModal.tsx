@@ -20,11 +20,15 @@ import {
   type MensagemGeral, type Reacao, REACOES,
   enviarArquivo, formatoDaImagem, urlDaMidia, urlGuardada, preCarregarUrls, apagarMidia,
   marcarComoLido, horaCurta, chaveDoDia, rotuloDoDia,
+  VIDEO_MAX_SEGUNDOS, VIDEO_MAX_MB, ARQUIVO_MAX_MB,
+  formatoDoArquivo, anexoEhAudio, formatarTamanho, binarioTemSeletorDeArquivos, escolherArquivo, tamanhoLocal,
 } from '../lib/chatGeral';
+import { formatarTempo } from '../lib/chatAudio';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
 // O chat geral dos membros, aberto pelo card da Home. Funciona como o WhatsApp:
-// texto e emoji (teclado do celular), fotos/memes/GIFs, mensagem de voz,
+// texto e emoji (teclado do celular), fotos/memes/GIFs, vídeos de até 2 min,
+// anexos (áudio baixado, PDF, documentos — 13/10/2026), mensagem de voz,
 // links com prévia (YouTube com miniatura), reações, responder e apagar.
 //
 // Quem pode o quê é decidido no BANCO (migração 20261011090000): só membros
@@ -78,6 +82,7 @@ export default function ChatGeralModal({
   const [audioAtivo, setAudioAtivo] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
   const podeGravar = useMemo(() => binarioPodeGravarAudio(), []);
+  const podeAnexarArquivo = useMemo(() => binarioTemSeletorDeArquivos(), []);
   const inputRef = useRef<TextInput>(null);
 
   const euSilenciado = silenciados.has(userId);
@@ -246,9 +251,93 @@ export default function ChatGeralModal({
     }
   };
 
+  const erroDeEnvio = (e: any) =>
+    Alert.alert(t('chatGeral.erroEnviar'), e?.message ?? t('chatGeral.erroEnviarTexto'));
+
+  // Vídeo da galeria: até 2 minutos e 40 MB (limite do bucket). No iPhone o
+  // sistema já converte para H.264 720p, que toca em qualquer celular e fica
+  // bem menor que o original.
+  const enviarVideo = async (asset: ImagePicker.ImagePickerAsset) => {
+    const duracaoMs = Math.round(asset.duration ?? 0);
+    if (duracaoMs > VIDEO_MAX_SEGUNDOS * 1000 + 4000) {
+      Alert.alert(t('chatGeral.videoLongoTitulo'), t('chatGeral.videoLongo'));
+      return;
+    }
+    const tamanho = asset.fileSize ?? (await tamanhoLocal(asset.uri));
+    if (tamanho && tamanho > VIDEO_MAX_MB * 1024 * 1024) {
+      Alert.alert(t('chatGeral.arquivoGrandeTitulo'), t('chatGeral.arquivoGrande', { mb: VIDEO_MAX_MB }));
+      return;
+    }
+    const doUri = asset.uri.split('?')[0].split('.').pop()?.toLowerCase();
+    const ehMov = doUri === 'mov' || (asset.mimeType ?? '').includes('quicktime');
+    setEnviando(true);
+    let caminho: string | null = null;
+    try {
+      caminho = await enviarArquivo(asset.uri, userId, ehMov ? 'mov' : 'mp4', ehMov ? 'video/quicktime' : 'video/mp4');
+      const legenda = texto.trim();
+      await inserir({
+        tipo: 'video', texto: legenda, midia_path: caminho,
+        midia_largura: asset.width || null, midia_altura: asset.height || null,
+        duracao_ms: Math.min(125000, Math.max(1, duracaoMs || 1)),
+      });
+      if (legenda) setTexto('');
+    } catch (e: any) {
+      if (caminho) apagarMidia(caminho);
+      erroDeEnvio(e);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // Anexo: áudio baixado (mp3 do Presenter Diário etc.), PDF, Word, Excel...
+  const anexarArquivo = async () => {
+    let arq;
+    try {
+      arq = await escolherArquivo();
+    } catch (e: any) {
+      erroDeEnvio(e);
+      return;
+    }
+    if (!arq) return;
+    const formato = formatoDoArquivo(arq.nome, arq.mime);
+    if (!formato) {
+      Alert.alert(t('chatGeral.formatoNaoAceitoTitulo'), t('chatGeral.formatoNaoAceito'));
+      return;
+    }
+    const tamanho = arq.tamanho ?? (await tamanhoLocal(arq.uri));
+    if (!tamanho) { erroDeEnvio(null); return; }
+    if (tamanho > ARQUIVO_MAX_MB * 1024 * 1024) {
+      Alert.alert(t('chatGeral.arquivoGrandeTitulo'), t('chatGeral.arquivoGrande', { mb: ARQUIVO_MAX_MB }));
+      return;
+    }
+    setEnviando(true);
+    let caminho: string | null = null;
+    try {
+      caminho = await enviarArquivo(arq.uri, userId, formato.ext, formato.contentType, true);
+      const legenda = texto.trim();
+      await inserir({
+        tipo: 'arquivo', texto: legenda, midia_path: caminho,
+        midia_nome: arq.nome.slice(0, 200), midia_tamanho: tamanho, midia_mime: formato.contentType,
+      });
+      if (legenda) setTexto('');
+    } catch (e: any) {
+      if (caminho) apagarMidia(caminho);
+      erroDeEnvio(e);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const escolherDaGaleria = async () => {
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!r.canceled && r.assets?.[0]) enviarImagem(r.assets[0]);
+    const r = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images', 'videos'],
+      quality: 0.7,
+      videoExportPreset: ImagePicker.VideoExportPreset.H264_1280x720,
+      videoMaxDuration: VIDEO_MAX_SEGUNDOS,
+    });
+    const a = !r.canceled ? r.assets?.[0] : undefined;
+    if (!a) return;
+    if (a.type === 'video') enviarVideo(a); else enviarImagem(a);
   };
 
   const tirarFoto = async () => {
@@ -269,7 +358,9 @@ export default function ChatGeralModal({
     Alert.alert(t('chatGeral.titulo'), undefined, [
       { text: t('chatGeral.galeria'), onPress: escolherDaGaleria },
       { text: t('chatGeral.camera'), onPress: tirarFoto },
-      { text: t('common.cancelar'), style: 'cancel' },
+      // Só nos binários com o seletor de arquivos (1.5.0+).
+      ...(podeAnexarArquivo ? [{ text: t('chatGeral.arquivoOpcao'), onPress: anexarArquivo }] : []),
+      { text: t('common.cancelar'), style: 'cancel' as const },
     ]);
   };
 
@@ -362,7 +453,8 @@ export default function ChatGeralModal({
   const resumo = (m: MensagemGeral) => {
     if (m.tipo === 'imagem') return m.texto ? `${t('chatGeral.foto')} · ${m.texto}` : t('chatGeral.foto');
     if (m.tipo === 'audio') return t('chatGeral.audio');
-    if (m.tipo === 'video') return t('chatGeral.video');
+    if (m.tipo === 'video') return m.texto ? `${t('chatGeral.video')} · ${m.texto}` : t('chatGeral.video');
+    if (m.tipo === 'arquivo') return `${anexoEhAudio(m) ? '🎵' : '📎'} ${m.midia_nome ?? t('chatGeral.arquivo')}`;
     return m.texto;
   };
 
@@ -373,7 +465,8 @@ export default function ChatGeralModal({
     const original = m.resposta_a ? porId.get(m.resposta_a) : null;
     const chips = reacoesPorMsg.get(m.id) ?? [];
     const nDen = denuncias[m.id] ?? 0;
-    const ehFoto = m.tipo === 'imagem';
+    // Foto e vídeo ocupam a bolha toda (sem o respiro do texto).
+    const ehFoto = m.tipo === 'imagem' || (m.tipo === 'video' && !!m.midia_path);
 
     return (
       <View style={[cs.bubbleRow, minha && cs.bubbleRowMine]}>
@@ -402,7 +495,7 @@ export default function ChatGeralModal({
               </View>
             )}
 
-            {ehFoto && m.midia_path ? (
+            {m.tipo === 'imagem' && m.midia_path ? (
               <FotoDaMensagem
                 caminho={m.midia_path}
                 largura={m.midia_largura}
@@ -423,8 +516,45 @@ export default function ChatGeralModal({
                 onLongPress={() => setMenuDe(m)}
                 obterUrl={urlDaMidia}
               />
+            ) : m.tipo === 'video' && m.midia_path ? (
+              <VideoDaMensagem
+                caminho={m.midia_path}
+                largura={m.midia_largura}
+                altura={m.midia_altura}
+                duracaoMs={m.duracao_ms}
+                onLongPress={() => setMenuDe(m)}
+                erroTexto={t('chatGeral.abrirErro')}
+              />
+            ) : m.tipo === 'arquivo' && m.midia_path && anexoEhAudio(m) ? (
+              <View style={{ gap: 4 }}>
+                <View style={st.anexoAudioNome}>
+                  <Ionicons name="musical-notes" size={13} color={minha ? 'rgba(255,255,255,0.85)' : COR} />
+                  <Text style={[st.anexoAudioTexto, { color: corTexto }]} numberOfLines={2}>{m.midia_nome}</Text>
+                </View>
+                <AudioMensagem
+                  caminho={m.midia_path}
+                  duracaoMs={m.duracao_ms}
+                  ativo={audioAtivo === m.id}
+                  onAtivar={() => setAudioAtivo(m.id)}
+                  onTerminar={() => setAudioAtivo(a => (a === m.id ? null : a))}
+                  corTexto={corTexto}
+                  corTrilho={minha ? 'rgba(255,255,255,0.35)' : C.bubbleOtherBorder}
+                  corProgresso={minha ? '#fff' : COR}
+                  onLongPress={() => setMenuDe(m)}
+                  obterUrl={urlDaMidia}
+                />
+              </View>
+            ) : m.tipo === 'arquivo' && m.midia_path ? (
+              <ArquivoDaMensagem
+                caminho={m.midia_path}
+                nome={m.midia_nome ?? t('chatGeral.arquivo')}
+                tamanho={m.midia_tamanho ?? null}
+                minha={minha}
+                C={C}
+                onLongPress={() => setMenuDe(m)}
+                erroTexto={t('chatGeral.abrirErro')}
+              />
             ) : m.tipo === 'video' ? (
-              // Vídeo chega no próximo build; até lá aparece só o rótulo.
               <Text style={[cs.bubbleText, { color: corTexto }]}>{t('chatGeral.video')}</Text>
             ) : null}
 
@@ -685,6 +815,96 @@ function FotoDaMensagem({
   );
 }
 
+// Vídeo: um quadro escuro com play e a duração. O toque abre o vídeo no
+// player do próprio celular (link assinado de 1 hora) — não precisa de módulo
+// nativo novo, então funciona também nos binários antigos via OTA.
+async function abrirMidia(caminho: string, erroTexto: string) {
+  try {
+    const url = await urlDaMidia(caminho);
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert(erroTexto);
+  }
+}
+
+function VideoDaMensagem({
+  caminho, largura, altura, duracaoMs, onLongPress, erroTexto,
+}: {
+  caminho: string; largura: number | null; altura: number | null; duracaoMs: number | null;
+  onLongPress: () => void; erroTexto: string;
+}) {
+  const [abrindo, setAbrindo] = useState(false);
+  const W = 230;
+  const proporcao = largura && altura ? altura / largura : 0.5625;
+  const H = Math.max(130, Math.min(300, Math.round(W * proporcao)));
+  const abrir = async () => {
+    if (abrindo) return;
+    setAbrindo(true);
+    await abrirMidia(caminho, erroTexto);
+    setAbrindo(false);
+  };
+  return (
+    <Pressable onPress={abrir} onLongPress={onLongPress} delayLongPress={300}>
+      <View style={[st.foto, st.video, { width: W, height: H }]}>
+        <View style={st.videoPlay}>
+          {abrindo ? <ActivityIndicator color="#fff" /> : <Ionicons name="play" size={26} color="#fff" style={{ marginLeft: 3 }} />}
+        </View>
+        {!!duracaoMs && (
+          <View style={st.videoTempo}>
+            <Ionicons name="videocam" size={11} color="#fff" />
+            <Text style={st.videoTempoTexto}>{formatarTempo(duracaoMs / 1000)}</Text>
+          </View>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+// Anexo que não é áudio (PDF, Word, Excel...): cartão com ícone, nome e
+// tamanho. O toque abre no visualizador do celular.
+function ArquivoDaMensagem({
+  caminho, nome, tamanho, minha, C, onLongPress, erroTexto,
+}: {
+  caminho: string; nome: string; tamanho: number | null; minha: boolean; C: PaletaChat;
+  onLongPress: () => void; erroTexto: string;
+}) {
+  const [abrindo, setAbrindo] = useState(false);
+  const ext = (caminho.split('.').pop() ?? '').toLowerCase();
+  const icone: { nome: keyof typeof Ionicons.glyphMap; cor: string } =
+    ext === 'pdf' ? { nome: 'document-text', cor: '#E5322D' } :
+    ext === 'doc' || ext === 'docx' ? { nome: 'document-text', cor: '#2B579A' } :
+    ext === 'xls' || ext === 'xlsx' ? { nome: 'grid', cor: '#217346' } :
+    ext === 'ppt' || ext === 'pptx' ? { nome: 'easel', cor: '#D24726' } :
+    ext === 'zip' ? { nome: 'archive', cor: '#8C8799' } :
+    { nome: 'document', cor: '#8C8799' };
+  const fundo = minha ? 'rgba(255,255,255,0.16)' : C.chipBg;
+  const corTexto = minha ? '#fff' : C.text;
+  const corSub = minha ? 'rgba(255,255,255,0.75)' : C.textMuted;
+  const abrir = async () => {
+    if (abrindo) return;
+    setAbrindo(true);
+    await abrirMidia(caminho, erroTexto);
+    setAbrindo(false);
+  };
+  return (
+    <TouchableOpacity onPress={abrir} onLongPress={onLongPress} delayLongPress={300} activeOpacity={0.85}
+      style={[st.anexo, { backgroundColor: fundo }]}>
+      <View style={[st.anexoIcone, { backgroundColor: minha ? '#fff' : 'transparent' }]}>
+        <Ionicons name={icone.nome} size={26} color={icone.cor} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[st.anexoNome, { color: corTexto }]} numberOfLines={2}>{nome}</Text>
+        <Text style={[st.anexoSub, { color: corSub }]}>
+          {[ext.toUpperCase(), formatarTamanho(tamanho)].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+      {abrindo
+        ? <ActivityIndicator size="small" color={corTexto} />
+        : <Ionicons name="open-outline" size={17} color={corSub} />}
+    </TouchableOpacity>
+  );
+}
+
 // Prévia do PRIMEIRO link da mensagem. YouTube mostra a miniatura (endereço
 // montado, sem API nem cota). Instagram, TikTok e o resto bloqueiam a leitura
 // da página pelo app, então mostram um cartão com o ícone e o nome do site — o
@@ -744,6 +964,16 @@ const st = StyleSheet.create({
   previaPlay: { position: 'absolute', top: 44, left: 94, width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   previaRodape: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 10 },
   previaSite: { fontSize: 13, fontWeight: '600' },
+  video: { backgroundColor: '#14112E' },
+  videoPlay: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(0,0,0,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', alignItems: 'center', justifyContent: 'center' },
+  videoTempo: { position: 'absolute', left: 8, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
+  videoTempoTexto: { color: '#fff', fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  anexo: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 10, width: 240, marginTop: 2 },
+  anexoIcone: { width: 40, height: 40, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  anexoNome: { fontSize: 13.5, fontWeight: '600', lineHeight: 18 },
+  anexoSub: { fontSize: 11.5, marginTop: 2 },
+  anexoAudioNome: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: 230 },
+  anexoAudioTexto: { fontSize: 12.5, fontWeight: '600', flexShrink: 1 },
 });
 
 function buildStyles(C: PaletaChat) { return StyleSheet.create({

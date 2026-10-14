@@ -1582,6 +1582,8 @@
     "enviar": "Enviar",
     "enviadoTitulo": "Enviado",
     "enviadoPara": "Enviado para o chat {{destino}}.",
-    "baixandoImagem": "Preparando a imagem…"
+    "baixandoImagem": "Preparando a imagem…",
+    "vazioTitulo": "Não chegou nada",
+    "vazioTexto": "O Peniel abriu, mas o outro app não entregou o arquivo. Tente de novo ou envie pelo 📎 › Arquivo dentro do chat."
   }
 }

@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert, Modal, View, Text, TouchableOpacity, Pressable, TextInput, ActivityIndicator, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,7 +44,7 @@ const COR_IGREJA = '#6A55E0';
 
 export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: () => void }) {
   const { t } = useTranslation();
-  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent({ resetOnBackground: true });
+  const { hasShareIntent, shareIntent, resetShareIntent, error: erroShare } = useShareIntent({ resetOnBackground: true });
   const { user } = useAuth();
   const { ehMembro, ehAdmin, carregando } = useAcesso();
   const { isDark } = useTheme();
@@ -65,9 +65,37 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
   // Baixando a imagem de um link compartilhado (ex.: app da RTM).
   const [baixandoImagem, setBaixandoImagem] = useState(false);
 
+  // ─── Compartilhamento que chega VAZIO (14/10/2026) ──────────────────────────
+  // A extensão do iPhone abre o app com "penielchurch://dataUrl=…#tipo" mesmo
+  // quando não conseguiu copiar o arquivo (ex.: áudio da RTM). O módulo então
+  // não entrega nada e antes o app abria em silêncio. Agora avisa, com o tipo
+  // que a extensão tentou (#file, #media, #text, #weburl) para diagnóstico.
+  const ultimoRecebido = useRef(0);
+  useEffect(() => {
+    const verificar = (url: string | null) => {
+      if (!url || !url.includes('dataUrl=')) return;
+      const chegou = Date.now();
+      const tipo = url.split('#')[1] || '?';
+      setTimeout(() => {
+        if (ultimoRecebido.current >= chegou) return;
+        Alert.alert(
+          t('compartilhar.vazioTitulo', 'Não chegou nada'),
+          `${t('compartilhar.vazioTexto', 'O Peniel abriu, mas o outro app não entregou o arquivo. Tente de novo ou envie pelo 📎 › Arquivo dentro do chat.')}\n\n(${tipo}${erroRef.current ? ` · ${erroRef.current}` : ''})`,
+        );
+      }, 4000);
+    };
+    Linking.getInitialURL().then(verificar).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => verificar(url));
+    return () => sub.remove();
+  }, []);
+  const erroRef = useRef<string | null>(null);
+  useEffect(() => { erroRef.current = erroShare ? String(erroShare) : null; }, [erroShare]);
+
   useEffect(() => {
     // Espera a sessão e o papel: no arranque a frio eles chegam depois.
-    if (!hasShareIntent || carregando) return;
+    if (!hasShareIntent) return;
+    ultimoRecebido.current = Date.now();
+    if (carregando) return;
 
     const f = shareIntent.files?.[0];
     const novo: Compartilhado = f

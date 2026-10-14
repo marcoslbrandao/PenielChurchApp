@@ -1582,6 +1582,8 @@
     "enviar": "Envoyer",
     "enviadoTitulo": "Envoyé",
     "enviadoPara": "Envoyé dans le chat {{destino}}.",
-    "baixandoImagem": "Préparation de l'image…"
+    "baixandoImagem": "Préparation de l'image…",
+    "vazioTitulo": "Rien n'est arrivé",
+    "vazioTexto": "Peniel s'est ouvert, mais l'autre app n'a pas transmis le fichier. Réessayez ou envoyez-le avec 📎 › Fichier dans le chat."
   }
 }

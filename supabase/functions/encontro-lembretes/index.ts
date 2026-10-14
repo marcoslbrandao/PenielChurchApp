@@ -76,6 +76,11 @@ Deno.serve(async (req) => {
       .from('grupo_eventos')
       .select('id, grupo, titulo, data, horario, hora_inicio, local, link_online')
       .in('data', diasAlvo)
+      // Estudo Bíblico fica de fora desde 14/10/2026: o lembrete dele é GERAL
+      // (todos os membros da igreja, não só a turma) e sai pelo cron
+      // `lembrete-estudo-30min` como aviso, igual à Reunião de Oração. Sem
+      // este filtro a turma receberia dois pushes iguais.
+      .neq('grupo', 'estudo_biblico')
       .not('hora_inicio', 'is', null)
       .is('lembrete_enviado_em', null);
 

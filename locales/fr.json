@@ -56,6 +56,8 @@
     "diaQuarta": "Mercredi",
     "diaSexta": "Vendredi",
     "diaSabado": "Samedi",
+    "diaSegunda": "Lundi",
+    "diaQuinta": "Jeudi",
     "mensagemDeDomingo": "Message du dimanche",
     "lerMensagemCompleta": "Lire le message complet",
     "quickGruposEmBreveMsg": "Bientôt disponible !\nContactez-nous sur WhatsApp.",
@@ -1571,5 +1573,14 @@
     "compartilharEntrar": "Connectez-vous avec votre compte membre pour partager dans le Chat de l'Église.",
     "compartilharSoMembros": "Le Chat de l'Église est réservé aux membres. Parlez aux responsables pour activer votre accès.",
     "entrar": "Se connecter"
+  },
+  "compartilhar": {
+    "enviarPara": "Envoyer à",
+    "banda": "Groupe de louange",
+    "infantil": "Ministère des enfants",
+    "legenda": "Ajoutez une légende (facultatif)",
+    "enviar": "Envoyer",
+    "enviadoTitulo": "Envoyé",
+    "enviadoPara": "Envoyé dans le chat {{destino}}."
   }
 }

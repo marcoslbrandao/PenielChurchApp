@@ -575,6 +575,12 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
   );
 }
 
+
+// Rótulo do dia nos "Próximos eventos" (0 = domingo … 6 = sábado). Antes era
+// uma cadeia de ifs que só conhecia domingo, terça, quarta e sexta — qualquer
+// outro dia (segunda, quinta) caía em "Sábado".
+const DIAS_DA_SEMANA = ['diaDomingo', 'diaSegunda', 'diaTerca', 'diaQuarta', 'diaQuinta', 'diaSexta', 'diaSabado'];
+
 export default function HomeScreen({ navigation, route }: { navigation?: any; route?: any }) {
   const { t, i18n } = useTranslation();
   const { user, isLoggedIn } = useAuth();
@@ -1268,7 +1274,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
                     )}
                     <Text style={styles.eventoNome} numberOfLines={1}>{ev.nomeKey ? t(`home.${ev.nomeKey}`) : ev.nome}</Text>
                   </View>
-                  <Text style={styles.eventoMeta}>{ev.diaSemana === 0 ? t('home.diaDomingo') : ev.diaSemana === 2 ? t('home.diaTerca') : ev.diaSemana === 3 ? t('home.diaQuarta') : ev.diaSemana === 5 ? t('home.diaSexta') : t('home.diaSabado')} · {ev.horario} · {ev.localKey ? t(`home.${ev.localKey}`) : ev.local}</Text>
+                  <Text style={styles.eventoMeta}>{t(`home.${DIAS_DA_SEMANA[ev.diaSemana] ?? 'diaDomingo'}`)} · {ev.horario} · {ev.localKey ? t(`home.${ev.localKey}`) : ev.local}</Text>
                 </View>
                 <View style={[styles.eventoTag, { backgroundColor: tag.bg }]}>
                   <Text style={[styles.eventoTagTexto, { color: tag.text }]}>{tag.label}</Text>

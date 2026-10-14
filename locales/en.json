@@ -56,6 +56,8 @@
     "diaQuarta": "Wednesday",
     "diaSexta": "Friday",
     "diaSabado": "Saturday",
+    "diaSegunda": "Monday",
+    "diaQuinta": "Thursday",
     "mensagemDeDomingo": "Sunday Message",
     "lerMensagemCompleta": "Read full message",
     "quickGruposEmBreveMsg": "Coming soon!\nGet in touch with us on WhatsApp.",
@@ -1571,5 +1573,14 @@
     "compartilharEntrar": "Sign in with your member account to share in the Church Chat.",
     "compartilharSoMembros": "The Church Chat is for members only. Talk to the leadership to activate your access.",
     "entrar": "Sign in"
+  },
+  "compartilhar": {
+    "enviarPara": "Send to",
+    "banda": "Band",
+    "infantil": "Children's Ministry",
+    "legenda": "Add a caption (optional)",
+    "enviar": "Send",
+    "enviadoTitulo": "Sent",
+    "enviadoPara": "Sent to the {{destino}} chat."
   }
 }

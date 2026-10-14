@@ -24,7 +24,7 @@ import { BUCKET_AUDIO } from './chatAudio';
 import {
   formatoDaImagem, prepararImagem, formatoDoArquivo, binarioTemSeletorDeArquivos,
   escolherArquivo, tamanhoLocal, VIDEO_MAX_SEGUNDOS, VIDEO_MAX_MB, ARQUIVO_MAX_MB,
-  type ArquivoEscolhido,
+  type ArquivoEscolhido, type Compartilhado,
 } from './chatGeral';
 
 export type TipoAnexo = 'imagem' | 'video' | 'arquivo';
@@ -251,4 +251,68 @@ export function abrirMenuDeAnexo(o: Opcoes, titulo: string) {
 /** Apaga o arquivo do anexo junto com a mensagem (melhor esforço). */
 export function apagarAnexo(caminho?: string | null) {
   if (caminho) apagarUpload(caminho);
+}
+
+/**
+ * Envia para o chat de um GRUPO ou da BANDA o que chegou pelo menu
+ * Compartilhar do celular (components/RecebeCompartilhamento.tsx). Sem
+ * interface: as validações viram erro com a mensagem já traduzida.
+ */
+export async function enviarCompartilhado(o: {
+  t: TFunction;
+  prefixo: string;
+  autorId: string;
+  arquivo: Compartilhado['arquivo'] | null | undefined;
+  /** Legenda (com arquivo) ou a mensagem (só texto/link). */
+  texto: string;
+  inserir: (campos: Partial<CamposAnexo> & { texto: string }) => Promise<void>;
+}): Promise<void> {
+  const tx = o.texto.trim();
+  const a = o.arquivo;
+  if (!a) {
+    if (!tx) return;
+    await o.inserir({ texto: tx.slice(0, 1000) });
+    return;
+  }
+  const mime = (a.mime ?? '').toLowerCase();
+  let campos: Omit<CamposAnexo, 'texto'>;
+  if (/^image\/(jpeg|jpg|png|gif|webp|heic|heif)$/.test(mime)) {
+    const img = await prepararImagem(a.uri, a.mime);
+    const { ext, contentType } = formatoDaImagem(img.mimeType, img.uri);
+    campos = {
+      midia_tipo: 'imagem', midia_path: await subir(o.prefixo, o.autorId, img.uri, ext, contentType, false),
+      midia_nome: null, midia_tamanho: null, midia_mime: contentType,
+      midia_largura: img.width ?? a.largura ?? null, midia_altura: img.height ?? a.altura ?? null, midia_duracao_ms: null,
+    };
+  } else if (mime.startsWith('video/')) {
+    const duracaoMs = Math.round(a.duracaoMs ?? 0);
+    if (duracaoMs > VIDEO_MAX_SEGUNDOS * 1000 + 4000) throw new Error(o.t('chatGeral.videoLongo'));
+    const tamanho = a.tamanho ?? (await tamanhoLocal(a.uri));
+    if (tamanho && tamanho > VIDEO_MAX_MB * 1024 * 1024) throw new Error(o.t('chatGeral.arquivoGrande', { mb: VIDEO_MAX_MB }));
+    const ehMov = mime.includes('quicktime') || /\.mov$/i.test(a.uri);
+    const contentType = ehMov ? 'video/quicktime' : 'video/mp4';
+    campos = {
+      midia_tipo: 'video', midia_path: await subir(o.prefixo, o.autorId, a.uri, ehMov ? 'mov' : 'mp4', contentType, false),
+      midia_nome: null, midia_tamanho: tamanho ?? null, midia_mime: contentType,
+      midia_largura: a.largura ?? null, midia_altura: a.altura ?? null,
+      midia_duracao_ms: Math.min(VIDEO_MAX_SEGUNDOS * 1000 + 5000, Math.max(1, duracaoMs || 1)),
+    };
+  } else {
+    const formato = formatoDoArquivo(a.nome, a.mime);
+    if (!formato) throw new Error(o.t('chatGeral.formatoNaoAceito'));
+    const tamanho = a.tamanho ?? (await tamanhoLocal(a.uri));
+    if (!tamanho) throw new Error(o.t('chatGeral.erroEnviarTexto'));
+    if (tamanho > ARQUIVO_MAX_MB * 1024 * 1024) throw new Error(o.t('chatGeral.arquivoGrande', { mb: ARQUIVO_MAX_MB }));
+    campos = {
+      midia_tipo: 'arquivo', midia_path: await subir(o.prefixo, o.autorId, a.uri, formato.ext, formato.contentType, false),
+      midia_nome: a.nome.slice(0, 200), midia_tamanho: tamanho, midia_mime: formato.contentType,
+      midia_largura: null, midia_altura: null, midia_duracao_ms: null,
+    };
+  }
+  try {
+    await o.inserir({ ...campos, texto: (tx || rotuloPadrao(campos.midia_tipo, campos.midia_nome, campos.midia_mime)).slice(0, 1000) });
+  } catch (e) {
+    apagarUpload(campos.midia_path);
+    throw e;
+  }
 }

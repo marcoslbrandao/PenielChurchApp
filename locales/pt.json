@@ -56,6 +56,8 @@
     "diaQuarta": "Quarta",
     "diaSexta": "Sexta",
     "diaSabado": "Sábado",
+    "diaSegunda": "Segunda",
+    "diaQuinta": "Quinta",
     "mensagemDeDomingo": "Mensagem de Domingo",
     "lerMensagemCompleta": "Ler mensagem completa",
     "quickGruposEmBreveMsg": "Em breve!\nFale conosco pelo WhatsApp.",
@@ -1571,5 +1573,14 @@
     "compartilharEntrar": "Entre com sua conta de membro para compartilhar no Chat da Igreja.",
     "compartilharSoMembros": "O Chat da Igreja é só para membros. Fale com a liderança para ativar seu acesso.",
     "entrar": "Entrar"
+  },
+  "compartilhar": {
+    "enviarPara": "Enviar para",
+    "banda": "Banda",
+    "infantil": "Ministério Infantil",
+    "legenda": "Escreva uma legenda (opcional)",
+    "enviar": "Enviar",
+    "enviadoTitulo": "Enviado",
+    "enviadoPara": "Enviado para o chat {{destino}}."
   }
 }

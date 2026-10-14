@@ -1581,6 +1581,7 @@
     "legenda": "Escribe una leyenda (opcional)",
     "enviar": "Enviar",
     "enviadoTitulo": "Enviado",
-    "enviadoPara": "Enviado al chat {{destino}}."
+    "enviadoPara": "Enviado al chat {{destino}}.",
+    "baixandoImagem": "Preparando la imagen…"
   }
 }

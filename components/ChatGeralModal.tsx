@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
 import { useTheme } from '../lib/theme';
-import { separarLinks } from '../lib/links';
+import { separarLinks, soLinkDeImagem } from '../lib/links';
 import { extractYoutubeId, youtubeThumbnail } from '../lib/youtube';
 import { binarioPodeGravarAudio } from '../lib/recursosNativos';
 import TextoComLinks from './TextoComLinks';
@@ -622,7 +622,7 @@ export default function ChatGeralModal({
                 />
               </View>
             )}
-            {m.tipo === 'texto' && <PreviaLink texto={m.texto} minha={minha} C={C} />}
+            {m.tipo === 'texto' && !soLinkDeImagem(m.texto) && <PreviaLink texto={m.texto} minha={minha} C={C} />}
 
             <Text style={[cs.hora, { color: minha ? 'rgba(255,255,255,0.7)' : C.textMuted }, ehFoto && { paddingHorizontal: 8, paddingBottom: 4 }]}>
               {horaCurta(m.created_at)}

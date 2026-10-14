@@ -13,6 +13,8 @@ import { useTheme } from '../lib/theme';
 import { supabase } from '../lib/supabase';
 import { formatarTamanho, type Compartilhado } from '../lib/chatGeral';
 import { enviarCompartilhado } from '../lib/chatAnexos';
+import { primeiroLinkDeImagem } from '../lib/links';
+import { baixarImagemDoLink } from '../lib/imagemDoLink';
 import ChatGeralModal from './ChatGeralModal';
 
 // ─── "Compartilhar → Peniel" (13/10/2026; destino escolhido desde 14/10) ─────
@@ -60,6 +62,8 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
   // Chat da Igreja: o conteúdo segue para o ChatGeralModal.
   const [chatIgrejaAberto, setChatIgrejaAberto] = useState(false);
   const [paraChatIgreja, setParaChatIgreja] = useState<Compartilhado | null>(null);
+  // Baixando a imagem de um link compartilhado (ex.: app da RTM).
+  const [baixandoImagem, setBaixandoImagem] = useState(false);
 
   useEffect(() => {
     // Espera a sessão e o papel: no arranque a frio eles chegam depois.
@@ -94,11 +98,29 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
       Alert.alert(t('chatGeral.compartilharTitulo'), t('chatGeral.compartilharSoMembros'));
       return;
     }
+    const uid = user.id;
+
+    // Só um link, e ele é de uma imagem (o app da RTM manda assim): baixa a
+    // imagem e segue como foto; o resto do texto vira a legenda. Se não der
+    // para baixar, continua como link de texto, igual a antes.
+    const img = !novo.arquivo && novo.texto ? primeiroLinkDeImagem(novo.texto) : null;
+    if (img) {
+      setBaixandoImagem(true);
+      baixarImagemDoLink(img.url).then(arquivo => {
+        setBaixandoImagem(false);
+        abrirDestinos(uid, arquivo ? { arquivo, texto: img.resto || null } : novo);
+      });
+      return;
+    }
+    abrirDestinos(uid, novo);
+  }, [hasShareIntent, carregando, user, ehMembro]);
+
+  const abrirDestinos = (uid: string, novo: Compartilhado) => {
     setConteudo(novo);
     setEscolhido(null);
     setLegenda('');
-    carregarDestinos(user.id, novo);
-  }, [hasShareIntent, carregando, user, ehMembro]);
+    carregarDestinos(uid, novo);
+  };
 
   const carregarDestinos = async (uid: string, novo: Compartilhado) => {
     setDestinos(null);
@@ -135,8 +157,8 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
   };
   const escolher = (d: Destino) => {
     if (d.id === 'igreja') { irParaChatIgreja(conteudo); return; }
-    // Link/texto vira a própria mensagem: já começa preenchido.
-    setLegenda(conteudo?.arquivo ? '' : (conteudo?.texto ?? ''));
+    // Link/texto vira a própria mensagem (ou a legenda da imagem baixada).
+    setLegenda(conteudo?.texto ?? '');
     setEscolhido(d);
   };
 
@@ -178,6 +200,15 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
   if (!user || !ehMembro) return null;
   return (
     <>
+      <Modal visible={baixandoImagem} transparent animationType="fade">
+        <View style={st.baixandoFundo}>
+          <View style={[st.baixando, { backgroundColor: C.bg }]}>
+            <ActivityIndicator color={COR_IGREJA} />
+            <Text style={[st.nome, { color: C.text, flex: 0 }]}>{t('compartilhar.baixandoImagem', 'Preparando a imagem…')}</Text>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={!!destinos} transparent animationType="slide" onRequestClose={fecharFolha}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Pressable style={st.fundo} onPress={enviando ? undefined : fecharFolha}>
@@ -258,6 +289,8 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
 }
 
 const st = StyleSheet.create({
+  baixandoFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
+  baixando: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20 },
   fundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   folha: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 16, paddingHorizontal: 16 },
   previa: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, padding: 12, marginBottom: 14 },

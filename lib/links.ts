@@ -68,3 +68,43 @@ export function separarLinks(texto: string): Trecho[] {
   if (ultimo < texto.length) saida.push({ tipo: 'texto', valor: texto.slice(ultimo) });
   return saida;
 }
+
+// ─── Link de imagem (14/10/2026) ─────────────────────────────────────────────
+// Apps como o da RTM, ao compartilhar uma imagem, mandam só o ENDEREÇO dela
+// (".../image.jpg?t=...&size=Medium") em vez do arquivo. Estas funções
+// reconhecem esse caso para o app baixar a imagem (RecebeCompartilhamento) ou
+// mostrá-la na bolha (TextoComLinks), em vez de exibir o link cru.
+
+const RE_EXT_IMAGEM = /\.(jpe?g|png|gif|webp|heic|heif)$/i;
+
+/** O caminho do link (sem ?query e #) termina em extensão de imagem? */
+export function ehLinkDeImagem(url: string): boolean {
+  const semQuery = url.split(/[?#]/)[0];
+  return /^https?:\/\//i.test(url) && RE_EXT_IMAGEM.test(semQuery);
+}
+
+/** Extensão da imagem pelo caminho do link ("jpg", "png"...). */
+export function extensaoDoLink(url: string): string | null {
+  const m = url.split(/[?#]/)[0].match(RE_EXT_IMAGEM);
+  return m ? m[1].toLowerCase() : null;
+}
+
+/**
+ * Primeiro link de imagem do texto e o que sobra dele (vira legenda).
+ * Ex.: "Presente Diário https://x/image.jpg" → { url, resto: "Presente Diário" }.
+ */
+export function primeiroLinkDeImagem(texto: string): { url: string; resto: string } | null {
+  const trechos = separarLinks(texto);
+  const i = trechos.findIndex(tr => tr.tipo === 'link' && ehLinkDeImagem(tr.url));
+  if (i < 0) return null;
+  const link = trechos[i] as Extract<Trecho, { tipo: 'link' }>;
+  const resto = trechos.filter((_, j) => j !== i).map(tr => tr.valor).join('').replace(/\s+/g, ' ').trim();
+  return { url: link.url, resto };
+}
+
+/** A mensagem é SÓ um link de imagem (nada mais escrito)? Devolve o link. */
+export function soLinkDeImagem(texto: string | null | undefined): string | null {
+  if (!texto) return null;
+  const r = primeiroLinkDeImagem(texto.trim());
+  return r && !r.resto ? r.url : null;
+}

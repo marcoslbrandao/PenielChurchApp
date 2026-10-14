@@ -1,6 +1,6 @@
-import React from 'react';
-import { Text, Linking, Alert, type StyleProp, type TextStyle } from 'react-native';
-import { separarLinks } from '../lib/links';
+import React, { useState } from 'react';
+import { Text, Linking, Alert, Image, Pressable, type StyleProp, type TextStyle } from 'react-native';
+import { separarLinks, soLinkDeImagem } from '../lib/links';
 
 // Texto de mensagem com os links clicáveis (sublinhados, na cor pedida).
 // Instagram, YouTube, Spotify, WhatsApp etc. abrem direto no app da pessoa
@@ -17,6 +17,14 @@ export default function TextoComLinks({
   // o que segurar na bolha faz (apagar a mensagem), em vez de nada.
   onLongPress?: () => void;
 }) {
+  // Mensagem que é SÓ um link de imagem (ex.: colado do app da RTM): mostra a
+  // imagem. Se ela não carregar, volta a mostrar o link (14/10/2026).
+  const urlImagem = soLinkDeImagem(texto);
+  const [imagemFalhou, setImagemFalhou] = useState(false);
+  if (urlImagem && !imagemFalhou) {
+    return <ImagemDoLink url={urlImagem} onLongPress={onLongPress} onErro={() => setImagemFalhou(true)} />;
+  }
+
   const trechos = separarLinks(texto);
   if (!trechos.some(t => t.tipo === 'link')) return <Text style={style}>{texto}</Text>;
 
@@ -44,5 +52,30 @@ export default function TextoComLinks({
         ),
       )}
     </Text>
+  );
+}
+
+const LARGURA = 230;
+
+function ImagemDoLink({ url, onLongPress, onErro }: { url: string; onLongPress?: () => void; onErro: () => void }) {
+  // Quadrada até saber o tamanho real; depois respeita a proporção (limitada).
+  const [proporcao, setProporcao] = useState(1);
+  return (
+    <Pressable
+      onPress={() => { Linking.openURL(url).catch(() => {}); }}
+      onLongPress={onLongPress}
+      style={{ borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.2)' }}
+    >
+      <Image
+        source={{ uri: url }}
+        style={{ width: LARGURA, height: LARGURA / proporcao }}
+        resizeMode="cover"
+        onLoad={e => {
+          const { width, height } = e.nativeEvent.source ?? {};
+          if (width && height) setProporcao(Math.min(2, Math.max(0.6, width / height)));
+        }}
+        onError={onErro}
+      />
+    </Pressable>
   );
 }

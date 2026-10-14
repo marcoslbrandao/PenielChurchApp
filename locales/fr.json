@@ -1581,6 +1581,7 @@
     "legenda": "Ajoutez une légende (facultatif)",
     "enviar": "Envoyer",
     "enviadoTitulo": "Envoyé",
-    "enviadoPara": "Envoyé dans le chat {{destino}}."
+    "enviadoPara": "Envoyé dans le chat {{destino}}.",
+    "baixandoImagem": "Préparation de l'image…"
   }
 }

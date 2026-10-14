@@ -1581,6 +1581,7 @@
     "legenda": "Add a caption (optional)",
     "enviar": "Send",
     "enviadoTitulo": "Sent",
-    "enviadoPara": "Sent to the {{destino}} chat."
+    "enviadoPara": "Sent to the {{destino}} chat.",
+    "baixandoImagem": "Preparing the image…"
   }
 }

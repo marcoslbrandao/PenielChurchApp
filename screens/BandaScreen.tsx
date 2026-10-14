@@ -17,6 +17,8 @@ import AudioMensagem from '../components/AudioMensagem';
 import GravadorAudio from '../components/GravadorAudio';
 import { binarioPodeGravarAudio } from '../lib/recursosNativos';
 import { enviarAudio, apagarAudio, TEXTO_DO_AUDIO } from '../lib/chatAudio';
+import AnexoMensagem from '../components/AnexoMensagem';
+import { abrirMenuDeAnexo, apagarAnexo, legendaDoAnexo, type CamposAnexo, type TipoAnexo } from '../lib/chatAnexos';
 import { paletaBanda, type BandaColors } from '../lib/temaBanda';
 import MetronomoModal from '../components/MetronomoModal';
 
@@ -175,6 +177,10 @@ type ChatMsg = {
   // Mensagem de voz: caminho `banda/<autor>/<uuid>.m4a` no bucket `chat-audio`.
   // `texto` leva o rótulo TEXTO_DO_AUDIO, para versões antigas do app.
   audio_path?: string | null; audio_duracao_ms?: number | null;
+  // Anexo (foto, vídeo, arquivo) em `banda/<autor>/...` — ver lib/chatAnexos.ts.
+  midia_tipo?: TipoAnexo | null; midia_path?: string | null; midia_nome?: string | null;
+  midia_tamanho?: number | null; midia_mime?: string | null; midia_largura?: number | null;
+  midia_altura?: number | null; midia_duracao_ms?: number | null;
 };
 type Tab = 'hoje' | 'repertorio' | 'cultos' | 'ensaios' | 'equipe' | 'chat';
 
@@ -3338,6 +3344,7 @@ function BandaMain() {
   const [audioAtivo, setAudioAtivo] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
   const [enviandoAudio, setEnviandoAudio] = useState(false);
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
   const podeGravar = useMemo(() => binarioPodeGravarAudio(), []);
   const [loadingChat, setLoadingChat] = useState(true);
   const [presencas, setPresencas] = useState<Presenca[]>([]);
@@ -3874,6 +3881,25 @@ function BandaMain() {
     }
   };
 
+  const anexar = () => {
+    if (!user?.id) { Alert.alert(t('common.erro'), t('banda.chatPrecisaLogin')); return; }
+    abrirMenuDeAnexo({
+      t, prefixo: 'banda', autorId: user.id, legenda: chatMsg,
+      setEnviando: setEnviandoAnexo,
+      limparLegenda: () => setChatMsg(''),
+      inserir: async (campos: CamposAnexo) => {
+        const { data, error } = await supabase
+          .from('banda_chat_mensagens')
+          .insert({ autor_id: user.id, autor_nome: meuNome, ...campos })
+          .select()
+          .single();
+        if (error) throw error;
+        if (data) setMessages(prev => (prev.some(m => m.id === (data as ChatMsg).id) ? prev : [...prev, data as ChatMsg]));
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      },
+    }, 'Chat');
+  };
+
   // Sair da aba do chat para o áudio que estiver tocando.
   useEffect(() => { if (activeTab !== 'chat') setAudioAtivo(null); }, [activeTab]);
 
@@ -3890,6 +3916,7 @@ function BandaMain() {
         setMessages(prev => prev.filter(m => m.id !== msg.id));
         await apagarLinha('banda_chat_mensagens', msg.id);
         if (msg.audio_path) apagarAudio(msg.audio_path);
+        apagarAnexo(msg.midia_path);
       }},
     ]);
   };
@@ -4891,7 +4918,30 @@ function BandaMain() {
                       style={[s.bubble, mine && s.bubbleMine]}
                     >
                       {!mine && <Text style={s.bubbleAuthor}>{m.autor_nome}</Text>}
-                      {m.audio_path ? (
+                      {m.midia_path ? (
+                        <>
+                          <AnexoMensagem
+                            m={m}
+                            id={m.id}
+                            minha={mine}
+                            corTexto={mine ? C.onPrimaryDim : C.text}
+                            corTrilho={C.border}
+                            corProgresso={C.primary}
+                            corCartao={C.surfaceHigh}
+                            audioAtivo={audioAtivo === m.id}
+                            onAtivarAudio={() => setAudioAtivo(m.id)}
+                            onTerminarAudio={() => setAudioAtivo(a => (a === m.id ? null : a))}
+                            onLongPress={() => apagarMensagem(m)}
+                          />
+                          {!!legendaDoAnexo(m) && (
+                            <TextoComLinks
+                              texto={legendaDoAnexo(m)!}
+                              style={[s.bubbleText, { marginTop: 6 }, mine && s.bubbleTextMine]}
+                              onLongPress={() => apagarMensagem(m)}
+                            />
+                          )}
+                        </>
+                      ) : m.audio_path ? (
                         <AudioMensagem
                           caminho={m.audio_path}
                           duracaoMs={m.audio_duracao_ms ?? null}
@@ -4918,6 +4968,13 @@ function BandaMain() {
             </ScrollView>
           )}
           <View style={s.chatInput}>
+            {!gravando && nomePronto && (
+              <TouchableOpacity onPress={anexar} disabled={enviandoAnexo || enviandoAudio} hitSlop={6} style={{ height: 42, justifyContent: 'center' }}>
+                {enviandoAnexo
+                  ? <ActivityIndicator size="small" color={C.primary} />
+                  : <Ionicons name="add-circle-outline" size={28} color={C.primary} />}
+              </TouchableOpacity>
+            )}
             {!gravando && (
               <TextInput style={s.chatField} placeholder={t('banda.mensagemPlaceholder')} placeholderTextColor={C.textDim} value={chatMsg} onChangeText={setChatMsg} returnKeyType="send" onSubmitEditing={sendMessage} maxLength={1000} />
             )}

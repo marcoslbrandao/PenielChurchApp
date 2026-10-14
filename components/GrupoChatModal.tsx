@@ -13,6 +13,9 @@ import AudioMensagem from './AudioMensagem';
 import GravadorAudio from './GravadorAudio';
 import { binarioPodeGravarAudio } from '../lib/recursosNativos';
 import { enviarAudio, apagarAudio, TEXTO_DO_AUDIO } from '../lib/chatAudio';
+import { useTranslation } from 'react-i18next';
+import AnexoMensagem from './AnexoMensagem';
+import { abrirMenuDeAnexo, apagarAnexo, legendaDoAnexo, type CamposAnexo, type TipoAnexo } from '../lib/chatAnexos';
 
 function paletaChat(isDark: boolean) {
   return isDark ? {
@@ -51,6 +54,16 @@ type Mensagem = {
   // é só o rótulo TEXTO_DO_AUDIO, para versões antigas do app.
   audio_path?: string | null;
   audio_duracao_ms?: number | null;
+  // Anexo (foto, vídeo, arquivo) — ver lib/chatAnexos.ts. `texto` leva a
+  // legenda ou um rótulo ("📷 Foto"), para versões antigas do app.
+  midia_tipo?: TipoAnexo | null;
+  midia_path?: string | null;
+  midia_nome?: string | null;
+  midia_tamanho?: number | null;
+  midia_mime?: string | null;
+  midia_largura?: number | null;
+  midia_altura?: number | null;
+  midia_duracao_ms?: number | null;
   created_at: string;
 };
 
@@ -79,6 +92,8 @@ export default function GrupoChatModal({
   const [gravando, setGravando] = useState(false);
   const [enviandoAudio, setEnviandoAudio] = useState(false);
   const podeGravar = useMemo(() => binarioPodeGravarAudio(), []);
+  const { t } = useTranslation();
+  const [enviandoAnexo, setEnviandoAnexo] = useState(false);
 
   const { isDark } = useTheme();
   // Dentro de um <Modal> do React Native, o <SafeAreaView> mede a view NATIVA
@@ -182,6 +197,19 @@ export default function GrupoChatModal({
     }
   };
 
+  const anexar = () => abrirMenuDeAnexo({
+    t, prefixo: grupo, autorId: userId, legenda: texto,
+    setEnviando: setEnviandoAnexo,
+    limparLegenda: () => setTexto(''),
+    inserir: async (campos: CamposAnexo) => {
+      const { data, error } = await supabase.from('grupo_chat_mensagens')
+        .insert({ grupo, autor_id: userId, autor_nome: userNome, ...campos })
+        .select().single();
+      if (error) throw error;
+      if (data) setMensagens(prev => (prev.some(m => m.id === (data as Mensagem).id) ? prev : [...prev, data as Mensagem]));
+    },
+  }, `Chat — ${grupoNome}`);
+
   // Fechar o chat para o áudio que estiver tocando.
   useEffect(() => { if (!visible) setAudioAtivo(null); }, [visible]);
 
@@ -194,6 +222,7 @@ export default function GrupoChatModal({
           setMensagens(prev => prev.filter(m => m.id !== msg.id));
           await apagarLinha('grupo_chat_mensagens', msg.id);
           if (msg.audio_path) apagarAudio(msg.audio_path);
+          apagarAnexo(msg.midia_path);
         },
       },
     ]);
@@ -245,7 +274,31 @@ export default function GrupoChatModal({
                   >
                     <View style={[cs.bubble, minha ? { backgroundColor: cor } : cs.bubbleOther]}>
                       {!minha && <Text style={[cs.autorNome, { color: cor }]}>{item.autor_nome}</Text>}
-                      {item.audio_path ? (
+                      {item.midia_path ? (
+                        <>
+                          <AnexoMensagem
+                            m={item}
+                            id={item.id}
+                            minha={minha}
+                            corTexto={minha ? '#fff' : C.text}
+                            corTrilho={minha ? 'rgba(255,255,255,0.35)' : C.bubbleOtherBorder}
+                            corProgresso={minha ? '#fff' : cor}
+                            corCartao={minha ? 'rgba(255,255,255,0.16)' : C.inputBg}
+                            audioAtivo={audioAtivo === item.id}
+                            onAtivarAudio={() => setAudioAtivo(item.id)}
+                            onTerminarAudio={() => setAudioAtivo(a => (a === item.id ? null : a))}
+                            onLongPress={podeApagar ? () => apagar(item) : undefined}
+                          />
+                          {!!legendaDoAnexo(item) && (
+                            <TextoComLinks
+                              texto={legendaDoAnexo(item)!}
+                              style={[cs.bubbleText, { marginTop: 6 }, minha && { color: '#fff' }]}
+                              corLink={minha ? '#fff' : cor}
+                              onLongPress={podeApagar ? () => apagar(item) : undefined}
+                            />
+                          )}
+                        </>
+                      ) : item.audio_path ? (
                         <AudioMensagem
                           caminho={item.audio_path}
                           duracaoMs={item.audio_duracao_ms ?? null}
@@ -273,6 +326,13 @@ export default function GrupoChatModal({
           )}
 
           <View style={[cs.inputRow, { paddingBottom: 10 + padBottom }]}>
+            {!gravando && (
+              <TouchableOpacity onPress={anexar} style={cs.anexarBtn} disabled={enviandoAnexo || enviandoAudio} hitSlop={6}>
+                {enviandoAnexo
+                  ? <ActivityIndicator size="small" color={cor} />
+                  : <Ionicons name="add-circle-outline" size={28} color={cor} />}
+              </TouchableOpacity>
+            )}
             {!gravando && (
             <TextInput
               style={cs.input}
@@ -333,4 +393,5 @@ function buildStyles(C: PaletaChat) { return StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.inputBarBorder, backgroundColor: C.inputBarBg },
   input: { flex: 1, maxHeight: 100, backgroundColor: C.inputBg, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 9, fontSize: 14, color: C.text },
   sendBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  anexarBtn: { height: 38, minWidth: 30, justifyContent: 'center', alignItems: 'center' },
 }); }

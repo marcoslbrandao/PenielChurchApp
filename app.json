@@ -3,7 +3,7 @@
     "name": "Peniel Church",
     "slug": "PenielChurchApp",
     "scheme": "penielchurch",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "runtimeVersion": "1.5.0",
     "updates": {
       "url": "https://u.expo.dev/f53e9e07-9556-4ea8-80e0-da4487b38e56",

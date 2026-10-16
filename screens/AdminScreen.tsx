@@ -1502,13 +1502,19 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
   const [query, setQuery] = useState('');
   const [resultados, setResultados] = useState<MembroDiretorio[]>([]);
   const [salvando, setSalvando] = useState(false);
+  // "membro_id|data" de quem marcou que nao pode (RLS: admin e lider da area).
+  const [indisponiveis, setIndisponiveis] = useState<Set<string>>(new Set());
 
   const idsAreas = areas.map(a => a.id).join(',');
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.rpc('escala_proximas_designacoes');
+    const [{ data, error }, { data: ind }] = await Promise.all([
+      supabase.rpc('escala_proximas_designacoes'),
+      supabase.from('escala_indisponibilidade').select('membro_id, data').gte('data', toISODate(new Date())),
+    ]);
     if (error) Alert.alert(t('common.erro'), error.message);
+    setIndisponiveis(new Set(((ind ?? []) as any[]).map(i => `${i.membro_id}|${i.data}`)));
     const permitidas = new Set(idsAreas.split(','));
     setDesignacoes(((data ?? []) as any[])
       .filter(d => permitidas.has(d.area_id))
@@ -1581,6 +1587,7 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
   // a mesma pessoa duas vezes no mesmo dia. O banco também barra (unique).
   const ocupadosNoDia = (data: string) => new Set(designacoes.filter(d => d.data === data).map(d => d.membro_id));
 
+  const naoPode = (membroId: string, data: string) => indisponiveis.has(`${membroId}|${data}`);
   const linhaPessoa = (m: MembroDiretorio, ocupado: boolean) => (
     <TouchableOpacity
       key={m.id}
@@ -1588,7 +1595,12 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
       onPress={() => escolher(m)}
       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border, opacity: ocupado ? 0.45 : 1 }}
     >
-      <Text style={{ flex: 1, fontSize: 14, color: C.text }}>{m.nome} {m.sobrenome}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 14, color: C.text }}>{m.nome} {m.sobrenome}</Text>
+        {!!alvo && naoPode(m.id, alvo.data) && (
+          <Text style={{ fontSize: 11, color: C.danger, marginTop: 2 }}>{t('admin.escalaMarcouIndisponivel')}</Text>
+        )}
+      </View>
       {ocupado
         ? <Text style={{ fontSize: 11, color: C.textMuted }}>{t('admin.escalaJaServeNoDia')}</Text>
         : <Ionicons name="checkmark-circle-outline" size={22} color={C.purple} />}
@@ -1673,7 +1685,12 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
                             <Text style={{ fontSize: 13, fontWeight: '700', color: C.text, marginBottom: 4 }}>{area.nome}</Text>
                             {pessoas.map(d => (
                               <View key={d.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 14 }}>
-                                <Text style={{ flex: 1, fontSize: 14, color: C.text }}>{d.nome} {d.sobrenome}</Text>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 14, color: C.text }}>{d.nome} {d.sobrenome}</Text>
+                                  {naoPode(d.membro_id, data) && (
+                                    <Text style={{ fontSize: 11, color: C.danger, fontWeight: '700', marginTop: 2 }}>{t('admin.escalaMarcouIndisponivelTrocar')}</Text>
+                                  )}
+                                </View>
                                 <TouchableOpacity onPress={() => setAlvo({ modo: 'trocar', area, data, designacao: d })} hitSlop={8}>
                                   <Ionicons name="swap-horizontal" size={20} color={C.purple} />
                                 </TouchableOpacity>
@@ -1734,96 +1751,160 @@ function formatarDataBR(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+// Datas de culto entre `inicio` e `fim` (ISO), com a regra de fim de ano da
+// Peniel (Marcos, 16/10/2026): o Natal e celebrado no domingo ANTES de 25/12,
+// depois so o culto da Virada (31/12), e o proximo culto e o 2o domingo de
+// janeiro. Os domingos entre esses ficam de fora. Tudo pode ser ligado ou
+// desligado na lista antes de gerar.
+type DataDeCulto = { data: string; rotulo?: 'natal' | 'virada' | 'extra'; ativo: boolean; motivoFora?: 'recesso' };
+function domingoDoNatal(ano: number): string {
+  const d = new Date(ano, 11, 24);
+  while (d.getDay() !== 0) d.setDate(d.getDate() - 1);
+  return toISODate(d);
+}
+function datasDeCulto(inicio: string, fim: string): DataDeCulto[] {
+  const [y, m, d] = inicio.split('-').map(Number);
+  const cursor = new Date(y, m - 1, d);
+  while (cursor.getDay() !== 0) cursor.setDate(cursor.getDate() + 1);
+  const lista: DataDeCulto[] = [];
+  while (toISODate(cursor) <= fim) {
+    const iso = toISODate(cursor);
+    const ano = cursor.getFullYear();
+    const natal = domingoDoNatal(ano);
+    if (iso.endsWith('-12-31')) lista.push({ data: iso, rotulo: 'virada', ativo: true });
+    else if (iso === natal) lista.push({ data: iso, rotulo: 'natal', ativo: true });
+    else if (iso > natal && cursor.getMonth() === 11) lista.push({ data: iso, ativo: false, motivoFora: 'recesso' });
+    else if (cursor.getMonth() === 0 && cursor.getDate() < 8) lista.push({ data: iso, ativo: false, motivoFora: 'recesso' });
+    else lista.push({ data: iso, ativo: true });
+    cursor.setDate(cursor.getDate() + 7);
+  }
+  // Culto da Virada em cada 31/12 do periodo.
+  for (let ano = y; ano <= Number(fim.slice(0, 4)); ano++) {
+    const virada = `${ano}-12-31`;
+    if (virada >= inicio && virada <= fim && !lista.some(l => l.data === virada)) {
+      lista.push({ data: virada, rotulo: 'virada', ativo: true });
+    }
+  }
+  return lista.sort((a, b) => a.data.localeCompare(b.data));
+}
+function lerDDMMAAAA(txt: string): string | null {
+  const [d, m, y] = txt.trim().split('/');
+  if (!d || !m || !y || y.length !== 4) return null;
+  const dt = new Date(Number(y), Number(m) - 1, Number(d));
+  if (isNaN(dt.getTime()) || dt.getDate() !== Number(d)) return null;
+  return toISODate(dt);
+}
+// Fim padrao: fim do 2o mes seguinte, a mesma janela em que os voluntarios
+// podem marcar os dias em que nao podem (em outubro, 31/12).
+function fimPadraoDaEscala(): string {
+  const h = new Date();
+  return toISODate(new Date(h.getFullYear(), h.getMonth() + 3, 0));
+}
+
 function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGerado }: {
   visible: boolean; areas: EscalaArea[]; voluntarios: AreaVoluntario[]; userId: string | undefined;
   onClose: () => void; onGerado: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [dataInicio, setDataInicio] = useState('');
-  const [semanas, setSemanas] = useState('26');
+  const [dataFim, setDataFim] = useState('');
+  const [datas, setDatas] = useState<DataDeCulto[]>([]);
+  const [extra, setExtra] = useState('');
   const [gerando, setGerando] = useState(false);
 
   useEffect(() => {
-    if (visible) { setDataInicio(formatarDataBR(toISODate(proximoDomingo()))); setSemanas('26'); }
+    if (visible) {
+      setDataInicio(formatarDataBR(toISODate(proximoDomingo())));
+      setDataFim(formatarDataBR(fimPadraoDaEscala()));
+      setExtra('');
+    }
   }, [visible]);
 
+  // Recalcula a lista sempre que as duas datas ficam validas.
+  useEffect(() => {
+    const ini = lerDDMMAAAA(dataInicio);
+    const fim = lerDDMMAAAA(dataFim);
+    setDatas(ini && fim && fim >= ini ? datasDeCulto(ini, fim) : []);
+  }, [dataInicio, dataFim]);
+
+  const alternar = (iso: string) => setDatas(ds => ds.map(d => (d.data === iso ? { ...d, ativo: !d.ativo } : d)));
+  const adicionarExtra = () => {
+    const iso = lerDDMMAAAA(extra);
+    if (!iso) { Alert.alert(t('common.atencao'), t('admin.escalaDataInvalida')); return; }
+    setDatas(ds => ds.some(d => d.data === iso)
+      ? ds.map(d => (d.data === iso ? { ...d, ativo: true } : d))
+      : [...ds, { data: iso, rotulo: 'extra' as const, ativo: true }].sort((a, b) => a.data.localeCompare(b.data)));
+    setExtra('');
+  };
+
+  const ativas = datas.filter(d => d.ativo).map(d => d.data);
+
   const handleGerar = async () => {
-    const [d, m, y] = dataInicio.split('/');
-    if (!d || !m || !y || y.length !== 4) { Alert.alert(t('common.atencao'), t('admin.informeADataDeInicio')); return; }
-    const inicio = new Date(Number(y), Number(m) - 1, Number(d));
-    if (inicio.getDay() !== 0) { Alert.alert(t('common.atencao'), t('admin.aDataDeInicioPrecisa')); return; }
-    const numSemanas = Number(semanas);
-    if (!numSemanas || numSemanas < 1 || numSemanas > 52) { Alert.alert(t('common.atencao'), t('admin.informeUmaQuantidadeDeDomingos')); return; }
+    const ini = lerDDMMAAAA(dataInicio);
+    const fim = lerDDMMAAAA(dataFim);
+    if (!ini || !fim) { Alert.alert(t('common.atencao'), t('admin.informeADataDeInicio')); return; }
+    if (fim < ini) { Alert.alert(t('common.atencao'), t('admin.escalaFimAntesDoInicio')); return; }
+    if (ativas.length === 0) { Alert.alert(t('common.atencao'), t('admin.escalaNenhumaData')); return; }
     if (areas.length === 0) { Alert.alert(t('common.atencao'), t('admin.cadastreAoMenosUmaArea')); return; }
 
     setGerando(true);
+    const primeira = ativas[0];
+    const ultima = ativas[ativas.length - 1];
 
-    const datas: string[] = [];
-    const cursor = new Date(inicio);
-    for (let i = 0; i < numSemanas; i++) {
-      datas.push(toISODate(cursor));
-      cursor.setDate(cursor.getDate() + 7);
-    }
-
-    const dataFim = datas[datas.length - 1];
-
-    // Designações já existentes no período — contam como "ocupado" pra não
-    // dar crash nem duplicar, e são descontadas das vagas de cada área.
-    const { data: existentesData, error: existentesError } = await supabase
-      .from('escala_designacoes')
-      .select('area_id, membro_id, data')
-      .gte('data', datas[0])
-      .lte('data', dataFim);
-
-    if (existentesError) {
-      setGerando(false);
-      Alert.alert(t('common.erro'), existentesError.message);
-      return;
-    }
+    // Ja escalados no periodo (contam como ocupados e descontam vagas) e os
+    // dias que cada voluntario marcou como indisponivel.
+    const [{ data: existentesData, error: existentesError }, { data: indData, error: indError }] = await Promise.all([
+      supabase.from('escala_designacoes').select('area_id, membro_id, data').gte('data', primeira).lte('data', ultima),
+      supabase.from('escala_indisponibilidade').select('membro_id, data').gte('data', primeira).lte('data', ultima),
+    ]);
+    const erro = existentesError ?? indError;
+    if (erro) { setGerando(false); Alert.alert(t('common.erro'), erro.message); return; }
 
     const usadoNoDia: Record<string, Set<string>> = {};
     const existentesPorAreaData: Record<string, number> = {};
+    const vezes: Record<string, number> = {};       // quantas vezes cada pessoa serve no periodo (todas as areas)
+    const ultimaVez: Record<string, string> = {};   // ultima data em que serviu
     (existentesData ?? []).forEach((e: any) => {
       (usadoNoDia[e.data] ??= new Set()).add(e.membro_id);
       const chave = `${e.area_id}|${e.data}`;
       existentesPorAreaData[chave] = (existentesPorAreaData[chave] ?? 0) + 1;
+      vezes[e.membro_id] = (vezes[e.membro_id] ?? 0) + 1;
     });
+    const indisponivel = new Set((indData ?? []).map((i: any) => `${i.membro_id}|${i.data}`));
 
-    const areasOrdenadas = [...areas].sort((a, b) => a.nome.localeCompare(b.nome));
+    // Areas com time menor escolhem primeiro: quem serve em duas areas fica
+    // pra area que mais depende dele.
     const poolPorArea: Record<string, string[]> = {};
-    areasOrdenadas.forEach(a => {
-      poolPorArea[a.id] = voluntarios.filter(v => v.area_id === a.id).map(v => v.membro_id);
-    });
-    const ponteiro: Record<string, number> = {};
-    areasOrdenadas.forEach(a => { ponteiro[a.id] = 0; });
+    areas.forEach(a => { poolPorArea[a.id] = voluntarios.filter(v => v.area_id === a.id).map(v => v.membro_id); });
+    const areasOrdenadas = [...areas].sort((a, b) =>
+      (poolPorArea[a.id].length - poolPorArea[b.id].length) || a.nome.localeCompare(b.nome));
+    const ordemNaFila: Record<string, number> = {};
+    voluntarios.forEach((v, i) => { ordemNaFila[v.membro_id] ??= i; });
 
     const novas: { area_id: string; membro_id: string; data: string; gerado_automaticamente: boolean; criado_por: string | undefined }[] = [];
+    let vagasSemNinguem = 0;
 
-    datas.forEach(data => {
+    ativas.forEach(data => {
       const usadosHoje = (usadoNoDia[data] ??= new Set());
       areasOrdenadas.forEach(area => {
-        const jaTem = existentesPorAreaData[`${area.id}|${data}`] ?? 0;
-        const precisa = area.vagas_padrao - jaTem;
+        const precisa = area.vagas_padrao - (existentesPorAreaData[`${area.id}|${data}`] ?? 0);
         if (precisa <= 0) return;
         const pool = poolPorArea[area.id];
-        if (!pool || pool.length === 0) return;
-
-        const escolhidos: string[] = [];
-        let i = ponteiro[area.id];
-        let tentativas = 0;
-        while (escolhidos.length < precisa && tentativas < pool.length) {
-          const candidato = pool[i % pool.length];
-          if (!usadosHoje.has(candidato)) {
-            escolhidos.push(candidato);
-            usadosHoje.add(candidato);
-          }
-          i++;
-          tentativas++;
-        }
-        ponteiro[area.id] = i % pool.length;
-
-        escolhidos.forEach(membroId => {
-          novas.push({ area_id: area.id, membro_id: membroId, data, gerado_automaticamente: true, criado_por: userId });
+        if (!pool.length) return;
+        // Quem serviu menos vem primeiro; empate: quem serviu ha mais tempo.
+        const candidatos = pool
+          .filter(id => !usadosHoje.has(id) && !indisponivel.has(`${id}|${data}`))
+          .sort((a, b) =>
+            ((vezes[a] ?? 0) - (vezes[b] ?? 0))
+            || (ultimaVez[a] ?? '').localeCompare(ultimaVez[b] ?? '')
+            || ((ordemNaFila[a] ?? 0) - (ordemNaFila[b] ?? 0)));
+        const escolhidos = candidatos.slice(0, precisa);
+        vagasSemNinguem += precisa - escolhidos.length;
+        escolhidos.forEach(id => {
+          usadosHoje.add(id);
+          vezes[id] = (vezes[id] ?? 0) + 1;
+          ultimaVez[id] = data;
+          novas.push({ area_id: area.id, membro_id: id, data, gerado_automaticamente: true, criado_por: userId });
         });
       });
     });
@@ -1840,14 +1921,25 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
 
     onGerado();
     onClose();
-    Alert.alert(t('admin.escalaGerada'), `${novas.length} designações criadas ao longo de ${numSemanas} domingos.`);
+    Alert.alert(
+      t('admin.escalaGerada'),
+      t('admin.escalaGeradaResumo', { n: novas.length, datas: ativas.length, ate: formatarDataBR(ultima) })
+        + (vagasSemNinguem > 0 ? `\n\n${t('admin.escalaVagasSemNinguem', { n: vagasSemNinguem })}` : ''),
+    );
   };
 
+  const rotuloDe = (d: DataDeCulto) =>
+    d.rotulo === 'natal' ? t('admin.escalaCultoNatal')
+      : d.rotulo === 'virada' ? t('admin.escalaCultoVirada')
+      : d.rotulo === 'extra' ? t('admin.escalaDataExtra')
+      : d.motivoFora === 'recesso' ? t('admin.escalaRecesso')
+      : '';
+
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={mo.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
-          <View style={mo.sheet}>
+          <View style={[mo.sheet, { maxHeight: '100%' }]}>
             <View style={mo.header}>
               <Text style={mo.title}>{t('admin.gerarEscalaDoSemestre')}</Text>
               <TouchableOpacity onPress={onClose}>
@@ -1857,26 +1949,64 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
             <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
             <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 16, lineHeight: 18 }}>
-              Preenche automaticamente as vagas de todas as áreas, revezando o time de voluntários de cada uma. Ninguém é escalado em duas áreas no mesmo domingo, e domingos/áreas já preenchidos manualmente não são sobrescritos.
+              {t('admin.escalaGeradorExplicacao')}
             </Text>
 
-            <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>{t('admin.domingoDeInicio')}</Text>
-              <View style={mo.fieldRow}>
-                <TextInput
-                  style={mo.fieldInput} placeholder={t('admin.ddMmAaaa')} placeholderTextColor={C.textDim}
-                  value={dataInicio} onChangeText={setDataInicio} keyboardType="numeric" maxLength={10}
-                />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={[mo.fieldWrap, { flex: 1 }]}>
+                <Text style={mo.fieldLabel}>{t('admin.escalaDe')}</Text>
+                <View style={mo.fieldRow}>
+                  <TextInput
+                    style={mo.fieldInput} placeholder={t('admin.ddMmAaaa')} placeholderTextColor={C.textDim}
+                    value={dataInicio} onChangeText={setDataInicio} keyboardType="numbers-and-punctuation" maxLength={10}
+                  />
+                </View>
+              </View>
+              <View style={[mo.fieldWrap, { flex: 1 }]}>
+                <Text style={mo.fieldLabel}>{t('admin.escalaAte')}</Text>
+                <View style={mo.fieldRow}>
+                  <TextInput
+                    style={mo.fieldInput} placeholder={t('admin.ddMmAaaa')} placeholderTextColor={C.textDim}
+                    value={dataFim} onChangeText={setDataFim} keyboardType="numbers-and-punctuation" maxLength={10}
+                  />
+                </View>
               </View>
             </View>
 
-            <View style={mo.fieldWrap}>
-              <Text style={mo.fieldLabel}>{t('admin.quantidadeDeDomingos')}</Text>
-              <View style={mo.fieldRow}>
-                <TextInput
-                  style={mo.fieldInput} placeholder="26" placeholderTextColor={C.textDim}
-                  value={semanas} onChangeText={setSemanas} keyboardType="number-pad"
-                />
+            <Text style={[s.sectionLabel, { marginTop: 4 }]}>
+              {t('admin.escalaDatasDeCulto', { n: ativas.length })}
+            </Text>
+            {datas.length === 0 ? (
+              <Text style={[s.emptyText, { marginBottom: 12 }]}>{t('admin.escalaInformePeriodo')}</Text>
+            ) : datas.map(d => (
+              <TouchableOpacity
+                key={d.data}
+                onPress={() => alternar(d.data)}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, gap: 10 }}
+              >
+                <Ionicons name={d.ativo ? 'checkbox' : 'square-outline'} size={20} color={d.ativo ? C.purple : C.textDim} />
+                <Text style={{ flex: 1, fontSize: 14, color: d.ativo ? C.text : C.textDim, textTransform: 'capitalize' }}>
+                  {formatarDataBR(d.data)} · {dataEscalaLonga(d.data, i18n.language).split(',')[0]}
+                </Text>
+                {!!rotuloDe(d) && (
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: d.ativo ? C.purple : C.textDim }}>{rotuloDe(d)}</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+
+            <View style={[mo.fieldWrap, { marginTop: 14 }]}>
+              <Text style={mo.fieldLabel}>{t('admin.escalaAdicionarData')}</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={[mo.fieldRow, { flex: 1 }]}>
+                  <TextInput
+                    style={mo.fieldInput} placeholder={t('admin.ddMmAaaa')} placeholderTextColor={C.textDim}
+                    value={extra} onChangeText={setExtra} keyboardType="numbers-and-punctuation" maxLength={10}
+                    onSubmitEditing={adicionarExtra}
+                  />
+                </View>
+                <TouchableOpacity onPress={adicionarExtra} style={{ justifyContent: 'center', paddingHorizontal: 12 }}>
+                  <Ionicons name="add-circle" size={28} color={C.purple} />
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -1885,6 +2015,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
                 <><Ionicons name="shuffle-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.gerarEscala')}</Text></>
               )}
             </TouchableOpacity>
+            <View style={{ height: 12 }} />
             </ScrollView>
           </View>
         </KeyboardAvoidingView>

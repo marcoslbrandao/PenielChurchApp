@@ -127,7 +127,9 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
   visible: boolean; onClose: () => void; onSaved: () => void;
 }) {
   const { t } = useTranslation();
-  const [tipo, setTipo] = useState<'membro' | 'banda'>('membro');
+  // Desde 16/10 não existe mais convite de MEMBRO: a pessoa cria o perfil e o
+  // Admin toca em "Tornar membro". Aqui só sobrou o código da Banda.
+  const [tipo, setTipo] = useState<'membro' | 'banda'>('banda');
   const [email, setEmail] = useState('');
   const [days, setDays] = useState('30');
   const [code, setCode] = useState(generateCode());
@@ -178,9 +180,6 @@ function NovoConviteModal({ visible, onClose, onSaved }: {
           <View style={mo.fieldWrap}>
             <Text style={mo.fieldLabel}>{t('admin.tipoDeConvite')}</Text>
             <View style={mo.daysRow}>
-              <TouchableOpacity style={[mo.dayPill, tipo === 'membro' && mo.dayPillActive]} onPress={() => setTipo('membro')}>
-                <Text style={[mo.dayPillText, tipo === 'membro' && mo.dayPillTextActive]}>{t('admin.pillMembro')}</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={[mo.dayPill, tipo === 'banda' && mo.dayPillActive]} onPress={() => setTipo('banda')}>
                 <Text style={[mo.dayPillText, tipo === 'banda' && mo.dayPillTextActive]}>{t('admin.pillBanda')}</Text>
               </TouchableOpacity>
@@ -654,7 +653,8 @@ const DIAS_SEMANA_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // ─── Contas de visitantes (Admin → Estatísticas) ────────────────────────────
 // Quem criou conta no app mas ainda não é membro (profiles.role = 'visitante').
 // O e-mail vem de auth.users pela RPC listar_contas_visitantes (só admin).
-type ContaVisitante = { id: string; nome: string | null; email: string | null; criado_em: string; ultimo_acesso: string | null };
+// `visitou_igreja`: bate (e-mail ou telefone) com um registro da Recepção.
+type ContaVisitante = { id: string; nome: string | null; email: string | null; criado_em: string; ultimo_acesso: string | null; visitou_igreja?: boolean };
 
 function ContasVisitantesModal({ visible, onClose, onChanged }: { visible: boolean; onClose: () => void; onChanged: () => void }) {
   const { t } = useTranslation();
@@ -714,6 +714,12 @@ function ContasVisitantesModal({ visible, onClose, onChanged }: { visible: boole
                 <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, fontWeight: '700', color: C.text }}>{c.nome?.trim() || '—'}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                    <Ionicons name={c.visitou_igreja ? 'home-outline' : 'phone-portrait-outline'} size={11} color={c.visitou_igreja ? C.success : C.textMuted} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: c.visitou_igreja ? C.success : C.textMuted }}>
+                      {c.visitou_igreja ? t('membros.visitouIgreja') : t('membros.soPeloApp')}
+                    </Text>
+                  </View>
                   {!!c.email && (
                     <TouchableOpacity onPress={() => Linking.openURL(`mailto:${c.email}`)}>
                       <Text style={{ fontSize: 13, color: C.primary, marginTop: 2 }}>{c.email}</Text>
@@ -2150,7 +2156,7 @@ export default function AdminScreen() {
   const [areaGerenciarVisible, setAreaGerenciarVisible] = useState<EscalaArea | null>(null);
   const [gerarEscalaModalVisible, setGerarEscalaModalVisible] = useState(false);
   const [editarEscalaVisible, setEditarEscalaVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao' | 'textos'>('convites');
+  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao' | 'textos'>('avisos');
   // São 9 abas e só ~3 cabem na tela por vez — sem esse indicador, dava a
   // impressão de que a lista de abas estava cortada/quebrada (só aparecia
   // uma lasquinha do ícone da 4ª aba na borda). A setinha "→" avisa que dá
@@ -2184,7 +2190,7 @@ export default function AdminScreen() {
     }
     // Convites
     const { data: inviteData } = await supabase
-      .from('invite_codes').select('*').order('created_at', { ascending: false });
+      .from('invite_codes').select('*').eq('tipo', 'banda').order('created_at', { ascending: false });
     if (inviteData) setInvites(inviteData as InviteCode[]);
     // Ofertas
     const { data: offeringsData } = await supabase
@@ -2402,7 +2408,7 @@ export default function AdminScreen() {
 
   const shareInvite = async (code: string) => {
     await Share.share({
-      message: `🔑 Convite Peniel Church:\n\nCódigo: ${code}\n\nAbra o app e insira este código na Área do Membro para ativar seu acesso.\n\nAinda não tem o app? Baixe aqui: ${APP_LINK_URL}`,
+      message: `🎵 Seu convite para a área da Banda de Louvor — Peniel Church:\n\nCódigo: ${code}\n\nAbra o app, vá em Membros → Banda, e insira este código para ativar seu acesso.\n\nAinda não tem o app? Baixe aqui: ${APP_LINK_URL}`,
     });
   };
 
@@ -2420,7 +2426,7 @@ export default function AdminScreen() {
   const ehAdmin = role === 'admin';
   // Quem só lidera área de escala começa (e fica) na aba Escalas.
   const abasVisiveis = ehAdmin
-    ? (['convites', 'avisos', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'textos', 'stats'] as const)
+    ? (['avisos', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'convites', 'textos', 'stats'] as const)
     : (['escalas'] as const);
   const abaAtual = abasVisiveis.includes(activeTab as any) ? activeTab : 'escalas';
 

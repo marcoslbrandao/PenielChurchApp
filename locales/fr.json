@@ -228,7 +228,7 @@
     "contaExcluidaMsg": "Votre compte et vos données ont été définitivement supprimés.",
     "meuCadastro": "Mon Inscription",
     "souMembroTitulo": "Je suis membre de Peniel Church",
-    "souMembroSub": "Activer mon accès à l’Espace Membres",
+    "souMembroSub": "Comment obtenir l'accès à l'Espace Membres",
     "entrarOuCriarConta": "Se connecter ou créer un compte",
     "entrarOuCriarContaSub": "Enregistrez des versets, recevez les annonces et suivez l’agenda",
     "notificacoesFalha": "Impossible de modifier les notifications pour le moment. Réessayez.",
@@ -920,7 +920,7 @@
   },
   "ativarMembro": {
     "titulo": "Espace Membres",
-    "explicacao": "Si vous êtes membre de Peniel Church, activez votre accès avec le code envoyé par votre responsable.",
+    "explicacao": "L'accès membre est accordé par les responsables de Peniel Church, directement dans l'app. Si vous fréquentez l'église, contactez-nous et nous activerons votre compte.",
     "digiteOCodigo": "Saisissez le code.",
     "codigoInvalido": "Code invalide ou expiré.",
     "ativar": "Activer l’accès membre",
@@ -930,8 +930,12 @@
     "semCodigoTitulo": "Vous n’avez pas encore le code ?",
     "semCodigoTexto": "Contactez les responsables pour demander votre accès. Vous pouvez revenir ici à tout moment pour saisir le code.",
     "solicitarAcesso": "Contacter les responsables",
-    "mensagemSolicitacao": "Bonjour ! Je souhaite demander l’accès membre dans l’application Peniel Church.",
-    "rodape": "Votre compte fonctionne normalement sans le code. L’Espace Membres est un espace supplémentaire réservé aux membres de Peniel Church."
+    "mensagemSolicitacao": "Bonjour ! Je fréquente Peniel Church et j'aimerais avoir l'accès membre dans l'app.",
+    "rodape": "Votre profil fonctionne normalement en tant que visiteur. L'Espace Membres est un espace en plus pour les membres de Peniel Church.",
+    "jaLiberadoTitulo": "Déjà parlé aux responsables ?",
+    "jaLiberadoTexto": "Une fois activé, touchez ci-dessous pour mettre à jour votre accès.",
+    "conferir": "Vérifier mon accès",
+    "aindaNaoLiberado": "Votre accès n'a pas encore été activé. Dès qu'il le sera, l'onglet Membres apparaîtra dans l'app."
   },
   "bemVindo": {
     "titulo": "Bienvenue à Peniel Church",
@@ -1114,7 +1118,7 @@
     "distribuiOsVoluntariosPelosDomingos": "Répartit automatiquement les bénévoles sur les dimanches",
     "areasDeServico": "Équipes de Service",
     "usuariosDoApp": "Utilisateurs de l'App",
-    "convites": "Invitations",
+    "convites": "Invitations du Groupe de louange",
     "totalGerados": "Total générées",
     "utilizados": "Utilisées",
     "taxaDeAtivacao": "Taux d'activation",
@@ -1140,7 +1144,7 @@
     "metodoTransferencia": "Virement",
     "novaOferta": "Nouvelle Offrande",
     "novaArea": "Nouvelle Équipe",
-    "aba_convites": "Invitations",
+    "aba_convites": "Louange",
     "aba_avisos": "Annonces",
     "aba_devocionais": "Méditations",
     "aba_mensagens": "Messages",
@@ -1346,7 +1350,12 @@
     "lidera": "Responsable de",
     "penielKids": "Peniel Kids",
     "liderDaBanda": "Responsable du Groupe de louange",
-    "bandaPeniel": "Groupe de louange Peniel"
+    "bandaPeniel": "Groupe de louange Peniel",
+    "membrosStat": "Membres",
+    "visitouIgreja": "A visité l'église",
+    "visitouIgrejaDica": "Ont un compte dans l'app et ont été enregistrés par l'Accueil. Prenez contact avec eux.",
+    "soPeloApp": "Uniquement l'app",
+    "soPeloAppDica": "Ont téléchargé l'app et créé un profil, mais aucune visite à l'église n'est enregistrée."
   },
   "meses": {
     "janeiro": "Janvier",
@@ -1585,5 +1594,16 @@
     "baixandoImagem": "Préparation de l'image…",
     "vazioTitulo": "Rien n'est arrivé",
     "vazioTexto": "Peniel s'est ouvert, mais l'autre app n'a pas transmis le fichier. Réessayez ou envoyez-le avec 📎 › Fichier dans le chat."
+  },
+  "lembretePerfil": {
+    "titulo": "Créez votre profil",
+    "texto": "C'est gratuit et prend moins d'une minute. Avec un profil, vous pouvez :",
+    "vantagemVersiculos": "Enregistrer vos versets préférés",
+    "vantagemPlano": "Suivre votre plan de lecture",
+    "vantagemOracao": "Envoyer des demandes de prière",
+    "vantagemAvisos": "Recevoir les annonces, directs et événements de l'église",
+    "vantagemAniversario": "Recevoir un message pour votre anniversaire",
+    "criar": "Créer mon profil",
+    "agoraNao": "Pas maintenant"
   }
 }

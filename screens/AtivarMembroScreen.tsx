@@ -1,13 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator,
-  KeyboardAvoidingView, Platform, StatusBar, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
+  StatusBar, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../lib/supabase';
 import { useTheme } from '../lib/theme';
 import { useAcesso } from '../lib/acesso';
 import ContatoModal from '../components/ContatoModal';
@@ -17,6 +16,11 @@ import ContatoModal from '../components/ContatoModal';
 // visitante via ao tocar na aba Membros. Agora a aba nem aparece pra quem não
 // é membro, e esta tela só é aberta de propósito — a partir do card do Perfil.
 // Por isso o tom mudou: não é mais um aviso de porta trancada, é um convite.
+//
+// 16/10/2026 — SEM CÓDIGO DE CONVITE. Decisão do Marcos: a igreja é pequena,
+// então quem libera o acesso é o Admin, direto em Membros > Visitantes
+// ("Tornar membro"). Esta tela só explica isso, abre o contato com a
+// liderança e deixa a pessoa conferir se já foi liberada.
 //
 // Também segue o tema do app (claro/escuro). A tela antiga era escura fixa,
 // o que destoava do Perfil claro logo antes dela.
@@ -39,35 +43,22 @@ export default function AtivarMembroScreen() {
   const { isDark } = useTheme();
   const C = useMemo(() => paletaAtivar(isDark), [isDark]);
   const s = useMemo(() => buildStyles(C), [C]);
-  const { definirPapel, recarregar } = useAcesso();
+  const { ehMembro, recarregar } = useAcesso();
 
-  const [codigo, setCodigo] = useState('');
-  const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState('');
-  const [sucesso, setSucesso] = useState(false);
+  const [conferindo, setConferindo] = useState(false);
+  const [aindaNao, setAindaNao] = useState(false);
   const [contatoVisivel, setContatoVisivel] = useState(false);
 
-  const ativar = async () => {
-    if (!codigo.trim()) { setErro(t('ativarMembro.digiteOCodigo')); return; }
-    setCarregando(true); setErro('');
-    const { data, error } = await supabase.rpc('use_invite_code', {
-      p_code: codigo.trim().toUpperCase(),
-    });
-    setCarregando(false);
-    if (error || !data?.success) {
-      setErro(data?.error ?? t('ativarMembro.codigoInvalido'));
-      return;
-    }
-    // Atualiza a UI na hora (a aba Membros aparece imediatamente) e confirma
-    // com o servidor logo em seguida, caso o papel concedido não seja 'membro'
-    // (um convite de líder, por exemplo).
-    setSucesso(true);
-    definirPapel('membro');
-    recarregar();
+  const conferir = async () => {
+    setConferindo(true); setAindaNao(false);
+    await recarregar();
+    setConferindo(false);
+    // `ehMembro` só muda no próximo render; se não mudou, avisa.
+    setAindaNao(true);
   };
 
-  // ── Sucesso ────────────────────────────────────────────────────────────────
-  if (sucesso) {
+  // ── Já é membro ────────────────────────────────────────────────────────────
+  if (ehMembro) {
     return (
       <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -86,7 +77,6 @@ export default function AtivarMembroScreen() {
     );
   }
 
-  // ── Formulário ─────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
@@ -97,66 +87,37 @@ export default function AtivarMembroScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-          <View style={[s.icone, { backgroundColor: C.accent + '22' }]}>
-            <Ionicons name="key-outline" size={38} color={C.accent} />
-          </View>
+      <ScrollView contentContainerStyle={s.scroll}>
+        <View style={[s.icone, { backgroundColor: C.accent + '22' }]}>
+          <Ionicons name="people-outline" size={38} color={C.accent} />
+        </View>
 
-          <Text style={s.titulo}>{t('ativarMembro.titulo')}</Text>
-          <Text style={s.subtitulo}>{t('ativarMembro.explicacao')}</Text>
+        <Text style={s.titulo}>{t('ativarMembro.titulo')}</Text>
+        <Text style={s.subtitulo}>{t('ativarMembro.explicacao')}</Text>
 
-          <View style={s.campoWrap}>
-            <View style={[s.campo, !!erro && { borderColor: C.danger }]}>
-              <Ionicons name="ticket-outline" size={18} color={C.textMuted} style={{ marginRight: 10 }} />
-              <TextInput
-                style={s.input}
-                placeholder="PENIEL-2024-XX"
-                placeholderTextColor={C.textDim}
-                value={codigo}
-                onChangeText={v => { setCodigo(v.toUpperCase()); setErro(''); }}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                returnKeyType="done"
-                onSubmitEditing={ativar}
-              />
-            </View>
-            {!!erro && (
-              <View style={s.erroLinha}>
-                <Ionicons name="alert-circle-outline" size={14} color={C.danger} />
-                <Text style={s.erroTexto}>{erro}</Text>
-              </View>
-            )}
-          </View>
+        <TouchableOpacity style={s.botao} onPress={() => setContatoVisivel(true)} activeOpacity={0.85}>
+          <Ionicons name="chatbubble-ellipses-outline" size={18} color="#fff" />
+          <Text style={s.botaoTexto}>{t('ativarMembro.solicitarAcesso')}</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[s.botao, carregando && { opacity: 0.7 }]}
-            onPress={ativar}
-            disabled={carregando}
-            activeOpacity={0.85}
-          >
-            {carregando ? <ActivityIndicator color="#fff" /> : (
+        <View style={s.semCodigo}>
+          <Text style={s.semCodigoTitulo}>{t('ativarMembro.jaLiberadoTitulo')}</Text>
+          <Text style={s.semCodigoTexto}>{t('ativarMembro.jaLiberadoTexto')}</Text>
+          <TouchableOpacity style={s.botaoSecundario} onPress={conferir} disabled={conferindo} activeOpacity={0.8}>
+            {conferindo ? <ActivityIndicator color={C.primary} /> : (
               <>
-                <Ionicons name="shield-checkmark-outline" size={18} color="#fff" />
-                <Text style={s.botaoTexto}>{t('ativarMembro.ativar')}</Text>
+                <Ionicons name="refresh-outline" size={17} color={C.primary} />
+                <Text style={s.botaoSecundarioTexto}>{t('ativarMembro.conferir')}</Text>
               </>
             )}
           </TouchableOpacity>
+          {aindaNao && !conferindo && (
+            <Text style={[s.semCodigoTexto, { marginTop: 12, marginBottom: 0 }]}>{t('ativarMembro.aindaNaoLiberado')}</Text>
+          )}
+        </View>
 
-          {/* Saída para quem NÃO tem código — sem isso, a tela é um beco sem
-              saída: a pessoa lê "peça ao seu líder" e não tem como pedir. */}
-          <View style={s.semCodigo}>
-            <Text style={s.semCodigoTitulo}>{t('ativarMembro.semCodigoTitulo')}</Text>
-            <Text style={s.semCodigoTexto}>{t('ativarMembro.semCodigoTexto')}</Text>
-            <TouchableOpacity style={s.botaoSecundario} onPress={() => setContatoVisivel(true)} activeOpacity={0.8}>
-              <Ionicons name="chatbubble-ellipses-outline" size={17} color={C.primary} />
-              <Text style={s.botaoSecundarioTexto}>{t('ativarMembro.solicitarAcesso')}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={s.rodape}>{t('ativarMembro.rodape')}</Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <Text style={s.rodape}>{t('ativarMembro.rodape')}</Text>
+      </ScrollView>
 
       <ContatoModal
         visible={contatoVisivel}

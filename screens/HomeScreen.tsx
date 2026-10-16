@@ -14,6 +14,7 @@ import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocion
 import BirthdayBanner from '../components/BirthdayBanner';
 import ChatGeralCard from '../components/ChatGeralCard';
 import CartaoNotificacoes from '../components/CartaoNotificacoes';
+import LembreteCriarPerfil from '../components/LembreteCriarPerfil';
 import MensagemDetalheModal, { Mensagem } from '../components/MensagemDetalheModal';
 import { livrosAT, livrosNT, Livro } from '../lib/bibliaLivros';
 import { useVersiculoDoDia, parseReferencia, getTextoVersiculo, getReferenciaVersiculo, getVersaoVersiculo } from '../lib/versiculoDoDia';
@@ -1345,6 +1346,9 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
       </Modal>
 
       <MensagemDetalheModal mensagem={mensagemAberta ? mensagem : null} onClose={() => setMensagemAberta(false)} />
+
+      {/* Quem usa sem conta: de vez em quando, as vantagens de criar o perfil. */}
+      <LembreteCriarPerfil onCriar={() => navigation?.navigate('Auth', { modoInicial: 'signup' })} />
     </View>
   );
 }

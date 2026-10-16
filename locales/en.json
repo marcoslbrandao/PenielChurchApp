@@ -228,7 +228,7 @@
     "contaExcluidaMsg": "Your account and data have been permanently removed.",
     "meuCadastro": "My Registration",
     "souMembroTitulo": "I'm a Peniel Church member",
-    "souMembroSub": "Activate my access to the Members Area",
+    "souMembroSub": "How to get access to the Members Area",
     "entrarOuCriarConta": "Sign in or create an account",
     "entrarOuCriarContaSub": "Save verses, get announcements and follow the schedule",
     "notificacoesFalha": "Couldn't change your notification setting right now. Please try again.",
@@ -920,7 +920,7 @@
   },
   "ativarMembro": {
     "titulo": "Members Area",
-    "explicacao": "If you are a Peniel Church member, activate your access with the code your leader sent you.",
+    "explicacao": "Member access is granted by the Peniel Church leadership, right in the app. If you attend the church, get in touch and we will enable your account.",
     "digiteOCodigo": "Enter the code.",
     "codigoInvalido": "Invalid or expired code.",
     "ativar": "Activate member access",
@@ -930,8 +930,12 @@
     "semCodigoTitulo": "Don't have the code yet?",
     "semCodigoTexto": "Get in touch with the leadership to request your access. You can come back here any time to enter the code.",
     "solicitarAcesso": "Contact the leadership",
-    "mensagemSolicitacao": "Hello! I would like to request member access in the Peniel Church app.",
-    "rodape": "Your account works normally without the code. The Members Area is an extra space for Peniel Church members."
+    "mensagemSolicitacao": "Hello! I attend Peniel Church and would like member access in the app.",
+    "rodape": "Your profile works normally as a visitor. The Members Area is an extra space for Peniel Church members.",
+    "jaLiberadoTitulo": "Already spoke to the leadership?",
+    "jaLiberadoTexto": "Once they enable it, tap below to refresh your access.",
+    "conferir": "Check my access",
+    "aindaNaoLiberado": "Your access has not been enabled yet. As soon as it is, the Members tab will appear in the app."
   },
   "bemVindo": {
     "titulo": "Welcome to Peniel Church",
@@ -1114,7 +1118,7 @@
     "distribuiOsVoluntariosPelosDomingos": "Spreads volunteers across the Sundays automatically",
     "areasDeServico": "Service Teams",
     "usuariosDoApp": "App Users",
-    "convites": "Invites",
+    "convites": "Band invites",
     "totalGerados": "Total generated",
     "utilizados": "Used",
     "taxaDeAtivacao": "Activation rate",
@@ -1140,7 +1144,7 @@
     "metodoTransferencia": "Bank transfer",
     "novaOferta": "New Offering",
     "novaArea": "New Team",
-    "aba_convites": "Invites",
+    "aba_convites": "Band",
     "aba_avisos": "Notices",
     "aba_devocionais": "Devotionals",
     "aba_mensagens": "Messages",
@@ -1346,7 +1350,12 @@
     "lidera": "Leads",
     "penielKids": "Peniel Kids",
     "liderDaBanda": "Band leader",
-    "bandaPeniel": "Peniel Band"
+    "bandaPeniel": "Peniel Band",
+    "membrosStat": "Members",
+    "visitouIgreja": "Visited the church",
+    "visitouIgrejaDica": "Have an app account and were registered by Reception. Get in touch with them.",
+    "soPeloApp": "App only",
+    "soPeloAppDica": "Downloaded the app and created a profile, but there is no record of a church visit."
   },
   "meses": {
     "janeiro": "January",
@@ -1585,5 +1594,16 @@
     "baixandoImagem": "Preparing the image…",
     "vazioTitulo": "Nothing arrived",
     "vazioTexto": "Peniel opened, but the other app did not hand over the file. Try again or send it with 📎 › File inside the chat."
+  },
+  "lembretePerfil": {
+    "titulo": "Create your profile",
+    "texto": "It is free and takes less than a minute. With a profile you can:",
+    "vantagemVersiculos": "Save your favourite verses",
+    "vantagemPlano": "Follow your reading plan",
+    "vantagemOracao": "Send prayer requests",
+    "vantagemAvisos": "Get church announcements, lives and events",
+    "vantagemAniversario": "Receive a message on your birthday",
+    "criar": "Create my profile",
+    "agoraNao": "Not now"
   }
 }

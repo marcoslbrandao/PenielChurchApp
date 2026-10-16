@@ -1255,7 +1255,9 @@ export default function MembrosScreen() {
   const [detailMembro, setDetailMembro] = useState<Membro | null>(null);
   // Contas do app com papel 'visitante' (RPC listar_contas_visitantes, só
   // admin). As que não têm ficha no diretório aparecem no filtro Visitante.
-  const [contasVisitantes, setContasVisitantes] = useState<{ id: string; nome: string | null; email: string | null; criado_em: string; avatar_url?: string | null }[]>([]);
+  // `visitou_igreja`: a conta bate (e-mail ou telefone) com um registro da
+  // Recepção — a pessoa esteve na igreja. Sem isso, só baixou o app.
+  const [contasVisitantes, setContasVisitantes] = useState<{ id: string; nome: string | null; email: string | null; criado_em: string; avatar_url?: string | null; visitou_igreja?: boolean }[]>([]);
   // Foto do perfil do app (profiles.avatar_url), por profile_id da ficha.
   const [fotos, setFotos] = useState<Record<string, string>>({});
   // Papel da conta no app (profiles.role) por profile_id — para o selo Admin.
@@ -1423,6 +1425,13 @@ export default function MembrosScreen() {
   // automaticamente, mesmo com a ficha marcada como Membro.
   const statusEfetivo = (m: Membro): Membro['status'] =>
     m.status === 'membro' && m.profile_id && lideraGrupos[m.profile_id]?.length ? 'lider' : m.status;
+  // "Membros são todos da igreja, mesmo que esteja como líder ou Admin"
+  // (Marcos, 16/10). O filtro e o contador de Membros incluem os líderes;
+  // o de Líderes continua sendo só eles.
+  const ehDaIgreja = (m: Membro) => {
+    const st = statusEfetivo(m);
+    return st === 'membro' || st === 'lider';
+  };
   const adultos = membros.filter(m => !m.responsavel_id);
   const perfisComFicha = new Set(membros.map(m => m.profile_id).filter(Boolean));
   const contasSemFicha = contasVisitantes.filter(c => {
@@ -1446,7 +1455,9 @@ export default function MembrosScreen() {
       ? true
       : filterStatus === 'crianca'
         ? ehDependenteLinha
-        : statusEfetivo(m) === filterStatus && !ehDependenteLinha;
+        : filterStatus === 'membro'
+          ? ehDaIgreja(m) && !ehDependenteLinha
+          : statusEfetivo(m) === filterStatus && !ehDependenteLinha;
     const matchMes = filterMes === null || mesDoNascimento(m.data_nascimento) === filterMes;
     // Sem filtro explícito de criança nem de aniversário, o dependente não
     // aparece. Buscar pelo nome dele funciona sempre.
@@ -1515,7 +1526,7 @@ export default function MembrosScreen() {
           // não deve inflar "quantos membros a igreja tem".
           // Os quatro são atalhos: tocar filtra a lista; tocar de novo volta
           // para Todos.
-          { label: 'Membros', value: adultos.filter(m => statusEfetivo(m) === 'membro').length, color: C.success, status: 'membro' as const },
+          { label: t('membros.membrosStat'), value: adultos.filter(ehDaIgreja).length, color: C.success, status: 'membro' as const },
           { label: t('membros.lideres'), value: adultos.filter(m => statusEfetivo(m) === 'lider').length, color: C.accent, status: 'lider' as const },
           { label: t('membros.visitantes'), value: adultos.filter(m => m.status === 'visitante').length + contasVisitantes.filter(c => !perfisComFicha.has(c.id)).length, color: C.textMuted, status: 'visitante' as const },
           { label: t('membros.anivMes'), value: birthdayCount, color: '#7C4DFF', status: null },
@@ -1650,11 +1661,22 @@ export default function MembrosScreen() {
 
           {mostraContasSemFicha && (
             <View style={{ marginTop: filtered.length > 0 ? 18 : 0 }}>
-              <Text style={{ fontSize: 12, fontWeight: '800', color: C.textMuted, letterSpacing: 0.5, marginBottom: 4 }}>
-                {t('membros.contasSemFicha').toUpperCase()}
-              </Text>
-              <Text style={{ fontSize: 11, color: C.textDim, marginBottom: 10 }}>{t('membros.contasSemFichaDica')}</Text>
-              {contasSemFicha.map(c => (
+              {/* Dois grupos (Marcos, 16/10): quem VISITOU A IGREJA (bate com
+                  um registro da Recepção) vem primeiro — é com quem a igreja
+                  entra em contato. Depois, quem só baixou o app. */}
+              {([true, false] as const).map(visitou => {
+                const lista = contasSemFicha.filter(c => !!c.visitou_igreja === visitou);
+                if (lista.length === 0) return null;
+                return (
+                <View key={String(visitou)} style={{ marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Ionicons name={visitou ? 'home-outline' : 'phone-portrait-outline'} size={13} color={visitou ? C.success : C.textMuted} />
+                <Text style={{ fontSize: 12, fontWeight: '800', color: visitou ? C.success : C.textMuted, letterSpacing: 0.5 }}>
+                  {(visitou ? t('membros.visitouIgreja') : t('membros.soPeloApp')).toUpperCase()} · {lista.length}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 11, color: C.textDim, marginBottom: 10 }}>{visitou ? t('membros.visitouIgrejaDica') : t('membros.soPeloAppDica')}</Text>
+              {lista.map(c => (
                 <TouchableOpacity key={c.id} activeOpacity={0.75} style={[s.memberCard, { alignItems: 'center', marginBottom: 8 }]}
                   onPress={() => Alert.alert(
                     c.nome?.trim() || '—',
@@ -1697,6 +1719,9 @@ export default function MembrosScreen() {
                   </TouchableOpacity>
                 </TouchableOpacity>
               ))}
+                </View>
+                );
+              })}
             </View>
           )}
         </ScrollView>

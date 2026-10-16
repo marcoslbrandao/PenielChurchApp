@@ -229,7 +229,7 @@
     "contaExcluidaMsg": "Sua conta e seus dados foram removidos permanentemente.",
     "meuCadastro": "Meu Cadastro",
     "souMembroTitulo": "Sou membro da Peniel Church",
-    "souMembroSub": "Ativar meu acesso à Área do Membro",
+    "souMembroSub": "Como liberar meu acesso à Área do Membro",
     "entrarOuCriarConta": "Entrar ou criar conta",
     "entrarOuCriarContaSub": "Salve versículos, receba avisos e acompanhe a agenda",
     "notificacoesFalha": "Não foi possível mudar as notificações agora. Tente de novo.",
@@ -920,7 +920,7 @@
   },
   "ativarMembro": {
     "titulo": "Área do Membro",
-    "explicacao": "Se você é membro da Peniel Church, ative seu acesso com o código que o seu líder enviou.",
+    "explicacao": "O acesso de membro é liberado pela liderança da Peniel Church, direto no app. Se você frequenta a igreja, fale com a gente e liberamos sua conta.",
     "digiteOCodigo": "Digite o código.",
     "codigoInvalido": "Código inválido ou expirado.",
     "ativar": "Ativar acesso de membro",
@@ -930,8 +930,12 @@
     "semCodigoTitulo": "Ainda não tem o código?",
     "semCodigoTexto": "Fale com a liderança e peça a liberação do seu acesso. Você pode voltar aqui a qualquer momento para inserir o código.",
     "solicitarAcesso": "Falar com a liderança",
-    "mensagemSolicitacao": "Olá! Gostaria de solicitar o acesso de membro no app da Peniel Church.",
-    "rodape": "Sua conta funciona normalmente sem o código. A Área do Membro é um espaço a mais para quem é membro da Peniel Church."
+    "mensagemSolicitacao": "Olá! Frequento a Peniel Church e gostaria de ter o acesso de membro no app.",
+    "rodape": "Seu perfil funciona normalmente como visitante. A Área do Membro é um espaço a mais para quem é membro da Peniel Church.",
+    "jaLiberadoTitulo": "Já falou com a liderança?",
+    "jaLiberadoTexto": "Depois que liberarem, toque abaixo para atualizar o seu acesso.",
+    "conferir": "Conferir meu acesso",
+    "aindaNaoLiberado": "Seu acesso ainda não foi liberado. Assim que for, a aba Membros aparece no app."
   },
   "bemVindo": {
     "titulo": "Bem-vindo à Peniel Church",
@@ -1114,7 +1118,7 @@
     "distribuiOsVoluntariosPelosDomingos": "Distribui os voluntários pelos domingos automaticamente",
     "areasDeServico": "Áreas de Serviço",
     "usuariosDoApp": "Usuários do App",
-    "convites": "Convites",
+    "convites": "Convites da Banda",
     "totalGerados": "Total gerados",
     "utilizados": "Utilizados",
     "taxaDeAtivacao": "Taxa de ativação",
@@ -1140,7 +1144,7 @@
     "metodoTransferencia": "Transferência",
     "novaOferta": "Nova Oferta",
     "novaArea": "Nova Área",
-    "aba_convites": "Convites",
+    "aba_convites": "Banda",
     "aba_avisos": "Avisos",
     "aba_devocionais": "Devocionais",
     "aba_mensagens": "Mensagens",
@@ -1346,7 +1350,12 @@
     "lidera": "Lidera",
     "penielKids": "Peniel Kids",
     "liderDaBanda": "Líder da Banda",
-    "bandaPeniel": "Banda Peniel"
+    "bandaPeniel": "Banda Peniel",
+    "membrosStat": "Membros",
+    "visitouIgreja": "Visitou a igreja",
+    "visitouIgrejaDica": "Têm conta no app e foram registrados pela Recepção. Entre em contato com eles.",
+    "soPeloApp": "Só pelo app",
+    "soPeloAppDica": "Baixaram o app e criaram perfil, mas não há registro de visita à igreja."
   },
   "meses": {
     "janeiro": "Janeiro",
@@ -1585,5 +1594,16 @@
     "baixandoImagem": "Preparando a imagem…",
     "vazioTitulo": "Não chegou nada",
     "vazioTexto": "O Peniel abriu, mas o outro app não entregou o arquivo. Tente de novo ou envie pelo 📎 › Arquivo dentro do chat."
+  },
+  "lembretePerfil": {
+    "titulo": "Crie seu perfil",
+    "texto": "É grátis e leva menos de um minuto. Com o perfil você pode:",
+    "vantagemVersiculos": "Salvar seus versículos favoritos",
+    "vantagemPlano": "Acompanhar seu plano de leitura",
+    "vantagemOracao": "Enviar pedidos de oração",
+    "vantagemAvisos": "Receber avisos, lives e eventos da igreja",
+    "vantagemAniversario": "Ganhar uma mensagem no seu aniversário",
+    "criar": "Criar meu perfil",
+    "agoraNao": "Agora não"
   }
 }

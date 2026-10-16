@@ -228,7 +228,7 @@
     "contaExcluidaMsg": "Tu cuenta y tus datos han sido eliminados permanentemente.",
     "meuCadastro": "Mi Registro",
     "souMembroTitulo": "Soy miembro de Peniel Church",
-    "souMembroSub": "Activar mi acceso al Área de Miembros",
+    "souMembroSub": "Cómo obtener acceso al Área de Miembros",
     "entrarOuCriarConta": "Iniciar sesión o crear cuenta",
     "entrarOuCriarContaSub": "Guarda versículos, recibe avisos y sigue la agenda",
     "notificacoesFalha": "No se pudo cambiar las notificaciones ahora. Inténtalo de nuevo.",
@@ -920,7 +920,7 @@
   },
   "ativarMembro": {
     "titulo": "Área de Miembros",
-    "explicacao": "Si eres miembro de Peniel Church, activa tu acceso con el código que te envió tu líder.",
+    "explicacao": "El acceso de miembro lo concede el liderazgo de Peniel Church, directamente en la app. Si asistes a la iglesia, habla con nosotros y habilitamos tu cuenta.",
     "digiteOCodigo": "Introduce el código.",
     "codigoInvalido": "Código inválido o caducado.",
     "ativar": "Activar acceso de miembro",
@@ -930,8 +930,12 @@
     "semCodigoTitulo": "¿Todavía no tienes el código?",
     "semCodigoTexto": "Habla con el liderazgo para solicitar tu acceso. Puedes volver aquí cuando quieras para introducir el código.",
     "solicitarAcesso": "Hablar con el liderazgo",
-    "mensagemSolicitacao": "¡Hola! Me gustaría solicitar el acceso de miembro en la app de Peniel Church.",
-    "rodape": "Tu cuenta funciona con normalidad sin el código. El Área de Miembros es un espacio adicional para los miembros de Peniel Church."
+    "mensagemSolicitacao": "¡Hola! Asisto a Peniel Church y me gustaría tener acceso de miembro en la app.",
+    "rodape": "Tu perfil funciona normalmente como visitante. El Área de Miembros es un espacio más para los miembros de Peniel Church.",
+    "jaLiberadoTitulo": "¿Ya hablaste con el liderazgo?",
+    "jaLiberadoTexto": "Cuando lo habiliten, toca abajo para actualizar tu acceso.",
+    "conferir": "Comprobar mi acceso",
+    "aindaNaoLiberado": "Tu acceso aún no ha sido habilitado. En cuanto lo esté, la pestaña Miembros aparecerá en la app."
   },
   "bemVindo": {
     "titulo": "Bienvenido a Peniel Church",
@@ -1114,7 +1118,7 @@
     "distribuiOsVoluntariosPelosDomingos": "Reparte a los voluntarios por los domingos automáticamente",
     "areasDeServico": "Áreas de Servicio",
     "usuariosDoApp": "Usuarios de la App",
-    "convites": "Invitaciones",
+    "convites": "Invitaciones de la Banda",
     "totalGerados": "Total generadas",
     "utilizados": "Utilizadas",
     "taxaDeAtivacao": "Tasa de activación",
@@ -1140,7 +1144,7 @@
     "metodoTransferencia": "Transferencia",
     "novaOferta": "Nueva Ofrenda",
     "novaArea": "Nueva Área",
-    "aba_convites": "Invitaciones",
+    "aba_convites": "Banda",
     "aba_avisos": "Avisos",
     "aba_devocionais": "Devocionales",
     "aba_mensagens": "Mensajes",
@@ -1346,7 +1350,12 @@
     "lidera": "Lidera",
     "penielKids": "Peniel Kids",
     "liderDaBanda": "Líder de la Banda",
-    "bandaPeniel": "Banda Peniel"
+    "bandaPeniel": "Banda Peniel",
+    "membrosStat": "Miembros",
+    "visitouIgreja": "Visitó la iglesia",
+    "visitouIgrejaDica": "Tienen cuenta en la app y fueron registrados por la Recepción. Ponte en contacto con ellos.",
+    "soPeloApp": "Solo por la app",
+    "soPeloAppDica": "Descargaron la app y crearon un perfil, pero no hay registro de visita a la iglesia."
   },
   "meses": {
     "janeiro": "Enero",
@@ -1585,5 +1594,16 @@
     "baixandoImagem": "Preparando la imagen…",
     "vazioTitulo": "No llegó nada",
     "vazioTexto": "Peniel se abrió, pero la otra app no entregó el archivo. Inténtalo de nuevo o envíalo con 📎 › Archivo dentro del chat."
+  },
+  "lembretePerfil": {
+    "titulo": "Crea tu perfil",
+    "texto": "Es gratis y toma menos de un minuto. Con el perfil puedes:",
+    "vantagemVersiculos": "Guardar tus versículos favoritos",
+    "vantagemPlano": "Seguir tu plan de lectura",
+    "vantagemOracao": "Enviar peticiones de oración",
+    "vantagemAvisos": "Recibir avisos, directos y eventos de la iglesia",
+    "vantagemAniversario": "Recibir un mensaje en tu cumpleaños",
+    "criar": "Crear mi perfil",
+    "agoraNao": "Ahora no"
   }
 }

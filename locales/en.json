@@ -566,10 +566,10 @@
   "banda": {
     "titulo": "Peniel Band",
     "subtitulo": "Worship Ministry",
-    "gateBody": "Exclusive area for band members.\nEnter the access code you received from the leader.",
+    "gateBody": "Exclusive area for the Band team.\nThe Band leader or the Admin adds you right in the app.",
     "codigoDeAcesso": "ACCESS CODE",
     "entrar": "Enter",
-    "gateHint": "Don't have the code? Talk to the band leader.\nEach code can only be used once.",
+    "gateHint": "Not in the Band yet? Talk to the Band leader.",
     "erroValidarCodigo": "Couldn't validate the code. Please try again.",
     "codigoInvalido": "Invalid code.",
     "musicas": "songs",
@@ -822,7 +822,16 @@
     "ministro": "Worship leader",
     "ministroVoce": "You're leading worship at this service",
     "ministroNinguem": "Nobody set",
-    "ministroDefinir": "Tap to set"
+    "ministroDefinir": "Tap to set",
+    "conferirAcesso": "Check my access",
+    "aindaNaoAdicionado": "You haven't been added to the Band yet.",
+    "adicionar": "Add",
+    "adicionarIntegrante": "Add to the Band",
+    "adicionarIntegranteDica": "Church members who are not in the Band yet. Tap to add.",
+    "buscarMembro": "Search by name...",
+    "nenhumCandidato": "No one to add. Only church members appear here.",
+    "removerDaBanda": "Remove from the Band",
+    "removerDaBandaConfirma": "{{nome}} will leave the Band and future schedules. Past schedules stay in the history. Continue?"
   },
   "jovens": {
     "eventos": "events",

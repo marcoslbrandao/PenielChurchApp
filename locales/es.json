@@ -566,10 +566,10 @@
   "banda": {
     "titulo": "Banda Peniel",
     "subtitulo": "Ministerio de Alabanza",
-    "gateBody": "Área exclusiva para miembros de la banda.\nIngresa el código de acceso recibido del líder.",
+    "gateBody": "Área exclusiva para el equipo de la Banda.\nEl líder de la Banda o el Admin te agrega directamente en la app.",
     "codigoDeAcesso": "CÓDIGO DE ACCESO",
     "entrar": "Entrar",
-    "gateHint": "¿No tienes el código? Habla con el líder de la banda.\nCada código solo puede usarse una vez.",
+    "gateHint": "¿Aún no estás en la Banda? Habla con el líder de la Banda.",
     "erroValidarCodigo": "No se pudo validar el código. Inténtalo de nuevo.",
     "codigoInvalido": "Código inválido.",
     "musicas": "canciones",
@@ -822,7 +822,16 @@
     "ministro": "Ministro(a) de alabanza",
     "ministroVoce": "Tú dirigís la alabanza en este culto",
     "ministroNinguem": "Nadie definido",
-    "ministroDefinir": "Toca para definir"
+    "ministroDefinir": "Toca para definir",
+    "conferirAcesso": "Comprobar mi acceso",
+    "aindaNaoAdicionado": "Aún no te han agregado a la Banda.",
+    "adicionar": "Agregar",
+    "adicionarIntegrante": "Agregar a la Banda",
+    "adicionarIntegranteDica": "Miembros de la iglesia que aún no están en la Banda. Toca para agregar.",
+    "buscarMembro": "Buscar por nombre...",
+    "nenhumCandidato": "Nadie para agregar. Solo aparecen miembros de la iglesia.",
+    "removerDaBanda": "Quitar de la Banda",
+    "removerDaBandaConfirma": "{{nome}} sale de la Banda y de las escalas futuras. Las escalas pasadas quedan en el historial. ¿Continuar?"
   },
   "jovens": {
     "eventos": "eventos",

@@ -566,10 +566,10 @@
   "banda": {
     "titulo": "Banda Peniel",
     "subtitulo": "Ministère de Louange",
-    "gateBody": "Espace réservé aux membres du groupe.\nEntrez le code d'accès reçu du responsable.",
+    "gateBody": "Espace réservé à l'équipe de louange.\nLe responsable de la louange ou l'Admin vous ajoute directement dans l'app.",
     "codigoDeAcesso": "CODE D'ACCÈS",
     "entrar": "Entrer",
-    "gateHint": "Vous n'avez pas le code ? Contactez le responsable du groupe.\nChaque code ne peut être utilisé qu'une seule fois.",
+    "gateHint": "Pas encore dans l'équipe ? Parlez au responsable de la louange.",
     "erroValidarCodigo": "Impossible de valider le code. Veuillez réessayer.",
     "codigoInvalido": "Code invalide.",
     "musicas": "morceaux",
@@ -822,7 +822,16 @@
     "ministro": "Ministre de louange",
     "ministroVoce": "C'est vous qui conduisez la louange à ce culte",
     "ministroNinguem": "Personne de défini",
-    "ministroDefinir": "Touchez pour définir"
+    "ministroDefinir": "Touchez pour définir",
+    "conferirAcesso": "Vérifier mon accès",
+    "aindaNaoAdicionado": "Vous n'avez pas encore été ajouté à l'équipe.",
+    "adicionar": "Ajouter",
+    "adicionarIntegrante": "Ajouter à l'équipe",
+    "adicionarIntegranteDica": "Membres de l'église qui ne sont pas encore dans l'équipe. Touchez pour ajouter.",
+    "buscarMembro": "Rechercher par nom...",
+    "nenhumCandidato": "Personne à ajouter. Seuls les membres de l'église apparaissent ici.",
+    "removerDaBanda": "Retirer de l'équipe",
+    "removerDaBandaConfirma": "{{nome}} quitte l'équipe et les plannings à venir. Les plannings passés restent dans l'historique. Continuer ?"
   },
   "jovens": {
     "eventos": "événements",

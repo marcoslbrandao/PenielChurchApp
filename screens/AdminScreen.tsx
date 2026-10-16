@@ -2426,7 +2426,7 @@ export default function AdminScreen() {
   const ehAdmin = role === 'admin';
   // Quem só lidera área de escala começa (e fica) na aba Escalas.
   const abasVisiveis = ehAdmin
-    ? (['avisos', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'convites', 'textos', 'stats'] as const)
+    ? (['avisos', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'textos', 'stats'] as const)
     : (['escalas'] as const);
   const abaAtual = abasVisiveis.includes(activeTab as any) ? activeTab : 'escalas';
 
@@ -2456,7 +2456,7 @@ export default function AdminScreen() {
           <Text style={s.headerTitle}>{t('admin.painelAdmin')}</Text>
           <Text style={s.headerSub}>{ehAdmin ? t('admin.administrador') : t('admin.liderDeEscala')}</Text>
         </View>
-        {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && abaAtual !== 'textos' && (
+        {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && abaAtual !== 'textos' && abaAtual !== 'stats' && (
           <TouchableOpacity
             style={s.newBtn}
             onPress={() => {
@@ -2498,7 +2498,7 @@ export default function AdminScreen() {
               onPress={() => setActiveTab(tab)}
             >
               <Ionicons
-                name={tab === 'convites' ? 'ticket-outline' : tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : tab === 'textos' ? 'create-outline' : 'bar-chart-outline'}
+                name={tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : tab === 'textos' ? 'create-outline' : 'bar-chart-outline'}
                 size={14}
                 color={abaAtual === tab ? C.purple : C.textMuted}
               />
@@ -2530,81 +2530,6 @@ export default function AdminScreen() {
           contentContainerStyle={s.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}
         >
-
-          {/* ══ CONVITES ══════════════════════════════════════════════════════ */}
-          {abaAtual === 'convites' && (
-            <>
-              {/* Summary */}
-              <View style={s.summaryRow}>
-                <View style={s.summaryCard}>
-                  <Text style={[s.summaryNum, { color: C.success }]}>{invites.filter(i => !i.is_used).length}</Text>
-                  <Text style={s.summaryLabel}>{t('admin.disponiveis')}</Text>
-                </View>
-                <View style={s.summaryCard}>
-                  <Text style={[s.summaryNum, { color: C.textMuted }]}>{invites.filter(i => i.is_used).length}</Text>
-                  <Text style={s.summaryLabel}>{t('admin.usados')}</Text>
-                </View>
-                <View style={s.summaryCard}>
-                  <Text style={[s.summaryNum, { color: C.purple }]}>{invites.length}</Text>
-                  <Text style={s.summaryLabel}>{t('admin.total')}</Text>
-                </View>
-              </View>
-
-              {invites.length === 0 ? (
-                <View style={s.empty}>
-                  <Ionicons name="ticket-outline" size={40} color={C.textDim} />
-                  <Text style={s.emptyText}>{t('admin.nenhumConviteGeradoAinda')}</Text>
-                  <TouchableOpacity style={s.emptyBtn} onPress={() => setModalVisible(true)}>
-                    <Text style={s.emptyBtnText}>{t('admin.criarPrimeiroConvite')}</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                invites.map(invite => (
-                  <View key={invite.id} style={[s.inviteCard, invite.is_used && s.inviteCardUsed]}>
-                    <View style={s.inviteLeft}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={[s.inviteCode, invite.is_used && { color: C.textMuted }]}>
-                          {invite.code}
-                        </Text>
-                        {invite.tipo === 'banda' && (
-                          <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
-                            <Text style={[s.statusBadgeText, { color: C.purple }]}>{t('admin.pillBanda')}</Text>
-                          </View>
-                        )}
-                      </View>
-                      {invite.assigned_to_email && (
-                        <View style={s.inviteEmailRow}>
-                          <Ionicons name="mail-outline" size={12} color={C.textMuted} />
-                          <Text style={s.inviteEmail}>{invite.assigned_to_email}</Text>
-                        </View>
-                      )}
-                      <View style={s.inviteMetaRow}>
-                        {invite.is_used ? (
-                          <View style={[s.statusBadge, { backgroundColor: C.textMuted + '20' }]}>
-                            <Text style={[s.statusBadgeText, { color: C.textMuted }]}>✓ Usado em {formatDate(invite.used_at)}</Text>
-                          </View>
-                        ) : (
-                          <View style={[s.statusBadge, { backgroundColor: C.success + '18' }]}>
-                            <Text style={[s.statusBadgeText, { color: C.success }]}>Disponível · expira {formatDate(invite.expires_at)}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                    <View style={s.inviteActions}>
-                      {!invite.is_used && (
-                        <TouchableOpacity style={s.actionBtn} onPress={() => shareInvite(invite.code)}>
-                          <Ionicons name="share-outline" size={16} color={C.purple} />
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteInvite(invite.id)}>
-                        <Ionicons name="trash-outline" size={16} color={C.danger} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))
-              )}
-            </>
-          )}
 
           {/* ══ AVISOS ════════════════════════════════════════════════════════ */}
           {abaAtual === 'avisos' && (
@@ -3142,32 +3067,8 @@ export default function AdminScreen() {
                 })}
               </View>
 
-              <Text style={[s.sectionLabel, { marginTop: 24 }]}>{t('admin.convites')}</Text>
-              <View style={s.inviteStatsCard}>
-                <View style={s.inviteStatRow}>
-                  <Text style={s.inviteStatLabel}>{t('admin.totalGerados')}</Text>
-                  <Text style={s.inviteStatValue}>{invites.length}</Text>
-                </View>
-                <View style={s.inviteStatRow}>
-                  <Text style={s.inviteStatLabel}>{t('admin.utilizados')}</Text>
-                  <Text style={[s.inviteStatValue, { color: C.success }]}>{invites.filter(i => i.is_used).length}</Text>
-                </View>
-                <View style={[s.inviteStatRow, { borderBottomWidth: 0 }]}>
-                  <Text style={s.inviteStatLabel}>{t('admin.disponiveis')}</Text>
-                  <Text style={[s.inviteStatValue, { color: C.purple }]}>{invites.filter(i => !i.is_used).length}</Text>
-                </View>
-              </View>
-
-              {/* Taxa de conversão */}
-              {invites.length > 0 && (
-                <View style={s.conversionCard}>
-                  <Text style={s.conversionLabel}>{t('admin.taxaDeAtivacao')}</Text>
-                  <Text style={s.conversionValue}>
-                    {Math.round((invites.filter(i => i.is_used).length / invites.length) * 100)}%
-                  </Text>
-                  <Text style={s.conversionSub}>{t('admin.dosConvitesForamUtilizados')}</Text>
-                </View>
-              )}
+              {/* Convites (códigos) saíram em 16/10/2026: membros e Banda agora são
+                  adicionados direto pelo Admin / líder da Banda. */}
 
               {/* Aniversários do mês */}
               <Text style={[s.sectionLabel, { marginTop: 24 }]}>{t('admin.aniversariosDoMes')}</Text>

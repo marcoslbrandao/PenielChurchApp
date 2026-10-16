@@ -566,10 +566,10 @@
   "banda": {
     "titulo": "Banda Peniel",
     "subtitulo": "Ministério de Louvor",
-    "gateBody": "Área exclusiva para membros da banda.\nInsira o código de acesso recebido do líder.",
+    "gateBody": "Área exclusiva para a equipe da Banda.\nO líder da Banda ou o Admin adiciona você direto pelo app.",
     "codigoDeAcesso": "CÓDIGO DE ACESSO",
     "entrar": "Entrar",
-    "gateHint": "Não tem o código? Fale com o líder da banda.\nCada código só pode ser usado uma vez.",
+    "gateHint": "Ainda não está na Banda? Fale com o líder da Banda.",
     "erroValidarCodigo": "Não foi possível validar o código. Tente novamente.",
     "codigoInvalido": "Código inválido.",
     "musicas": "músicas",
@@ -822,7 +822,16 @@
     "ministro": "Ministro(a) de louvor",
     "ministroVoce": "Você conduz o louvor neste culto",
     "ministroNinguem": "Ninguém definido",
-    "ministroDefinir": "Toque para definir"
+    "ministroDefinir": "Toque para definir",
+    "conferirAcesso": "Conferir meu acesso",
+    "aindaNaoAdicionado": "Você ainda não foi adicionado à Banda.",
+    "adicionar": "Adicionar",
+    "adicionarIntegrante": "Adicionar à Banda",
+    "adicionarIntegranteDica": "Membros da igreja que ainda não estão na Banda. Toque para adicionar.",
+    "buscarMembro": "Buscar pelo nome...",
+    "nenhumCandidato": "Ninguém para adicionar. Só membros da igreja aparecem aqui.",
+    "removerDaBanda": "Remover da Banda",
+    "removerDaBandaConfirma": "{{nome}} sai da Banda e das escalas futuras. As escalas passadas continuam no histórico. Continuar?"
   },
   "jovens": {
     "eventos": "eventos",

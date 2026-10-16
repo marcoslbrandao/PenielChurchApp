@@ -129,7 +129,9 @@ type Presenca = {
   id: string; tipo: 'culto' | 'ensaio'; evento_id: string;
   profile_id: string; status: 'confirmado' | 'ausente';
 };
-type BandaMembro = { id: string; profile_id: string; nome: string; avatar_url?: string | null };
+// `ativo = false`: saiu da Banda. Some da Equipe e das escalas novas, mas
+// continua aqui para o histórico (escalas passadas, ministro do culto).
+type BandaMembro = { id: string; profile_id: string; nome: string; avatar_url?: string | null; ativo?: boolean };
 
 // Catálogo de funções do ministério (tabela `banda_funcoes`) e o N:N com as
 // pessoas. Substituiu a lista fixa de 8 instrumentos que vivia no código: dava
@@ -520,57 +522,41 @@ function rotuloDoDia(dia: string, hoje: string, lang: string, t: (k: string) => 
 }
 
 // ─── Gate ─────────────────────────────────────────────────────────────────────
+// Desde 16/10/2026 não existe mais código da Banda (decisão do Marcos): o Admin
+// ou o líder da Banda adiciona a pessoa pela aba Equipe. Esta tela só explica
+// isso e deixa a pessoa conferir se já foi adicionada.
 function InviteGate({ onUnlock }: { onUnlock: () => void }) {
   const { C, gate } = useBandaTema();
   const { t } = useTranslation();
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
+  const { user } = useAuth();
   const [checking, setChecking] = useState(false);
-  const shake = useRef(new Animated.Value(0)).current;
+  const [aindaNao, setAindaNao] = useState(false);
 
-  const dispararErro = (msg: string) => {
-    setError(msg);
-    Animated.sequence([
-      Animated.timing(shake, { toValue: 10, duration: 60, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: -10, duration: 60, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 6, duration: 60, useNativeDriver: true }),
-      Animated.timing(shake, { toValue: 0, duration: 60, useNativeDriver: true }),
-    ]).start();
-    setTimeout(() => setError(''), 3000);
-  };
-
-  const tryUnlock = async () => {
-    if (!code.trim()) return;
-    setChecking(true);
-    const { data, error: rpcError } = await supabase.rpc('use_banda_code', { p_code: code.trim() });
+  const conferir = async () => {
+    if (!user) return;
+    setChecking(true); setAindaNao(false);
+    const { data } = await supabase.from('profiles').select('banda_acesso, role').eq('id', user.id).single();
     setChecking(false);
-    if (rpcError) { dispararErro(t('banda.erroValidarCodigo')); return; }
-    if (!data?.success) { dispararErro(data?.error ?? t('banda.codigoInvalido')); return; }
-    onUnlock();
+    if (data?.banda_acesso || data?.role === 'admin') { onUnlock(); return; }
+    setAindaNao(true);
   };
 
   return (
     <SafeAreaView style={gate.safe}>
       <StatusBar barStyle={C.statusBar} backgroundColor={C.bg} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={gate.kav}>
-        <View style={gate.inner}>
-          <View style={gate.iconRing}><Ionicons name="musical-notes" size={36} color={C.primary} /></View>
-          <Text style={gate.title}>{t('banda.titulo')}</Text>
-          <Text style={gate.subtitle}>{t('banda.subtitulo')}</Text>
-          <Text style={gate.body}>{t('banda.gateBody')}</Text>
-          <Animated.View style={{ transform: [{ translateX: shake }], width: '100%' }}>
-            <TextInput style={[gate.input, !!error && gate.inputError]} placeholder={t('banda.codigoDeAcesso')} placeholderTextColor={C.textDim}
-              value={code} onChangeText={t => setCode(t.toUpperCase())} autoCapitalize="characters" returnKeyType="go" onSubmitEditing={tryUnlock} editable={!checking} />
-          </Animated.View>
-          {!!error && <Text style={gate.errorText}>{error}</Text>}
-          <TouchableOpacity style={[gate.btn, checking && { opacity: 0.7 }]} onPress={tryUnlock} activeOpacity={0.85} disabled={checking}>
-            {checking ? <ActivityIndicator color={C.onPrimary} /> : (
-              <><Text style={gate.btnText}>{t('banda.entrar')}</Text><Ionicons name="arrow-forward" size={18} color={C.onPrimary} /></>
-            )}
-          </TouchableOpacity>
-          <Text style={gate.hint}>{t('banda.gateHint')}</Text>
-        </View>
-      </KeyboardAvoidingView>
+      <View style={gate.inner}>
+        <View style={gate.iconRing}><Ionicons name="musical-notes" size={36} color={C.primary} /></View>
+        <Text style={gate.title}>{t('banda.titulo')}</Text>
+        <Text style={gate.subtitle}>{t('banda.subtitulo')}</Text>
+        <Text style={gate.body}>{t('banda.gateBody')}</Text>
+        <TouchableOpacity style={[gate.btn, checking && { opacity: 0.7 }]} onPress={conferir} activeOpacity={0.85} disabled={checking}>
+          {checking ? <ActivityIndicator color={C.onPrimary} /> : (
+            <><Ionicons name="refresh-outline" size={18} color={C.onPrimary} /><Text style={gate.btnText}>{t('banda.conferirAcesso')}</Text></>
+          )}
+        </TouchableOpacity>
+        {aindaNao && <Text style={[gate.errorText, { marginTop: 14, textAlign: 'center' }]}>{t('banda.aindaNaoAdicionado')}</Text>}
+        <Text style={gate.hint}>{t('banda.gateHint')}</Text>
+      </View>
     </SafeAreaView>
   );
 }
@@ -2164,9 +2150,11 @@ function EscalaLista({ escala, membros, onRemover, funcoes }: {
 // Um toque no cartão da Equipe abre isto. Guardar quem toca o quê é o que
 // permite a escala oferecer as funções certas primeiro — e o líder saber, sem
 // abrir culto por culto, que só duas pessoas cobrem o baixo.
-function MembroFuncoesModal({ membro, funcoes, membroFuncoes, onClose, onSaved }: {
+function MembroFuncoesModal({ membro, funcoes, membroFuncoes, onClose, onSaved, podeRemover, onRemovido }: {
   membro: BandaMembro | null; funcoes: BandaFuncao[]; membroFuncoes: MembroFuncao[];
   onClose: () => void; onSaved: () => void;
+  /** Admin ou líder da Banda: mostra "Remover da Banda". */
+  podeRemover?: boolean; onRemovido?: () => void;
 }) {
   const { C, md, s } = useBandaTema();
   const { t } = useTranslation();
@@ -2202,6 +2190,22 @@ function MembroFuncoesModal({ membro, funcoes, membroFuncoes, onClose, onSaved }
     }
     setSaving(false);
     onSaved(); onClose();
+  };
+
+  // Sai da Banda: some da Equipe e das escalas futuras; o histórico fica.
+  const removerDaBanda = () => {
+    if (!membro) return;
+    Alert.alert(t('banda.removerDaBanda'), t('banda.removerDaBandaConfirma', { nome: membro.nome }), [
+      { text: t('common.cancelar'), style: 'cancel' },
+      { text: t('banda.removerDaBanda'), style: 'destructive', onPress: async () => {
+        setSaving(true);
+        const { data, error } = await supabase.rpc('remover_da_banda', { p_profile_id: membro.profile_id });
+        setSaving(false);
+        const res = data as { success?: boolean; error?: string } | null;
+        if (error || !res?.success) { Alert.alert(t('common.erro'), error?.message ?? res?.error ?? ''); return; }
+        onRemovido?.(); onClose();
+      } },
+    ]);
   };
 
   return (
@@ -2243,7 +2247,97 @@ function MembroFuncoesModal({ membro, funcoes, membroFuncoes, onClose, onSaved }
           <TouchableOpacity style={[md.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
             {saving ? <ActivityIndicator color={C.onPrimary} /> : <><Ionicons name="save-outline" size={18} color={C.onPrimary} /><Text style={md.saveBtnText}>{t('banda.salvarAlteracoes')}</Text></>}
           </TouchableOpacity>
+          {podeRemover && (
+            <TouchableOpacity onPress={removerDaBanda} disabled={saving} style={{ alignItems: 'center', paddingVertical: 14 }} hitSlop={6}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: C.danger }}>{t('banda.removerDaBanda')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Adicionar integrante ────────────────────────────────────────────────────
+// Admin ou líder da Banda escolhe entre os membros da igreja que ainda não
+// estão na Banda (RPC listar_candidatos_banda). Substituiu o código da Banda.
+function AdicionarIntegranteModal({ visible, onClose, onAdicionado }: {
+  visible: boolean; onClose: () => void; onAdicionado: () => void;
+}) {
+  const { C, md } = useBandaTema();
+  const { t } = useTranslation();
+  const [lista, setLista] = useState<{ id: string; nome: string; avatar_url: string | null }[]>([]);
+  const [carregando, setCarregando] = useState(false);
+  const [busca, setBusca] = useState('');
+  const [adicionandoId, setAdicionandoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    setBusca('');
+    setCarregando(true);
+    supabase.rpc('listar_candidatos_banda').then(({ data, error }) => {
+      setCarregando(false);
+      if (error) { Alert.alert(t('common.erro'), error.message); return; }
+      setLista((data as any[]) ?? []);
+    });
+  }, [visible]);
+
+  const adicionar = async (id: string) => {
+    setAdicionandoId(id);
+    const { data, error } = await supabase.rpc('adicionar_a_banda', { p_profile_id: id });
+    setAdicionandoId(null);
+    const res = data as { success?: boolean; error?: string } | null;
+    if (error || !res?.success) { Alert.alert(t('common.erro'), error?.message ?? res?.error ?? ''); return; }
+    setLista(prev => prev.filter(p => p.id !== id));
+    onAdicionado();
+  };
+
+  const q = busca.trim().toLowerCase();
+  const filtrada = q ? lista.filter(p => p.nome.toLowerCase().includes(q)) : lista;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={md.overlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
+        <View style={md.sheet}>
+          <View style={md.header}>
+            <Text style={md.title}>{t('banda.adicionarIntegrante')}</Text>
+            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
+          </View>
+          <Text style={md.setlistSubtitulo}>{t('banda.adicionarIntegranteDica')}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface, borderWidth: 1, borderColor: C.border, borderRadius: 10, paddingHorizontal: 12, height: 42, marginBottom: 10 }}>
+            <Ionicons name="search-outline" size={16} color={C.textMuted} />
+            <TextInput
+              style={{ flex: 1, marginLeft: 8, fontSize: 14, color: C.text }}
+              placeholder={t('banda.buscarMembro')}
+              placeholderTextColor={C.textDim}
+              value={busca}
+              onChangeText={setBusca}
+            />
+          </View>
+          {carregando ? (
+            <ActivityIndicator color={C.primary} style={{ marginVertical: 24 }} />
+          ) : (
+            <ScrollView style={{ maxHeight: 420, flexShrink: 1 }} keyboardShouldPersistTaps="handled">
+              {filtrada.length === 0 ? (
+                <Text style={md.setlistVazio}>{t('banda.nenhumCandidato')}</Text>
+              ) : filtrada.map(p => (
+                <TouchableOpacity key={p.id} style={md.songRow} onPress={() => adicionar(p.id)} disabled={!!adicionandoId} activeOpacity={0.7}>
+                  {p.avatar_url
+                    ? <Image source={{ uri: p.avatar_url }} style={{ width: 34, height: 34, borderRadius: 17, marginRight: 10 }} />
+                    : <View style={{ width: 34, height: 34, borderRadius: 17, marginRight: 10, backgroundColor: C.primaryDim, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: C.onPrimaryDim }}>{iniciaisDoNome(p.nome)}</Text>
+                      </View>}
+                  <Text style={[md.songTitle, { flex: 1, color: C.text }]} numberOfLines={1}>{p.nome}</Text>
+                  {adicionandoId === p.id
+                    ? <ActivityIndicator size="small" color={C.primary} />
+                    : <Ionicons name="add-circle-outline" size={22} color={C.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -3325,6 +3419,10 @@ function BandaMain() {
   const [cultos, setCultos] = useState<Culto[]>([]);
   const [ensaios, setEnsaios] = useState<Ensaio[]>([]);
   const [membros, setMembros] = useState<BandaMembro[]>([]);
+  // Equipe e escalas novas só mostram quem está na Banda; `membros` (todos)
+  // continua servindo para os nomes do histórico.
+  const membrosAtivos = useMemo(() => membros.filter(m => m.ativo !== false), [membros]);
+  const [adicionarVisible, setAdicionarVisible] = useState(false);
   const [funcoes, setFuncoes] = useState<BandaFuncao[]>([]);
   const [membroFuncoes, setMembroFuncoes] = useState<MembroFuncao[]>([]);
   const [funcoesModal, setFuncoesModal] = useState(false);
@@ -4753,8 +4851,14 @@ function BandaMain() {
         <View style={{ flex: 1 }}>
           <View style={s.cultosToolbar}>
             <Text style={s.cultosCount}>
-              {membros.length} {membros.length !== 1 ? t('banda.integrantes') : t('banda.integranteSingular')}
+              {membrosAtivos.length} {membrosAtivos.length !== 1 ? t('banda.integrantes') : t('banda.integranteSingular')}
             </Text>
+            {podeVerRascunho && (
+              <TouchableOpacity style={s.acaoBtn} onPress={() => setAdicionarVisible(true)} activeOpacity={0.85}>
+                <Ionicons name="person-add-outline" size={15} color={C.primary} />
+                <Text style={[s.acaoTexto, { color: C.primary }]}>{t('banda.adicionar')}</Text>
+              </TouchableOpacity>
+            )}
             {podeVerRascunho && (
               <TouchableOpacity style={s.acaoBtn} onPress={() => setFuncoesModal(true)} activeOpacity={0.85}>
                 <Ionicons name="options-outline" size={15} color={C.textMuted} />
@@ -4762,7 +4866,7 @@ function BandaMain() {
               </TouchableOpacity>
             )}
           </View>
-          {membros.length === 0 ? (
+          {membrosAtivos.length === 0 ? (
             <View style={s.emptyState}>
               <Ionicons name="people-outline" size={48} color={C.textDim} />
               <Text style={s.emptyTitle}>{t('banda.equipeVaziaTitulo')}</Text>
@@ -4794,7 +4898,7 @@ function BandaMain() {
                 </View>
               )}
 
-              {membros.map(m => {
+              {membrosAtivos.map(m => {
                 const minhas = membroFuncoes.filter(mf => mf.membro_id === m.id);
                 const listaFuncoes = funcoes
                   .filter(f => minhas.some(mf => mf.funcao_id === f.id))
@@ -4878,6 +4982,13 @@ function BandaMain() {
             membroFuncoes={membroFuncoes}
             onClose={() => setMembroEditando(null)}
             onSaved={fetchFuncoes}
+            podeRemover={podeVerRascunho}
+            onRemovido={() => { fetchMembros(); fetchCultos(); fetchEnsaios(); fetchTimes(); }}
+          />
+          <AdicionarIntegranteModal
+            visible={adicionarVisible}
+            onClose={() => setAdicionarVisible(false)}
+            onAdicionado={fetchMembros}
           />
         </View>
       )}
@@ -5076,7 +5187,7 @@ function BandaMain() {
           onSalvo={fetchCultos}
           cultoId={ministroModal}
           ministroAtual={cultos.find(c => c.id === ministroModal)?.ministro_id ?? null}
-          membros={membros}
+          membros={membrosAtivos}
         />
       )}
 
@@ -5085,7 +5196,7 @@ function BandaMain() {
           visible={!!escalaModal}
           onClose={() => setEscalaModal(null)}
           onSaved={() => (escalaModal.tipo === 'culto' ? fetchCultos() : fetchEnsaios())}
-          membros={membros}
+          membros={membrosAtivos}
           tipo={escalaModal.tipo}
           eventoId={escalaModal.eventoId}
           times={times}

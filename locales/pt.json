@@ -24,7 +24,8 @@
     "tenteNovamente": "Tente novamente.",
     "enviando": "Enviando...",
     "removerFalhouTitulo": "Não foi possível remover",
-    "tentarNovamente": "Tentar novamente"
+    "tentarNovamente": "Tentar novamente",
+    "removerSemPermissao": "Não foi possível apagar. Você pode não ter permissão para isso, ou o item já tinha sido removido."
   },
   "home": {
     "bemVindo": "Bem-vindo de volta",

@@ -2182,7 +2182,7 @@ function MembroFuncoesModal({ membro, funcoes, membroFuncoes, onClose, onSaved, 
     setSaving(true);
     // Apaga e reescreve em vez de calcular o diff: são poucas linhas por pessoa
     // e o diff seria três consultas pra economizar uma.
-    await apagarLinha('banda_membro_funcoes', membro.id, 'membro_id');
+    await apagarLinha('banda_membro_funcoes', membro.id, 'membro_id', false);
     if (sel.length) {
       const { error } = await supabase.from('banda_membro_funcoes').insert(
         sel.map(funcao_id => ({ membro_id: membro.id, funcao_id, principal: funcao_id === principal })));

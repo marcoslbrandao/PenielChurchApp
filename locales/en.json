@@ -24,7 +24,8 @@
     "tenteNovamente": "Please try again.",
     "enviando": "Sending...",
     "removerFalhouTitulo": "Couldn't remove",
-    "tentarNovamente": "Try again"
+    "tentarNovamente": "Try again",
+    "removerSemPermissao": "Could not delete. You may not have permission, or the item was already removed."
   },
   "home": {
     "bemVindo": "Welcome back",

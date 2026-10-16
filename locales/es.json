@@ -24,7 +24,8 @@
     "tenteNovamente": "Inténtalo de nuevo.",
     "enviando": "Enviando...",
     "removerFalhouTitulo": "No se pudo eliminar",
-    "tentarNovamente": "Intentar de nuevo"
+    "tentarNovamente": "Intentar de nuevo",
+    "removerSemPermissao": "No se pudo eliminar. Puede que no tengas permiso o que el elemento ya se haya eliminado."
   },
   "home": {
     "bemVindo": "Bienvenido de nuevo",

@@ -20,11 +20,20 @@ export async function apagarLinha(
   tabela: string,
   valor: string,
   coluna = 'id',
+  /** false quando apagar zero linhas é normal (ex.: "apaga e reescreve"). */
+  avisarSeNada = true,
 ): Promise<boolean> {
-  const { error } = await supabase.from(tabela).delete().eq(coluna, valor);
+  const { error, count } = await supabase.from(tabela).delete({ count: 'exact' }).eq(coluna, valor);
   if (error) {
     console.log(`Falha ao apagar ${tabela}.${coluna}=${valor}:`, error);
     Alert.alert(i18n.t('common.removerFalhouTitulo'), error.message);
+    return false;
+  }
+  // A RLS sem policy de DELETE não devolve erro: só apaga zero linhas. Foi o
+  // caso da lixeira do Admin > Contato (16/10/2026). Agora isso também avisa.
+  if (count === 0 && avisarSeNada) {
+    console.log(`Nada apagado em ${tabela}.${coluna}=${valor} (sem permissão ou já não existia)`);
+    Alert.alert(i18n.t('common.removerFalhouTitulo'), i18n.t('common.removerSemPermissao'));
     return false;
   }
   return true;

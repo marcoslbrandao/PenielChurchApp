@@ -24,7 +24,8 @@
     "tenteNovamente": "Veuillez réessayer.",
     "enviando": "Envoi...",
     "removerFalhouTitulo": "Suppression impossible",
-    "tentarNovamente": "Réessayer"
+    "tentarNovamente": "Réessayer",
+    "removerSemPermissao": "Suppression impossible. Vous n'avez peut-être pas l'autorisation, ou l'élément a déjà été supprimé."
   },
   "home": {
     "bemVindo": "Bon retour",

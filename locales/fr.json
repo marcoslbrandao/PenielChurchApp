@@ -1591,7 +1591,14 @@
     "compartilharTitulo": "Chat de l'Église",
     "compartilharEntrar": "Connectez-vous avec votre compte membre pour partager dans le Chat de l'Église.",
     "compartilharSoMembros": "Le Chat de l'Église est réservé aux membres. Parlez aux responsables pour activer votre accès.",
-    "entrar": "Se connecter"
+    "entrar": "Se connecter",
+    "info": "Réactions et vu par",
+    "infoReacoes": "Voir les réactions",
+    "reacoesTitulo": "Réactions",
+    "vistoPor": "Vu par",
+    "vistoExplica": "Ceux qui ont ouvert le Chat de l’Église après ce message.",
+    "ninguemReagiu": "Aucune réaction pour l’instant.",
+    "ninguemViu": "Personne ne l’a encore ouvert."
   },
   "compartilhar": {
     "enviarPara": "Envoyer à",

@@ -20,7 +20,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import type { TFunction } from 'i18next';
 import { supabase } from './supabase';
-import { BUCKET_AUDIO } from './chatAudio';
+import { BUCKET_AUDIO, duracaoDoAudio } from './chatAudio';
 import {
   formatoDaImagem, prepararImagem, formatoDoArquivo, binarioTemSeletorDeArquivos,
   escolherArquivo, tamanhoLocal, VIDEO_MAX_SEGUNDOS, VIDEO_MAX_MB, ARQUIVO_MAX_MB,
@@ -198,12 +198,15 @@ async function enviarDocumento(o: Opcoes, arq: ArquivoEscolhido) {
     Alert.alert(o.t('chatGeral.arquivoGrandeTitulo'), o.t('chatGeral.arquivoGrande', { mb: ARQUIVO_MAX_MB }));
     return;
   }
-  await finalizar(o, async () => ({
-    midia_tipo: 'arquivo',
-    midia_path: await subir(o.prefixo, o.autorId, arq.uri, formato.ext, formato.contentType, true),
-    midia_nome: arq.nome.slice(0, 200), midia_tamanho: tamanho, midia_mime: formato.contentType,
-    midia_largura: null, midia_altura: null, midia_duracao_ms: null,
-  }));
+  await finalizar(o, async () => {
+    const duracao = formato.contentType.startsWith('audio/') ? await duracaoDoAudio(arq.uri) : null;
+    return {
+      midia_tipo: 'arquivo',
+      midia_path: await subir(o.prefixo, o.autorId, arq.uri, formato.ext, formato.contentType, true),
+      midia_nome: arq.nome.slice(0, 200), midia_tamanho: tamanho, midia_mime: formato.contentType,
+      midia_largura: null, midia_altura: null, midia_duracao_ms: duracao,
+    };
+  });
 }
 
 /** O menu do 📎: galeria (foto/vídeo), câmera e — nos binários 1.5.0+ — arquivo. */
@@ -303,10 +306,13 @@ export async function enviarCompartilhado(o: {
     const tamanho = a.tamanho ?? (await tamanhoLocal(a.uri));
     if (!tamanho) throw new Error(o.t('chatGeral.erroEnviarTexto'));
     if (tamanho > ARQUIVO_MAX_MB * 1024 * 1024) throw new Error(o.t('chatGeral.arquivoGrande', { mb: ARQUIVO_MAX_MB }));
+    const duracao = formato.contentType.startsWith('audio/')
+      ? (a.duracaoMs ? Math.round(a.duracaoMs) : await duracaoDoAudio(a.uri))
+      : null;
     campos = {
       midia_tipo: 'arquivo', midia_path: await subir(o.prefixo, o.autorId, a.uri, formato.ext, formato.contentType, false),
       midia_nome: a.nome.slice(0, 200), midia_tamanho: tamanho, midia_mime: formato.contentType,
-      midia_largura: null, midia_altura: null, midia_duracao_ms: null,
+      midia_largura: null, midia_altura: null, midia_duracao_ms: duracao,
     };
   }
   try {

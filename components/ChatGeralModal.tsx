@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Image, Pressable,
-  KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert, StatusBar, Keyboard, Linking,
+  KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert, StatusBar, Keyboard, Linking, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +24,7 @@ import {
   formatoDoArquivo, anexoEhAudio, formatarTamanho, binarioTemSeletorDeArquivos, escolherArquivo, tamanhoLocal,
   prepararImagem, type ArquivoEscolhido, type Compartilhado,
 } from '../lib/chatGeral';
-import { formatarTempo } from '../lib/chatAudio';
+import { formatarTempo, duracaoDoAudio } from '../lib/chatAudio';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
 // O chat geral dos membros, aberto pelo card da Home. Funciona como o WhatsApp:
@@ -94,6 +94,13 @@ export default function ChatGeralModal({
   const [enviando, setEnviando] = useState(false);
   const [respondendo, setRespondendo] = useState<MensagemGeral | null>(null);
   const [menuDe, setMenuDe] = useState<MensagemGeral | null>(null);
+  // "Reações e visualizações" de uma mensagem (16/10/2026).
+  const [infoDe, setInfoDe] = useState<MensagemGeral | null>(null);
+  const abrirInfo = (m: MensagemGeral) => {
+    setMenuDe(null);
+    // Espera o menu fechar: dois Modals trocando juntos travam no iPhone.
+    setTimeout(() => setInfoDe(m), 350);
+  };
   const [fotoAberta, setFotoAberta] = useState<string | null>(null);
   const [audioAtivo, setAudioAtivo] = useState<string | null>(null);
   const [gravando, setGravando] = useState(false);
@@ -337,11 +344,14 @@ export default function ChatGeralModal({
     setEnviando(true);
     let caminho: string | null = null;
     try {
+      // Áudio: mede antes de subir (o arquivo local pode ser apagado no envio).
+      const duracao = formato.contentType.startsWith('audio/') ? await duracaoDoAudio(arq.uri) : null;
       caminho = await enviarArquivo(arq.uri, userId, formato.ext, formato.contentType, apagarLocal);
       const legenda = texto.trim();
       await inserir({
         tipo: 'arquivo', texto: legenda, midia_path: caminho,
         midia_nome: arq.nome.slice(0, 200), midia_tamanho: tamanho, midia_mime: formato.contentType,
+        duracao_ms: duracao,
       });
       if (legenda) setTexto('');
       return true;
@@ -635,6 +645,8 @@ export default function ChatGeralModal({
                 <TouchableOpacity
                   key={c.emoji}
                   onPress={() => reagir(m, c.emoji)}
+                  onLongPress={() => setInfoDe(m)}
+                  delayLongPress={300}
                   style={[cs.chip, { backgroundColor: C.chipBg }, c.minha && { borderColor: COR }]}
                 >
                   <Text style={cs.chipEmoji}>{c.emoji}</Text>
@@ -810,6 +822,12 @@ export default function ChatGeralModal({
                 {!euSilenciado && (
                   <ItemMenu icone="arrow-undo-outline" texto={t('chatGeral.responder')} cor={C.text} onPress={() => responder(menuDe)} />
                 )}
+                <ItemMenu
+                  icone="information-circle-outline"
+                  texto={menuDe.autor_id === userId || ehAdmin ? t('chatGeral.info') : t('chatGeral.infoReacoes')}
+                  cor={C.text}
+                  onPress={() => abrirInfo(menuDe)}
+                />
                 {podeApagar(menuDe) && (
                   <ItemMenu icone="trash-outline" texto={t('chatGeral.apagar')} cor="#E84B1A" onPress={() => apagar(menuDe)} />
                 )}
@@ -831,6 +849,15 @@ export default function ChatGeralModal({
           </Pressable>
         </Modal>
 
+        {/* ── Reações e visualizações ────────────────────────────────────── */}
+        <InfoDaMensagem
+          mensagem={infoDe}
+          verVistos={!!infoDe && (infoDe.autor_id === userId || ehAdmin)}
+          C={C}
+          cs={cs}
+          onFechar={() => setInfoDe(null)}
+        />
+
         {/* ── Foto em tela cheia ─────────────────────────────────────────── */}
         <Modal visible={!!fotoAberta} transparent animationType="fade" onRequestClose={() => setFotoAberta(null)}>
           <Pressable style={cs.fotoFundo} onPress={() => setFotoAberta(null)}>
@@ -846,6 +873,75 @@ export default function ChatGeralModal({
 }
 
 // ─── Peças ───────────────────────────────────────────────────────────────────
+type LinhaInfo = { tipo: 'reacao' | 'visto'; user_id: string; nome: string; emoji: string | null };
+
+// Quem reagiu (todo membro vê) e quem viu (só o autor e o Admin; o banco
+// confere de novo em chat_geral_info_mensagem). "Viu" = abriu o Chat da
+// Igreja depois que a mensagem foi enviada.
+function InfoDaMensagem({ mensagem, verVistos, C, cs, onFechar }: {
+  mensagem: MensagemGeral | null; verVistos: boolean;
+  C: ReturnType<typeof paletaChat>; cs: ReturnType<typeof buildStyles>; onFechar: () => void;
+}) {
+  const { t } = useTranslation();
+  const [linhas, setLinhas] = useState<LinhaInfo[] | null>(null);
+
+  useEffect(() => {
+    if (!mensagem) return;
+    let vivo = true;
+    setLinhas(null);
+    supabase.rpc('chat_geral_info_mensagem', { p_mensagem: mensagem.id }).then(({ data, error }) => {
+      if (vivo) setLinhas(error ? [] : ((data ?? []) as LinhaInfo[]));
+    });
+    return () => { vivo = false; };
+  }, [mensagem?.id]);
+
+  const reacoes = (linhas ?? []).filter(l => l.tipo === 'reacao');
+  const vistos = (linhas ?? []).filter(l => l.tipo === 'visto');
+
+  const Pessoa = ({ l }: { l: LinhaInfo }) => (
+    <View style={st.infoLinha}>
+      <View style={[st.infoAvatar, { backgroundColor: C.chipBg }]}>
+        <Text style={[st.infoInicial, { color: COR }]}>{(l.nome.trim()[0] ?? '?').toUpperCase()}</Text>
+      </View>
+      <Text style={[st.infoNome, { color: C.text }]} numberOfLines={1}>{l.nome}</Text>
+      {l.emoji ? <Text style={{ fontSize: 22 }}>{l.emoji}</Text> : <Ionicons name="checkmark-done" size={18} color={COR} />}
+    </View>
+  );
+
+  return (
+    <Modal visible={!!mensagem} transparent animationType="slide" onRequestClose={onFechar}>
+      <Pressable style={cs.menuFundo} onPress={onFechar}>
+        <Pressable style={[cs.menu, { maxHeight: '75%', paddingHorizontal: 18 }]} onPress={() => {}}>
+          {linhas === null ? (
+            <ActivityIndicator color={COR} style={{ marginVertical: 30 }} />
+          ) : (
+            <ScrollView>
+              <Text style={[st.infoTitulo, { color: C.text }]}>
+                {t('chatGeral.reacoesTitulo')}{reacoes.length ? ` · ${reacoes.length}` : ''}
+              </Text>
+              {reacoes.length
+                ? reacoes.map(l => <Pessoa key={`r${l.user_id}`} l={l} />)
+                : <Text style={[st.infoVazio, { color: C.textMuted }]}>{t('chatGeral.ninguemReagiu')}</Text>}
+
+              {verVistos && (
+                <>
+                  <Text style={[st.infoTitulo, { color: C.text, marginTop: 18 }]}>
+                    {t('chatGeral.vistoPor')}{vistos.length ? ` · ${vistos.length}` : ''}
+                  </Text>
+                  <Text style={[st.infoExplica, { color: C.textMuted }]}>{t('chatGeral.vistoExplica')}</Text>
+                  {vistos.length
+                    ? vistos.map(l => <Pessoa key={`v${l.user_id}`} l={l} />)
+                    : <Text style={[st.infoVazio, { color: C.textMuted }]}>{t('chatGeral.ninguemViu')}</Text>}
+                </>
+              )}
+            </ScrollView>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 function ItemMenu({ icone, texto, cor, onPress }: { icone: keyof typeof Ionicons.glyphMap; texto: string; cor: string; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} style={st.menuItem}>
@@ -1029,6 +1125,13 @@ function PreviaLink({ texto, minha, C }: { texto: string; minha: boolean; C: Pal
 }
 
 const st = StyleSheet.create({
+  infoTitulo: { fontSize: 15, fontWeight: '800', marginBottom: 6 },
+  infoExplica: { fontSize: 12.5, marginBottom: 6 },
+  infoVazio: { fontSize: 14, paddingVertical: 8 },
+  infoLinha: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  infoAvatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  infoInicial: { fontSize: 15, fontWeight: '800' },
+  infoNome: { flex: 1, fontSize: 15, fontWeight: '600' },
   menuItem: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 20 },
   menuItemTexto: { fontSize: 16, fontWeight: '600' },
   foto: { borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center' },

@@ -1591,7 +1591,14 @@
     "compartilharTitulo": "Church Chat",
     "compartilharEntrar": "Sign in with your member account to share in the Church Chat.",
     "compartilharSoMembros": "The Church Chat is for members only. Talk to the leadership to activate your access.",
-    "entrar": "Sign in"
+    "entrar": "Sign in",
+    "info": "Reactions and seen by",
+    "infoReacoes": "See reactions",
+    "reacoesTitulo": "Reactions",
+    "vistoPor": "Seen by",
+    "vistoExplica": "People who opened the Church Chat after this message.",
+    "ninguemReagiu": "No reactions yet.",
+    "ninguemViu": "No one has opened it yet."
   },
   "compartilhar": {
     "enviarPara": "Send to",

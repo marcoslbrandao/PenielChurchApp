@@ -1591,7 +1591,14 @@
     "compartilharTitulo": "Chat da Igreja",
     "compartilharEntrar": "Entre com sua conta de membro para compartilhar no Chat da Igreja.",
     "compartilharSoMembros": "O Chat da Igreja é só para membros. Fale com a liderança para ativar seu acesso.",
-    "entrar": "Entrar"
+    "entrar": "Entrar",
+    "info": "Reações e quem viu",
+    "infoReacoes": "Ver reações",
+    "reacoesTitulo": "Reações",
+    "vistoPor": "Visto por",
+    "vistoExplica": "Quem abriu o Chat da Igreja depois desta mensagem.",
+    "ninguemReagiu": "Ninguém reagiu ainda.",
+    "ninguemViu": "Ninguém abriu ainda."
   },
   "compartilhar": {
     "enviarPara": "Enviar para",

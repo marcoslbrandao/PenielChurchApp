@@ -12,7 +12,7 @@
 // `limpar-audios-chat` remove o arquivo órfão na passada seguinte.
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
-import { RecordingPresets, type RecordingOptions } from 'expo-audio';
+import { RecordingPresets, createAudioPlayer, type AudioPlayer, type RecordingOptions } from 'expo-audio';
 import { supabase } from './supabase';
 
 export const BUCKET_AUDIO = 'chat-audio';
@@ -68,6 +68,29 @@ export async function urlDoAudio(caminho: string): Promise<string> {
 export async function apagarAudio(caminho: string) {
   urlsAssinadas.delete(caminho);
   await supabase.storage.from(BUCKET_AUDIO).remove([caminho]).then(() => {}, () => {});
+}
+
+/**
+ * Duração (ms) de um arquivo de áudio do celular — ex.: o mp3 do Presente
+ * Diário que chega pelo Compartilhar. Com ela o anexo aparece igual a uma
+ * mensagem de voz (player já com o tempo), em vez de 0:00 até tocar.
+ * Melhor esforço: em até 5 s, senão null (o player descobre ao tocar).
+ */
+export async function duracaoDoAudio(uri: string): Promise<number | null> {
+  let p: AudioPlayer | null = null;
+  try {
+    p = createAudioPlayer({ uri });
+    const inicio = Date.now();
+    while (Date.now() - inicio < 5000) {
+      if (p.isLoaded && p.duration > 0) return Math.max(1, Math.round(p.duration * 1000));
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    try { p?.remove(); } catch { /* já liberado */ }
+  }
 }
 
 export function formatarTempo(segundos: number): string {

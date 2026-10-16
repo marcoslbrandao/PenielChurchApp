@@ -45,7 +45,7 @@ const COR_IGREJA = '#6A55E0';
 export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: () => void }) {
   const { t } = useTranslation();
   const { hasShareIntent, shareIntent, resetShareIntent, error: erroShare } = useShareIntent({ resetOnBackground: true });
-  const { user } = useAuth();
+  const { user, loading: carregandoSessao } = useAuth();
   const { ehMembro, ehAdmin, carregando } = useAcesso();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -95,7 +95,9 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
     // Espera a sessão e o papel: no arranque a frio eles chegam depois.
     if (!hasShareIntent) return;
     ultimoRecebido.current = Date.now();
-    if (carregando) return;
+    // Este componente tem a própria instância do useAuth: espera ela também,
+    // senão o "user" ainda vazio daqui pedia login a quem já está logado.
+    if (carregando || carregandoSessao) return;
 
     const f = shareIntent.files?.[0];
     const novo: Compartilhado = f
@@ -141,7 +143,7 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
       return;
     }
     abrirDestinos(uid, novo);
-  }, [hasShareIntent, carregando, user, ehMembro]);
+  }, [hasShareIntent, carregando, carregandoSessao, user, ehMembro]);
 
   const abrirDestinos = (uid: string, novo: Compartilhado) => {
     setConteudo(novo);

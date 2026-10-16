@@ -25,6 +25,7 @@ class ShareViewController: UIViewController {
   let pkpassContentType: String = "com.apple.pkpass"
   let pdfContentType: String = UTType.pdf.identifier
   let vcardContentType: String = "public.vcard"
+  let audioContentType: String = UTType.audio.identifier
 
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -40,7 +41,24 @@ class ShareViewController: UIViewController {
         dismissWithError(message: "No content found")
         return
       }
-      for (index, attachment) in (attachments).enumerated() {
+      // Peniel (16/10/2026): o app da RTM manda ARQUIVO (audio/imagem) ou link
+      // JUNTO com um texto (o titulo). Cada item era tratado em separado e cada
+      // um gravava por cima do outro: o texto vinha por ultimo e apagava o
+      // arquivo, entao no Peniel chegava so o titulo. Agora, se veio qualquer
+      // coisa alem de texto puro, o texto solto e descartado.
+      let soTexto: (NSItemProvider) -> Bool = { a in
+        a.hasItemConformingToTypeIdentifier(self.textContentType)
+          && ![self.imageContentType, self.videoContentType, self.audioContentType, self.fileURLType,
+               self.pdfContentType, self.pkpassContentType, self.vcardContentType,
+               self.propertyListType, self.urlContentType]
+            .contains { a.hasItemConformingToTypeIdentifier($0) }
+      }
+      var itens = attachments
+      if itens.contains(where: { !soTexto($0) }) {
+        itens = itens.filter { !soTexto($0) }
+        content.attachments = itens
+      }
+      for (index, attachment) in itens.enumerated() {
         if attachment.hasItemConformingToTypeIdentifier(imageContentType) {
           await handleImages(content: content, attachment: attachment, index: index)
         } else if attachment.hasItemConformingToTypeIdentifier(videoContentType) {
@@ -49,6 +67,8 @@ class ShareViewController: UIViewController {
           await handleVCard(content: content, attachment: attachment, index: index) 
         } else if attachment.hasItemConformingToTypeIdentifier(fileURLType) {
           await handleFiles(content: content, attachment: attachment, index: index)
+        } else if attachment.hasItemConformingToTypeIdentifier(audioContentType) {
+          await handleAudio(content: content, attachment: attachment, index: index)
         } else if attachment.hasItemConformingToTypeIdentifier(pkpassContentType) {
           await handlePkPass(content: content, attachment: attachment, index: index)
         } else if attachment.hasItemConformingToTypeIdentifier(pdfContentType) {
@@ -122,6 +142,13 @@ class ShareViewController: UIViewController {
   private func handleUrl(content: NSExtensionItem, attachment: NSItemProvider, index: Int) async {
     Task.detached {
       if let item = try! await attachment.loadItem(forTypeIdentifier: self.urlContentType) as? URL {
+        // Peniel (16/10/2026): link que e um arquivo do aparelho (file://) segue como arquivo.
+        if item.isFileURL {
+          Task { @MainActor in
+            await self.handleFileURL(content: content, url: item, index: index)
+          }
+          return
+        }
         Task { @MainActor in
 
           self.sharedWebUrl.append(WebUrl(url: item.absoluteString, meta: ""))
@@ -413,6 +440,40 @@ class ShareViewController: UIViewController {
         NSLog("[ERROR] Cannot load pdf content !\(String(describing: content))")
         await self.dismissWithError(
           message: "Cannot load pdf content \(String(describing: content))")
+      }
+    }
+  }
+
+  // Peniel (16/10/2026): audio que chega so como public.audio (mp3/m4a), sem file-url.
+  private func handleAudio(content: NSExtensionItem, attachment: NSItemProvider, index: Int) async {
+    let tipo = attachment.registeredTypeIdentifiers.first {
+      UTType($0)?.conforms(to: .audio) ?? false
+    } ?? self.audioContentType
+    _ = attachment.loadFileRepresentation(forTypeIdentifier: tipo) { url, error in
+      guard let url = url else {
+        NSLog("[ERROR] Cannot load audio content: \(String(describing: error))")
+        DispatchQueue.main.async { self.dismissWithError(message: "Cannot load audio content") }
+        return
+      }
+      let ext = url.pathExtension.isEmpty
+        ? (UTType(tipo)?.preferredFilenameExtension ?? "m4a") : url.pathExtension
+      var nome = attachment.suggestedName ?? url.deletingPathExtension().lastPathComponent
+      if (nome as NSString).pathExtension.lowercased() == ext.lowercased() {
+        nome = (nome as NSString).deletingPathExtension
+      }
+      if nome.isEmpty { nome = "audio" }
+      let pasta = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+      try? FileManager.default.createDirectory(at: pasta, withIntermediateDirectories: true)
+      let destino = pasta.appendingPathComponent("\(nome).\(ext)")
+      // Copia ja: o iOS apaga `url` assim que este bloco termina.
+      let ok = self.copyFile(at: url, to: destino)
+      Task { @MainActor in
+        if ok {
+          await self.handleFileURL(content: content, url: destino, index: index)
+        } else {
+          self.dismissWithError(message: "Cannot copy audio content")
+        }
       }
     }
   }

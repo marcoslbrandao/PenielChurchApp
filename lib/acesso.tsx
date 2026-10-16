@@ -42,10 +42,16 @@ export function AcessoProvider({ children }: { children: React.ReactNode }) {
   const [papel, setPapel] = useState<Papel | null>(null);
   const [carregandoPapel, setCarregandoPapel] = useState(false);
   const [lideraGrupo, setLideraGrupo] = useState(false);
+  // De QUAL usuário é o papel carregado. Sem isso havia uma renderização em
+  // que a sessão já tinha chegado, mas a busca do papel ainda nem começara
+  // (o efeito roda depois): carregando=false e papel=null → "não é membro".
+  // O "Compartilhar → Peniel" (arranque a frio) caía bem nesse instante e
+  // mostrava "O Chat da Igreja é só para membros" para um membro (16/10/2026).
+  const [papelDe, setPapelDe] = useState<string | null>(null);
   const userId = user?.id ?? null;
 
   const recarregar = useCallback(async () => {
-    if (!userId) { setPapel(null); setLideraGrupo(false); return; }
+    if (!userId) { setPapel(null); setLideraGrupo(false); setPapelDe(null); return; }
     setCarregandoPapel(true);
     // Liderar um grupo entra na conta junto com o papel. Nomear alguém em
     // `group_leaders` não mexe no `role`, então a pessoa virava líder de um
@@ -57,6 +63,7 @@ export function AcessoProvider({ children }: { children: React.ReactNode }) {
     ]);
     setPapel((data?.role as Papel) ?? 'visitante');
     setLideraGrupo((liderancas ?? []).length > 0);
+    setPapelDe(userId);
     setCarregandoPapel(false);
   }, [userId]);
 
@@ -73,7 +80,7 @@ export function AcessoProvider({ children }: { children: React.ReactNode }) {
         papel,
         ehMembro,
         ehAdmin,
-        carregando: loading || carregandoPapel,
+        carregando: loading || carregandoPapel || (userId !== null && papelDe !== userId),
         recarregar,
         definirPapel: setPapel,
       }}

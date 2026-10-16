@@ -44,7 +44,7 @@ function abaPrincipal(screen: string, params?: any): Destino {
 
 export function destinoDaNotificacao(
   dados: DadosNotificacao | undefined | null,
-  acesso: { ehMembro: boolean; logado: boolean },
+  acesso: { ehMembro: boolean; logado: boolean; ehAdmin?: boolean },
 ): Destino | null {
   if (!dados?.type) return null;
   const { type, grupo, origem } = dados;
@@ -80,6 +80,12 @@ export function destinoDaNotificacao(
       // membro e toca num push de ontem cairia numa aba que não existe mais
       // para ele, e o React Navigation simplesmente não navegaria.
       return podeMembros ? abaMembros('Banda') : SININHO;
+    case 'admin_contato':
+    case 'admin_oracao':
+      // Push só do Admin (mensagem de Contato / pedido de oração): abre o
+      // painel Admin já na aba certa.
+      if (!acesso.logado || !acesso.ehAdmin) return SININHO;
+      return abaMembros('Admin', { aba: type === 'admin_contato' ? 'contato' : 'oracao' });
     case 'aniversario_visitante':
       // Parabéns do próprio visitante: o cartão está na Home.
       return abaPrincipal('Inicio');

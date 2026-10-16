@@ -190,7 +190,7 @@ function MainTabs() {
 // montar. Sem essa chamada, o recurso funciona perfeitamente nos testes (app
 // em segundo plano) e nunca na vida real.
 function RoteadorDeNotificacoes({ navPronta }: { navPronta: boolean }) {
-  const { ehMembro, carregando } = useAcesso();
+  const { ehMembro, ehAdmin, carregando } = useAcesso();
   const { isLoggedIn } = useAuth();
   const [pendente, setPendente] = useState<any>(null);
   const jaTratouInicial = useRef(false);
@@ -217,7 +217,7 @@ function RoteadorDeNotificacoes({ navPronta }: { navPronta: boolean }) {
     // sininho nos primeiros segundos depois de abrir o app — o mesmo engano
     // que a guarda de `carregandoPapel` evita nos atalhos da Home.
     if (!pendente || !navPronta || carregando || !navigationRef.isReady()) return;
-    const destino = destinoDaNotificacao(pendente, { ehMembro, logado: isLoggedIn });
+    const destino = destinoDaNotificacao(pendente, { ehMembro, ehAdmin, logado: isLoggedIn });
     setPendente(null);
     if (!destino) return;
     // O ref é criado sem tipagem de rotas (`createNavigationContainerRef()`
@@ -225,7 +225,7 @@ function RoteadorDeNotificacoes({ navPronta }: { navPronta: boolean }) {
     // não aceita `never` no segundo. O cast é na função, não nos valores:
     // assim `nome` e `params` continuam conferidos aqui dentro.
     (navigationRef.navigate as (nome: string, params?: any) => void)(destino.nome, destino.params);
-  }, [pendente, navPronta, carregando, ehMembro, isLoggedIn]);
+  }, [pendente, navPronta, carregando, ehMembro, ehAdmin, isLoggedIn]);
 
   return null;
 }

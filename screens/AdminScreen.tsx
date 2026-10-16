@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -2395,6 +2396,17 @@ export default function AdminScreen() {
   };
 
   useEffect(() => { if (!loadingRole && role) fetchData(); }, [loadingRole, role, fetchData]);
+
+  // Toque no push do Admin (Contato / pedido de oração) chega aqui com
+  // `aba`: abre direto nela e relê a lista, para a mensagem nova já aparecer.
+  const route = useRoute<any>();
+  const abaDoPush = route.params?.aba as string | undefined;
+  useEffect(() => {
+    if (abaDoPush === 'contato' || abaDoPush === 'oracao') {
+      setActiveTab(abaDoPush);
+      if (!loadingRole && role) fetchData();
+    }
+  }, [abaDoPush, route.params]);
 
   const deleteInvite = (id: string) => {
     Alert.alert(t('admin.removerConvite'), t('admin.desejaRemoverEsteCodigo'), [

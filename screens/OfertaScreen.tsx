@@ -160,7 +160,7 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
         )}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets>
 
         {/* ── Valor ─────────────────────────────────────────────────────────── */}
         <View style={styles.valorCard}>

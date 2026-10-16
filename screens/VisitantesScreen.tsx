@@ -23,6 +23,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
   ActivityIndicator, StatusBar, RefreshControl, Alert, Linking, Modal,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -355,7 +356,8 @@ export default function VisitantesScreen() {
       {/* Ficha e follow-up */}
       <Modal visible={!!aberto} animationType="slide" transparent onRequestClose={() => setAberto(null)}>
         <View style={s.modalFundo}>
-          <View style={s.modalCartao}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
+          <View style={[s.modalCartao, { maxHeight: '100%' }]}>
             <View style={s.modalTopo}>
               <Text style={s.modalTitulo} numberOfLines={1}>{aberto?.nome}</Text>
               <TouchableOpacity onPress={() => setAberto(null)} hitSlop={10}>
@@ -363,7 +365,7 @@ export default function VisitantesScreen() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flexShrink: 1 }}>
+            <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
               {!!aberto?.telefone && <Linha s={s} C={C} icone="call-outline" texto={aberto.telefone} />}
               {!!aberto?.email && <Linha s={s} C={C} icone="mail-outline" texto={aberto.email} />}
               <Linha s={s} C={C} icone="calendar-outline"
@@ -422,13 +424,15 @@ export default function VisitantesScreen() {
               </TouchableOpacity>
             </View>
           </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
       {/* Equipe de acolhimento — só admin */}
       <Modal visible={equipeAberta} animationType="slide" transparent
         onRequestClose={() => setEquipeAberta(false)}>
         <View style={s.modalFundo}>
-          <View style={s.modalCartao}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
+          <View style={[s.modalCartao, { maxHeight: '100%' }]}>
             <View style={s.modalTopo}>
               <Text style={s.modalTitulo}>{t('visitantes.equipesTitulo')}</Text>
               <TouchableOpacity onPress={() => setEquipeAberta(false)} hitSlop={10}>
@@ -462,7 +466,7 @@ export default function VisitantesScreen() {
               />
             </View>
 
-            <ScrollView style={{ flexShrink: 1 }}>
+            <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
               {achados.map(p => (
                 <TouchableOpacity key={p.id} style={s.pessoaLinha} onPress={() => adicionarNaEquipe(p)}>
                   <Ionicons name="add-circle-outline" size={20} color={C.success} />
@@ -488,6 +492,7 @@ export default function VisitantesScreen() {
               )}
             </ScrollView>
           </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </SafeAreaView>

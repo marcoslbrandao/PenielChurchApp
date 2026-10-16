@@ -125,13 +125,14 @@ function EditProfileModal({ visible, profile, userId, onClose, onSaved, mostrarA
     <Modal visible={visible} animationType="slide" transparent>
       <View style={em.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
-          <View style={em.sheet}>
+          <View style={[em.sheet, { maxHeight: '100%' }]}>
             <View style={em.header}>
               <Text style={em.title}>{t('perfil.editarPerfil')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
+            <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
             <View style={em.field}>
               <Text style={em.label}>{t('auth.nomeCompleto')}</Text>
               <TextInput style={em.input} value={fullName} onChangeText={setFullName}
@@ -153,6 +154,7 @@ function EditProfileModal({ visible, profile, userId, onClose, onSaved, mostrarA
             <TouchableOpacity style={[em.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : <Text style={em.saveBtnText}>{t('perfil.salvarAlteracoes')}</Text>}
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -358,16 +360,21 @@ function PrayerRequestsModal({ visible, userId, onClose }: {
                                { bg: '#EEF4FF', text: C.primary, label: t('perfil.statusAberto') };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={lm.overlay}>
-        <View style={lm.sheet}>
+        {/* O KeyboardAvoidingView envolve a FOLHA inteira (antes envolvia só o
+            formulário, por dentro da folha, e não empurrava nada: o teclado
+            cobria o texto). O formulário rola, então dá para arrastar e ver
+            o que se está escrevendo. */}
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ width: '100%', maxHeight: '92%' }}>
+        <View style={[lm.sheet, { maxHeight: '100%' }]}>
           <View style={lm.header}>
             <Text style={lm.title}>{t('perfil.pedidosDeOracao')}</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={22} color={C.textMuted} /></TouchableOpacity>
           </View>
 
           {showForm ? (
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
               <Text style={lm.emptyText}>{t('perfil.pedidoPrivadoAviso')}</Text>
               <View style={{ height: 12 }} />
               <TextInput style={lm.input} placeholder={t('perfil.tituloPlaceholderOracao')} placeholderTextColor={C.textDim}
@@ -380,7 +387,7 @@ function PrayerRequestsModal({ visible, userId, onClose }: {
               <TouchableOpacity onPress={() => setShowForm(false)} style={{ alignItems: 'center', marginTop: -4, marginBottom: 8 }}>
                 <Text style={{ color: C.textMuted, fontSize: 13 }}>{t('common.cancelar')}</Text>
               </TouchableOpacity>
-            </KeyboardAvoidingView>
+            </ScrollView>
           ) : (
             <>
               <TouchableOpacity style={lm.addBtn} onPress={() => setShowForm(true)}>
@@ -414,6 +421,7 @@ function PrayerRequestsModal({ visible, userId, onClose }: {
             </>
           )}
         </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

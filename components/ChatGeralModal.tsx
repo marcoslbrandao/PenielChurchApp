@@ -25,6 +25,8 @@ import {
   prepararImagem, type ArquivoEscolhido, type Compartilhado,
 } from '../lib/chatGeral';
 import { formatarTempo, duracaoDoAudio } from '../lib/chatAudio';
+import RegrasDoChat from './RegrasDoChat';
+import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/moderacao';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
 // O chat geral dos membros, aberto pelo card da Home. Funciona como o WhatsApp:
@@ -109,6 +111,10 @@ export default function ChatGeralModal({
   const inputRef = useRef<TextInput>(null);
 
   const euSilenciado = silenciados.has(userId);
+  // Moderação (17/10/2026, diretriz 1.2 da Apple): Denunciar e Bloquear
+  // voltaram ao menu, Regras da comunidade antes de entrar, filtro de
+  // palavras no envio. Silenciar = suspender de TODOS os chats.
+  const mod = useModeracaoChat(userId, visible);
   // Arquivo recebido pelo menu Compartilhar, esperando o toque em Enviar.
   const [pendente, setPendente] = useState<Compartilhado['arquivo'] | null>(null);
   const mostrarMic = podeGravar && !pendente && (gravando || !texto.trim());
@@ -153,7 +159,7 @@ export default function ChatGeralModal({
     setReacoes((reac.data ?? []) as Reacao[]);
     setSilenciados(new Set(((sil.data ?? []) as { user_id: string }[]).map(r => r.user_id)));
     if (ehAdmin) {
-      const { data } = await supabase.from('chat_geral_denuncias').select('mensagem_id');
+      const { data } = await supabase.from('chat_denuncias').select('mensagem_id').eq('chat', 'geral').eq('status', 'aberta');
       const cont: Record<string, number> = {};
       for (const d of (data ?? []) as { mensagem_id: string }[]) cont[d.mensagem_id] = (cont[d.mensagem_id] ?? 0) + 1;
       setDenuncias(cont);
@@ -208,6 +214,7 @@ export default function ChatGeralModal({
     const asc: Linha[] = [];
     let diaAnterior = '';
     for (const m of mensagens) {
+      if (mod.bloqueados.has(m.autor_id)) continue;
       const dia = chaveDoDia(m.created_at);
       if (dia !== diaAnterior) {
         asc.push({ tipo: 'dia', id: 'dia-' + dia, rotulo: rotuloDoDia(m.created_at, t('chatGeral.hoje'), t('chatGeral.ontem')) });
@@ -216,7 +223,7 @@ export default function ChatGeralModal({
       asc.push({ tipo: 'msg', id: m.id, msg: m });
     }
     return asc.reverse();
-  }, [mensagens, t]);
+  }, [mensagens, t, mod.bloqueados]);
 
   const porId = useMemo(() => {
     const mapa = new Map<string, MensagemGeral>();
@@ -252,6 +259,7 @@ export default function ChatGeralModal({
   const enviarTexto = async () => {
     const tx = texto.trim();
     if (!tx || enviando) return;
+    if (barrarSeOfensivo(tx, t)) return;
     setEnviando(true);
     try {
       await inserir({ tipo: 'texto', texto: tx });
@@ -379,6 +387,7 @@ export default function ChatGeralModal({
   const enviarPendente = async () => {
     const a = pendente;
     if (!a || enviando) return;
+    if (barrarSeOfensivo(texto, t)) return;
     const mime = (a.mime ?? '').toLowerCase();
     const midia: MidiaLocal = {
       uri: a.uri, mimeType: a.mime, width: a.largura, height: a.altura,
@@ -419,6 +428,7 @@ export default function ChatGeralModal({
 
   const anexar = () => {
     Keyboard.dismiss();
+    if (barrarSeOfensivo(texto, t)) return;
     Alert.alert(t('chatGeral.titulo'), undefined, [
       { text: t('chatGeral.galeria'), onPress: escolherDaGaleria },
       { text: t('chatGeral.camera'), onPress: tirarFoto },
@@ -478,17 +488,13 @@ export default function ChatGeralModal({
 
   const denunciar = (msg: MensagemGeral) => {
     setMenuDe(null);
-    Alert.alert(t('chatGeral.denunciarTitulo'), t('chatGeral.denunciarTexto'), [
-      { text: t('common.cancelar'), style: 'cancel' },
-      {
-        text: t('chatGeral.denunciar'), style: 'destructive', onPress: async () => {
-          const { error } = await supabase.from('chat_geral_denuncias').insert({ mensagem_id: msg.id });
-          if (error && error.code === '23505') { Alert.alert(t('chatGeral.jaDenunciada')); return; }
-          if (error) { Alert.alert(t('common.erro'), error.message); return; }
-          Alert.alert(t('chatGeral.denunciada'));
-        },
-      },
-    ]);
+    // Espera o menu fechar: Alert junto com o fechamento do Modal some no iPhone.
+    setTimeout(() => denunciarMensagem('geral', msg.id, t), 350);
+  };
+
+  const bloquear = (msg: MensagemGeral) => {
+    setMenuDe(null);
+    setTimeout(() => mod.bloquear(msg.autor_id, msg.autor_nome, t), 350);
   };
 
   const alternarSilencio = (msg: MensagemGeral) => {
@@ -501,10 +507,10 @@ export default function ChatGeralModal({
       });
       return;
     }
-    Alert.alert(t('chatGeral.silenciarTitulo'), t('chatGeral.silenciarTexto', { nome }), [
+    Alert.alert(t('moderacao.suspenderTitulo'), t('moderacao.suspenderTexto', { nome }), [
       { text: t('common.cancelar'), style: 'cancel' },
       {
-        text: t('chatGeral.silenciar', { nome }), style: 'destructive', onPress: async () => {
+        text: t('moderacao.suspender'), style: 'destructive', onPress: async () => {
           const { error } = await supabase.from('chat_geral_silenciados').insert({ user_id: msg.autor_id });
           if (error) { Alert.alert(t('common.erro'), error.message); return; }
           setSilenciados(prev => new Set(prev).add(msg.autor_id));
@@ -753,7 +759,7 @@ export default function ChatGeralModal({
           {euSilenciado ? (
             <View style={[cs.inputRow, { paddingBottom: 10 + padBottom, justifyContent: 'center', alignItems: 'center' }]}>
               <Ionicons name="volume-mute-outline" size={16} color={C.textMuted} />
-              <Text style={cs.silenciadoTexto}>{t('chatGeral.silenciado')}</Text>
+              <Text style={cs.silenciadoTexto}>{t('moderacao.suspensoAviso')}</Text>
             </View>
           ) : (
             <View style={[cs.inputRow, { paddingBottom: 10 + padBottom }]}>
@@ -831,14 +837,20 @@ export default function ChatGeralModal({
                 {podeApagar(menuDe) && (
                   <ItemMenu icone="trash-outline" texto={t('chatGeral.apagar')} cor="#E84B1A" onPress={() => apagar(menuDe)} />
                 )}
-                {/* "Denunciar" removido a pedido do Marcos (17/10/2026): só
-                    quem escreveu e o admin apagam; o admin modera e silencia. */}
+                {/* Denunciar e Bloquear voltaram (17/10/2026): exigência da
+                    diretriz 1.2 da Apple. Apagar continua só autor e admin. */}
+                {menuDe.autor_id !== userId && (
+                  <ItemMenu icone="flag-outline" texto={t('moderacao.denunciar')} cor={C.text} onPress={() => denunciar(menuDe)} />
+                )}
+                {menuDe.autor_id !== userId && (
+                  <ItemMenu icone="ban-outline" texto={t('moderacao.bloquearNome', { nome: menuDe.autor_nome })} cor={C.text} onPress={() => bloquear(menuDe)} />
+                )}
                 {ehAdmin && menuDe.autor_id !== userId && (
                   <ItemMenu
                     icone={silenciados.has(menuDe.autor_id) ? 'volume-high-outline' : 'volume-mute-outline'}
                     texto={silenciados.has(menuDe.autor_id)
-                      ? t('chatGeral.liberar', { nome: menuDe.autor_nome })
-                      : t('chatGeral.silenciar', { nome: menuDe.autor_nome })}
+                      ? t('moderacao.liberarNome', { nome: menuDe.autor_nome })
+                      : t('moderacao.suspenderNome', { nome: menuDe.autor_nome })}
                     cor={C.text}
                     onPress={() => alternarSilencio(menuDe)}
                   />
@@ -855,6 +867,14 @@ export default function ChatGeralModal({
           C={C}
           cs={cs}
           onFechar={() => setInfoDe(null)}
+        />
+
+        <RegrasDoChat
+          visivel={visible && mod.regrasAceitas === false}
+          cor={COR}
+          isDark={isDark}
+          onAceitar={mod.aceitarRegras}
+          onRecusar={fechar}
         />
 
         {/* ── Foto em tela cheia ─────────────────────────────────────────── */}

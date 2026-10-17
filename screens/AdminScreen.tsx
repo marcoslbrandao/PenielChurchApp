@@ -19,6 +19,7 @@ import { useBirthdays } from '../lib/useBirthdays';
 import { useTranslation } from 'react-i18next';
 import { APP_LINK_URL } from '../lib/appLinks';
 import { versaoDoBinario } from '../lib/recursosNativos';
+import DenunciasAdmin from '../components/DenunciasAdmin';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -2684,7 +2685,7 @@ export default function AdminScreen() {
   const [areaGerenciarVisible, setAreaGerenciarVisible] = useState<EscalaArea | null>(null);
   const [gerarEscalaModalVisible, setGerarEscalaModalVisible] = useState(false);
   const [editarEscalaVisible, setEditarEscalaVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao' | 'textos'>('avisos');
+  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao' | 'textos' | 'denuncias'>('avisos');
   // São 9 abas e só ~3 cabem na tela por vez — sem esse indicador, dava a
   // impressão de que a lista de abas estava cortada/quebrada (só aparecia
   // uma lasquinha do ícone da 4ª aba na borda). A setinha "→" avisa que dá
@@ -2928,8 +2929,16 @@ export default function AdminScreen() {
   // `aba`: abre direto nela e relê a lista, para a mensagem nova já aparecer.
   const route = useRoute<any>();
   const abaDoPush = route.params?.aba as string | undefined;
+  // Pontinho da aba Denúncias (moderação dos chats, 17/10/2026).
+  const [denunciasAbertas, setDenunciasAbertas] = useState(0);
   useEffect(() => {
-    if (abaDoPush === 'contato' || abaDoPush === 'oracao') {
+    if (role !== 'admin') return;
+    supabase.from('chat_denuncias').select('chat, mensagem_id').eq('status', 'aberta').then(({ data }) => {
+      setDenunciasAbertas(new Set((data ?? []).map((d: any) => `${d.chat}:${d.mensagem_id}`)).size);
+    });
+  }, [role, route.params]);
+  useEffect(() => {
+    if (abaDoPush === 'contato' || abaDoPush === 'oracao' || abaDoPush === 'denuncias') {
       setActiveTab(abaDoPush);
       if (!loadingRole && role) fetchData();
     }
@@ -2965,7 +2974,7 @@ export default function AdminScreen() {
   const ehAdmin = role === 'admin';
   // Quem só lidera área de escala começa (e fica) na aba Escalas.
   const abasVisiveis = ehAdmin
-    ? (['avisos', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'textos', 'stats'] as const)
+    ? (['avisos', 'denuncias', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'textos', 'stats'] as const)
     : (['escalas'] as const);
   const abaAtual = abasVisiveis.includes(activeTab as any) ? activeTab : 'escalas';
 
@@ -2995,7 +3004,7 @@ export default function AdminScreen() {
           <Text style={s.headerTitle}>{t('admin.painelAdmin')}</Text>
           <Text style={s.headerSub}>{ehAdmin ? t('admin.administrador') : t('admin.liderDeEscala')}</Text>
         </View>
-        {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && abaAtual !== 'textos' && abaAtual !== 'stats' && (
+        {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && abaAtual !== 'textos' && abaAtual !== 'stats' && abaAtual !== 'denuncias' && (
           <TouchableOpacity
             style={s.newBtn}
             onPress={() => {
@@ -3037,11 +3046,14 @@ export default function AdminScreen() {
               onPress={() => setActiveTab(tab)}
             >
               <Ionicons
-                name={tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : tab === 'textos' ? 'create-outline' : 'bar-chart-outline'}
+                name={tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : tab === 'textos' ? 'create-outline' : tab === 'denuncias' ? 'flag-outline' : 'bar-chart-outline'}
                 size={14}
                 color={abaAtual === tab ? C.purple : C.textMuted}
               />
               {tab === 'contato' && contatoMensagens.some(m => m.status === 'novo') && (
+                <View style={s.tabDot} />
+              )}
+              {tab === 'denuncias' && denunciasAbertas > 0 && (
                 <View style={s.tabDot} />
               )}
               {tab === 'oracao' && pedidosOracao.some(p => p.status === 'aberto') && (
@@ -3209,6 +3221,11 @@ export default function AdminScreen() {
                 ))
               )}
             </>
+          )}
+
+          {/* ══ DENÚNCIAS (chats) ═════════════════════════════════════════════ */}
+          {abaAtual === 'denuncias' && (
+            <DenunciasAdmin key={`den-${refreshing ? 1 : 0}`} C={C as any} onMudou={setDenunciasAbertas} />
           )}
 
           {/* ══ CONTATO ═══════════════════════════════════════════════════════ */}

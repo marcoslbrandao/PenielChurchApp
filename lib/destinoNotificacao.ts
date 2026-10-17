@@ -82,10 +82,11 @@ export function destinoDaNotificacao(
       return podeMembros ? abaMembros('Banda') : SININHO;
     case 'admin_contato':
     case 'admin_oracao':
+    case 'admin_denuncia':
       // Push só do Admin (mensagem de Contato / pedido de oração): abre o
       // painel Admin já na aba certa.
       if (!acesso.logado || !acesso.ehAdmin) return SININHO;
-      return abaMembros('Admin', { aba: type === 'admin_contato' ? 'contato' : 'oracao' });
+      return abaMembros('Admin', { aba: type === 'admin_contato' ? 'contato' : type === 'admin_denuncia' ? 'denuncias' : 'oracao' });
     case 'aniversario_visitante':
       // Parabéns do próprio visitante: o cartão está na Home.
       return abaPrincipal('Inicio');

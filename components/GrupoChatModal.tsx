@@ -16,6 +16,9 @@ import { enviarAudio, apagarAudio, TEXTO_DO_AUDIO } from '../lib/chatAudio';
 import { useTranslation } from 'react-i18next';
 import AnexoMensagem from './AnexoMensagem';
 import { abrirMenuDeAnexo, apagarAnexo, legendaDoAnexo, type CamposAnexo, type TipoAnexo } from '../lib/chatAnexos';
+import MenuMensagem, { type AcaoMenu } from './MenuMensagem';
+import RegrasDoChat from './RegrasDoChat';
+import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo, alternarSuspensao } from '../lib/moderacao';
 
 function paletaChat(isDark: boolean) {
   return isDark ? {
@@ -94,6 +97,14 @@ export default function GrupoChatModal({
   const podeGravar = useMemo(() => binarioPodeGravarAudio(), []);
   const { t } = useTranslation();
   const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  // Moderação (17/10/2026, diretriz 1.2 da Apple): menu ao segurar a
+  // mensagem com Apagar, Denunciar, Bloquear e (admin) Suspender; Regras da
+  // comunidade antes de entrar; filtro de palavras no envio.
+  const [menuDe, setMenuDe] = useState<Mensagem | null>(null);
+  const mod = useModeracaoChat(userId, visible);
+  // O banco já esconde as mensagens de quem eu bloqueei; o filtro aqui só
+  // faz sumir na hora, sem esperar recarregar.
+  const visiveis = useMemo(() => mensagens.filter(m => !mod.bloqueados.has(m.autor_id)), [mensagens, mod.bloqueados]);
 
   const { isDark } = useTheme();
   // Dentro de um <Modal> do React Native, o <SafeAreaView> mede a view NATIVA
@@ -172,6 +183,7 @@ export default function GrupoChatModal({
   const enviar = async () => {
     const texto_ = texto.trim();
     if (!texto_ || enviando) return;
+    if (barrarSeOfensivo(texto_, t)) return;
     setEnviando(true);
     const { error } = await supabase.from('grupo_chat_mensagens').insert({
       grupo, autor_id: userId, autor_nome: userNome, texto: texto_,
@@ -197,7 +209,7 @@ export default function GrupoChatModal({
     }
   };
 
-  const anexar = () => abrirMenuDeAnexo({
+  const anexar = () => !barrarSeOfensivo(texto, t) && abrirMenuDeAnexo({
     t, prefixo: grupo, autorId: userId, legenda: texto,
     setEnviando: setEnviandoAnexo,
     limparLegenda: () => setTexto(''),
@@ -228,6 +240,13 @@ export default function GrupoChatModal({
     ]);
   };
 
+  const acaoDoMenu = (msg: Mensagem, acao: AcaoMenu) => {
+    if (acao === 'apagar') apagar(msg);
+    else if (acao === 'denunciar') denunciarMensagem('grupo', msg.id, t);
+    else if (acao === 'bloquear') mod.bloquear(msg.autor_id, msg.autor_nome, t);
+    else if (acao === 'suspender') alternarSuspensao(msg.autor_id, msg.autor_nome, mod.suspensos.has(msg.autor_id), t, mod.recarregar);
+  };
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={cs.safe}>
@@ -253,7 +272,7 @@ export default function GrupoChatModal({
           ) : (
             <FlatList
               ref={listRef}
-              data={mensagens}
+              data={visiveis}
               keyExtractor={m => m.id}
               contentContainerStyle={cs.list}
               onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
@@ -265,11 +284,10 @@ export default function GrupoChatModal({
               }
               renderItem={({ item }) => {
                 const minha = item.autor_id === userId;
-                const podeApagar = minha || podeModerar;
                 return (
                   <TouchableOpacity
-                    activeOpacity={podeApagar ? 0.6 : 1}
-                    onLongPress={() => podeApagar && apagar(item)}
+                    activeOpacity={0.6}
+                    onLongPress={() => setMenuDe(item)}
                     style={[cs.bubbleRow, minha && cs.bubbleRowMine]}
                   >
                     <View style={[cs.bubble, minha ? { backgroundColor: cor } : cs.bubbleOther]}>
@@ -287,14 +305,14 @@ export default function GrupoChatModal({
                             audioAtivo={audioAtivo === item.id}
                             onAtivarAudio={() => setAudioAtivo(item.id)}
                             onTerminarAudio={() => setAudioAtivo(a => (a === item.id ? null : a))}
-                            onLongPress={podeApagar ? () => apagar(item) : undefined}
+                            onLongPress={() => setMenuDe(item)}
                           />
                           {!!legendaDoAnexo(item) && (
                             <TextoComLinks
                               texto={legendaDoAnexo(item)!}
                               style={[cs.bubbleText, { marginTop: 6 }, minha && { color: '#fff' }]}
                               corLink={minha ? '#fff' : cor}
-                              onLongPress={podeApagar ? () => apagar(item) : undefined}
+                              onLongPress={() => setMenuDe(item)}
                             />
                           )}
                         </>
@@ -308,14 +326,14 @@ export default function GrupoChatModal({
                           corTexto={minha ? '#fff' : C.text}
                           corTrilho={minha ? 'rgba(255,255,255,0.35)' : C.bubbleOtherBorder}
                           corProgresso={minha ? '#fff' : cor}
-                          onLongPress={podeApagar ? () => apagar(item) : undefined}
+                          onLongPress={() => setMenuDe(item)}
                         />
                       ) : (
                         <TextoComLinks
                           texto={item.texto}
                           style={[cs.bubbleText, minha && { color: '#fff' }]}
                           corLink={minha ? '#fff' : cor}
-                          onLongPress={podeApagar ? () => apagar(item) : undefined}
+                          onLongPress={() => setMenuDe(item)}
                         />
                       )}
                     </View>
@@ -325,6 +343,12 @@ export default function GrupoChatModal({
             />
           )}
 
+          {mod.souSuspenso ? (
+            <View style={[cs.inputRow, { paddingBottom: 10 + padBottom, justifyContent: 'center', alignItems: 'center' }]}>
+              <Ionicons name="volume-mute-outline" size={16} color={C.textMuted} />
+              <Text style={{ fontSize: 13, color: C.textMuted, marginLeft: 6, flexShrink: 1 }}>{t('moderacao.suspensoAviso')}</Text>
+            </View>
+          ) : (
           <View style={[cs.inputRow, { paddingBottom: 10 + padBottom }]}>
             {!gravando && (
               <TouchableOpacity onPress={anexar} style={cs.anexarBtn} disabled={enviandoAnexo || enviandoAudio} hitSlop={6}>
@@ -368,7 +392,29 @@ export default function GrupoChatModal({
               </TouchableOpacity>
             )}
           </View>
+          )}
         </KeyboardAvoidingView>
+
+        <MenuMensagem
+          visivel={!!menuDe}
+          autorNome={menuDe?.autor_nome ?? ''}
+          minha={menuDe?.autor_id === userId}
+          podeApagar={!!menuDe && (menuDe.autor_id === userId || podeModerar)}
+          ehAdmin={podeModerar}
+          autorSuspenso={!!menuDe && mod.suspensos.has(menuDe.autor_id)}
+          corFundo={C.inputBarBg}
+          corTexto={C.text}
+          corBorda={C.inputBarBorder}
+          onAcao={acao => menuDe && acaoDoMenu(menuDe, acao)}
+          onFechar={() => setMenuDe(null)}
+        />
+        <RegrasDoChat
+          visivel={visible && mod.regrasAceitas === false}
+          cor={cor}
+          isDark={isDark}
+          onAceitar={mod.aceitarRegras}
+          onRecusar={onClose}
+        />
       </View>
     </Modal>
   );

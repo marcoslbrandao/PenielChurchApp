@@ -22,6 +22,8 @@ import { mascaraDataBR, dataBRparaISO, isoParaDataBR } from '../lib/datas';
 import { IDIOMAS, trocarIdioma } from '../lib/i18n';
 import { useTheme, ThemeMode } from '../lib/theme';
 import { pushEstaAtivo, definirPush, removerTokenDesteAparelho, ativarNotificacoesComAjuda } from '../lib/useNotifications';
+import RegrasDoChat from '../components/RegrasDoChat';
+import BloqueadosModal from '../components/BloqueadosModal';
 
 // Versão real do app.json (não mais um texto fixo desatualizado), + info de
 // qual atualização OTA (EAS Update) está rodando agora — útil pra confirmar
@@ -710,6 +712,9 @@ export default function ProfileScreen() {
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [deleteAccountVisible, setDeleteAccountVisible] = useState(false);
+  // Moderação dos chats (17/10/2026): Regras da comunidade e Pessoas bloqueadas.
+  const [regrasVisivel, setRegrasVisivel] = useState(false);
+  const [bloqueadosVisivel, setBloqueadosVisivel] = useState(false);
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -923,6 +928,10 @@ export default function ProfileScreen() {
         { icon: 'person-outline', label: t('perfil.editarPerfil'), onPress: () => isLoggedIn ? setEditModalVisible(true) : pedirLogin(t('perfil.faceLoginEditarPerfil')) },
         { icon: 'lock-closed-outline', label: t('perfil.alterarSenha'), onPress: () => isLoggedIn ? handleChangePassword() : pedirLogin(t('perfil.faceLoginAlterarSenha')) },
         { icon: 'help-circle-outline', label: t('perfil.suporte'), onPress: handleSupport },
+        ...(ehMembro ? [
+          { icon: 'shield-checkmark-outline' as keyof typeof Ionicons.glyphMap, label: t('moderacao.regrasPerfil'), onPress: () => setRegrasVisivel(true) },
+          { icon: 'ban-outline' as keyof typeof Ionicons.glyphMap, label: t('moderacao.bloqueadosPerfil'), onPress: () => setBloqueadosVisivel(true) },
+        ] : []),
         { icon: 'trash-outline', label: t('perfil.excluirConta'), color: C.danger, onPress: () => isLoggedIn ? setDeleteAccountVisible(true) : pedirLogin(t('perfil.faceLoginExcluirConta')) },
       ],
     },
@@ -1091,6 +1100,8 @@ export default function ProfileScreen() {
         visible={themeModalVisible}
         onClose={() => setThemeModalVisible(false)}
       />
+      <RegrasDoChat visivel={regrasVisivel} cor="#6A55E0" isDark={isDark} somenteLeitura onAceitar={() => setRegrasVisivel(false)} onRecusar={() => setRegrasVisivel(false)} />
+      <BloqueadosModal visivel={bloqueadosVisivel} isDark={isDark} onFechar={() => setBloqueadosVisivel(false)} />
       <DeleteAccountModal
         visible={deleteAccountVisible}
         onClose={() => setDeleteAccountVisible(false)}

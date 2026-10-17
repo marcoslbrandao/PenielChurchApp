@@ -85,6 +85,7 @@ type FichaLinha = {
   necessidades_especiais: string | null;
   info_responsavel: string | null;
   responsavel_nome: string;
+  autoriza_fotos?: boolean | null;
 };
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
@@ -260,6 +261,20 @@ function FichaSalaModal({ visible, onClose, C, t }: {
                         {l.responsavel_nome ? ` · ${l.responsavel_nome}` : ''}
                       </Text>
                     </View>
+                  </View>
+
+                  {/* Fotos (17/10/2026): sem resposta = não fotografar. */}
+                  <View style={[s.fichaBloco, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                    <Ionicons
+                      name={l.autoriza_fotos ? 'camera-outline' : 'close-circle-outline'}
+                      size={15}
+                      color={l.autoriza_fotos ? C.textDim : C.alerta}
+                    />
+                    <Text style={[s.fichaTexto, !l.autoriza_fotos && { color: C.alerta, fontWeight: '700' }]}>
+                      {l.autoriza_fotos === true ? t('kids.fotosAutorizadas')
+                        : l.autoriza_fotos === false ? t('kids.fotosNaoAutorizadas')
+                          : t('kids.fotosSemResposta')}
+                    </Text>
                   </View>
 
                   {!!l.alergias && (

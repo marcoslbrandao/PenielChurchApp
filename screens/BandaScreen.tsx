@@ -21,6 +21,9 @@ import AnexoMensagem from '../components/AnexoMensagem';
 import { abrirMenuDeAnexo, apagarAnexo, legendaDoAnexo, type CamposAnexo, type TipoAnexo } from '../lib/chatAnexos';
 import { paletaBanda, type BandaColors } from '../lib/temaBanda';
 import MetronomoModal from '../components/MetronomoModal';
+import MenuMensagem, { type AcaoMenu } from '../components/MenuMensagem';
+import RegrasDoChat from '../components/RegrasDoChat';
+import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo, alternarSuspensao } from '../lib/moderacao';
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
 // A paleta vive em `lib/temaBanda` porque o metrônomo também precisa dela.
@@ -3443,6 +3446,10 @@ function BandaMain() {
   const [gravando, setGravando] = useState(false);
   const [enviandoAudio, setEnviandoAudio] = useState(false);
   const [enviandoAnexo, setEnviandoAnexo] = useState(false);
+  // Moderação do chat da Banda (17/10/2026, diretriz 1.2 da Apple) — ver
+  // lib/moderacao.ts. `menuChatDe` = mensagem segurada.
+  const [menuChatDe, setMenuChatDe] = useState<ChatMsg | null>(null);
+  const { isDark: chatEscuro } = useTheme();
   const podeGravar = useMemo(() => binarioPodeGravarAudio(), []);
   const [loadingChat, setLoadingChat] = useState(true);
   const [presencas, setPresencas] = useState<Presenca[]>([]);
@@ -3942,9 +3949,19 @@ function BandaMain() {
   // diretório da banda chegou), pra não gravar um nome provisório no banco.
   const nomePronto = meuPerfil !== null || membros.length > 0;
 
+  const mod = useModeracaoChat(user?.id, activeTab === 'chat');
+  const mensagensVisiveis = useMemo(() => messages.filter(m => !mod.bloqueados.has(m.autor_id)), [messages, mod.bloqueados]);
+  const acaoDoMenuChat = (msg: ChatMsg, acao: AcaoMenu) => {
+    if (acao === 'apagar') apagarMensagem(msg);
+    else if (acao === 'denunciar') denunciarMensagem('banda', msg.id, t);
+    else if (acao === 'bloquear') mod.bloquear(msg.autor_id, msg.autor_nome, t);
+    else if (acao === 'suspender') alternarSuspensao(msg.autor_id, msg.autor_nome, mod.suspensos.has(msg.autor_id), t, mod.recarregar);
+  };
+
   const sendMessage = async () => {
     const texto = chatMsg.trim();
     if (!texto || enviandoChat) return;
+    if (barrarSeOfensivo(texto, t)) return;
     if (!user?.id) { Alert.alert(t('common.erro'), t('banda.chatPrecisaLogin')); return; }
     setEnviandoChat(true);
     const { data, error } = await supabase
@@ -3982,6 +3999,7 @@ function BandaMain() {
 
   const anexar = () => {
     if (!user?.id) { Alert.alert(t('common.erro'), t('banda.chatPrecisaLogin')); return; }
+    if (barrarSeOfensivo(chatMsg, t)) return;
     abrirMenuDeAnexo({
       t, prefixo: 'banda', autorId: user.id, legenda: chatMsg,
       setEnviando: setEnviandoAnexo,
@@ -5008,17 +5026,17 @@ function BandaMain() {
             <View style={s.loadingWrap}><ActivityIndicator color={C.primary} /></View>
           ) : (
             <ScrollView ref={scrollRef} contentContainerStyle={s.chatContent} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
-              {messages.length === 0 ? (
+              {mensagensVisiveis.length === 0 ? (
                 <View style={s.emptyState}>
                   <Ionicons name="chatbubbles-outline" size={48} color={C.textDim} />
                   <Text style={s.emptyTitle}>{t('banda.chatVazio')}</Text>
                   <Text style={s.emptyDesc}>{t('banda.chatVazioDesc')}</Text>
                 </View>
-              ) : messages.map((m, idx) => {
+              ) : mensagensVisiveis.map((m, idx) => {
                 const mine = m.autor_id === user?.id;
                 // Divisor de data quando a mensagem cai num dia diferente da anterior.
                 const dia = diaDaMensagem(m.created_at);
-                const mostraDia = idx === 0 || diaDaMensagem(messages[idx - 1].created_at) !== dia;
+                const mostraDia = idx === 0 || diaDaMensagem(mensagensVisiveis[idx - 1].created_at) !== dia;
                 return (
                   <View key={m.id}>
                     {mostraDia && (
@@ -5027,8 +5045,8 @@ function BandaMain() {
                       </View>
                     )}
                     <TouchableOpacity
-                      activeOpacity={mine || meuPerfil?.admin ? 0.7 : 1}
-                      onLongPress={() => apagarMensagem(m)}
+                      activeOpacity={0.7}
+                      onLongPress={() => setMenuChatDe(m)}
                       style={[s.bubble, mine && s.bubbleMine]}
                     >
                       {!mine && <Text style={s.bubbleAuthor}>{m.autor_nome}</Text>}
@@ -5045,13 +5063,13 @@ function BandaMain() {
                             audioAtivo={audioAtivo === m.id}
                             onAtivarAudio={() => setAudioAtivo(m.id)}
                             onTerminarAudio={() => setAudioAtivo(a => (a === m.id ? null : a))}
-                            onLongPress={() => apagarMensagem(m)}
+                            onLongPress={() => setMenuChatDe(m)}
                           />
                           {!!legendaDoAnexo(m) && (
                             <TextoComLinks
                               texto={legendaDoAnexo(m)!}
                               style={[s.bubbleText, { marginTop: 6 }, mine && s.bubbleTextMine]}
-                              onLongPress={() => apagarMensagem(m)}
+                              onLongPress={() => setMenuChatDe(m)}
                             />
                           )}
                         </>
@@ -5065,13 +5083,13 @@ function BandaMain() {
                           corTexto={mine ? C.onPrimaryDim : C.text}
                           corTrilho={C.border}
                           corProgresso={C.primary}
-                          onLongPress={() => apagarMensagem(m)}
+                          onLongPress={() => setMenuChatDe(m)}
                         />
                       ) : (
                         <TextoComLinks
                           texto={m.texto}
                           style={[s.bubbleText, mine && s.bubbleTextMine]}
-                          onLongPress={() => apagarMensagem(m)}
+                          onLongPress={() => setMenuChatDe(m)}
                         />
                       )}
                       <Text style={[s.bubbleTime, mine && s.bubbleTimeMine]}>{horaDaMensagem(m.created_at)}</Text>
@@ -5081,6 +5099,12 @@ function BandaMain() {
               })}
             </ScrollView>
           )}
+          {mod.souSuspenso ? (
+            <View style={[s.chatInput, { justifyContent: 'center', alignItems: 'center' }]}>
+              <Ionicons name="volume-mute-outline" size={16} color={C.textMuted} />
+              <Text style={{ fontSize: 13, color: C.textMuted, marginLeft: 6, flexShrink: 1 }}>{t('moderacao.suspensoAviso')}</Text>
+            </View>
+          ) : (
           <View style={s.chatInput}>
             {!gravando && nomePronto && (
               <TouchableOpacity onPress={anexar} disabled={enviandoAnexo || enviandoAudio} hitSlop={6} style={{ height: 42, justifyContent: 'center' }}>
@@ -5114,7 +5138,28 @@ function BandaMain() {
               </TouchableOpacity>
             )}
           </View>
+          )}
         </KeyboardAvoidingView>
+        <MenuMensagem
+          visivel={!!menuChatDe}
+          autorNome={menuChatDe?.autor_nome ?? ''}
+          minha={menuChatDe?.autor_id === user?.id}
+          podeApagar={!!menuChatDe && (menuChatDe.autor_id === user?.id || !!meuPerfil?.adminIgreja)}
+          ehAdmin={!!meuPerfil?.adminIgreja}
+          autorSuspenso={!!menuChatDe && mod.suspensos.has(menuChatDe.autor_id)}
+          corFundo={C.surface}
+          corTexto={C.text}
+          corBorda={C.border}
+          onAcao={acao => menuChatDe && acaoDoMenuChat(menuChatDe, acao)}
+          onFechar={() => setMenuChatDe(null)}
+        />
+        <RegrasDoChat
+          visivel={mod.regrasAceitas === false}
+          cor={C.primary}
+          isDark={chatEscuro}
+          onAceitar={mod.aceitarRegras}
+          onRecusar={() => setActiveTab('hoje')}
+        />
         </View>
       )}
 

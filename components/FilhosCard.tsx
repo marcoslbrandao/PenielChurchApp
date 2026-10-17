@@ -69,6 +69,9 @@ type FilhoEdit = {
   alergias: string;
   necessidades: string;
   infoExtra: string;
+  // Autorização de fotos/vídeos (17/10/2026). '' = ainda não respondeu; o
+  // Salvar exige a resposta. Vai para `members.autoriza_fotos`.
+  fotos: '' | 'sim' | 'nao';
   sujo: boolean;
 };
 
@@ -149,7 +152,7 @@ function filhoVazio(): FilhoEdit {
   return {
     key: novaChave(), idBanco: null,
     nome: '', sobrenome: '', nascimento: '', sexo: '',
-    alergias: '', necessidades: '', infoExtra: '', sujo: true,
+    alergias: '', necessidades: '', infoExtra: '', fotos: '', sujo: true,
   };
 }
 
@@ -179,7 +182,7 @@ function FilhosCard({ responsavelId }, ref) {
     setCarregando(true);
     const { data } = await supabase
       .from('members')
-      .select('id, nome, sobrenome, data_nascimento, sexo, alergias, necessidades_especiais, info_responsavel')
+      .select('id, nome, sobrenome, data_nascimento, sexo, alergias, necessidades_especiais, info_responsavel, autoriza_fotos')
       .eq('responsavel_id', responsavelId)
       .order('data_nascimento', { ascending: true });
     setFilhos((data ?? []).map((f: any) => ({
@@ -192,6 +195,7 @@ function FilhosCard({ responsavelId }, ref) {
       alergias: f.alergias ?? '',
       necessidades: f.necessidades_especiais ?? '',
       infoExtra: f.info_responsavel ?? '',
+      fotos: f.autoriza_fotos === true ? 'sim' : f.autoriza_fotos === false ? 'nao' : '',
       sujo: false,
     })));
     setCarregando(false);
@@ -249,6 +253,10 @@ function FilhosCard({ responsavelId }, ref) {
         if (!dataPlausivel(f.nascimento)) {
           return { ok: false, erro: t('filhos.erroDataDe', { nome: f.nome.trim() }) };
         }
+        if (!f.fotos) {
+          setExpandido(f.key);
+          return { ok: false, erro: t('filhos.erroFotos', { nome: f.nome.trim() }) };
+        }
       }
 
       if (paraApagar.length > 0) {
@@ -269,6 +277,7 @@ function FilhosCard({ responsavelId }, ref) {
           alergias: f.alergias.trim() || null,
           necessidades_especiais: f.necessidades.trim() || null,
           info_responsavel: f.infoExtra.trim() || null,
+          autoriza_fotos: f.fotos === 'sim',
         };
 
         if (f.idBanco) {
@@ -327,6 +336,12 @@ function FilhosCard({ responsavelId }, ref) {
                     {/* Etiqueta na linha fechada: quem confere a ficha no
                         corredor, minutos antes do lanche, não vai abrir cada
                         cadastro. */}
+                    {f.fotos === 'nao' && (
+                      <View style={s.tagAlergia}>
+                        <Ionicons name="camera-outline" size={10} color={C.danger} />
+                        <Text style={s.tagAlergiaTexto}>{t('filhos.tagSemFotos')}</Text>
+                      </View>
+                    )}
                     {!!f.alergias.trim() && (
                       <View style={s.tagAlergia}>
                         <Ionicons name="warning" size={10} color={C.danger} />
@@ -378,6 +393,27 @@ function FilhosCard({ responsavelId }, ref) {
                         onPress={() => mexer(f.key, 'sexo', f.sexo === op.valor ? '' : op.valor)}
                       >
                         <Text style={[s.pillTexto, f.sexo === op.valor && s.pillTextoAtivo]}>{t(op.chave)}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Fotos e vídeos (17/10/2026): resposta obrigatória. Sem
+                      autorização, a criança não aparece em foto/vídeo da
+                      igreja nem no chat da equipe do Ministério Infantil. */}
+                  <Text style={s.label}>{t('filhos.fotosTitulo')}</Text>
+                  <Text style={[s.blocoAjuda, { marginBottom: 8 }]}>
+                    {t('filhos.fotosPergunta', { nome: f.nome.trim() || t('filhos.semNome') })}
+                  </Text>
+                  <View style={s.pillRow}>
+                    {(['sim', 'nao'] as const).map(op => (
+                      <TouchableOpacity
+                        key={op}
+                        style={[s.pill, f.fotos === op && s.pillAtiva]}
+                        onPress={() => mexer(f.key, 'fotos', op)}
+                      >
+                        <Text style={[s.pillTexto, f.fotos === op && s.pillTextoAtivo]}>
+                          {op === 'sim' ? t('filhos.fotosSim') : t('filhos.fotosNao')}
+                        </Text>
                       </TouchableOpacity>
                     ))}
                   </View>

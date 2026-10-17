@@ -1219,7 +1219,10 @@
     "escalaMarcouIndisponivelTrocar": "Marcó que no puede — cambiar",
     "vagasPorCulto": "Puestos por culto",
     "vagasPorCultoDesc": "Cuántas personas de esta área sirven en cada culto",
-    "timeAtual": "Equipo actual ({{n}})"
+    "timeAtual": "Equipo actual ({{n}})",
+    "apagarArea": "Eliminar área",
+    "apagarAreaTitulo": "¿Eliminar el área \"{{area}}\"?",
+    "apagarAreaMsg": "Esto elimina el área, su equipo ({{n}} personas) y las fechas en que alguien ya estaba en la escala de ella. Las personas siguen en la app y en otras áreas. No se puede deshacer."
   },
   "membros": {
     "buscarPeloNome": "Buscar por nombre...",

@@ -1219,7 +1219,10 @@
     "escalaMarcouIndisponivelTrocar": "A indiqué ne pas pouvoir — remplacer",
     "vagasPorCulto": "Places par culte",
     "vagasPorCultoDesc": "Combien de personnes de cette équipe servent à chaque culte",
-    "timeAtual": "Équipe actuelle ({{n}})"
+    "timeAtual": "Équipe actuelle ({{n}})",
+    "apagarArea": "Supprimer l'équipe",
+    "apagarAreaTitulo": "Supprimer l'équipe « {{area}} » ?",
+    "apagarAreaMsg": "Cela supprime l'équipe, ses membres ({{n}} personnes) et les dates où quelqu'un y était déjà inscrit. Les personnes restent dans l'app et dans les autres équipes. Action irréversible."
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",

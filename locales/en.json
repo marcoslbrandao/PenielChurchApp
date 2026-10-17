@@ -1219,7 +1219,10 @@
     "escalaMarcouIndisponivelTrocar": "Marked they can't — swap",
     "vagasPorCulto": "Slots per service",
     "vagasPorCultoDesc": "How many people from this area serve at each service",
-    "timeAtual": "Current team ({{n}})"
+    "timeAtual": "Current team ({{n}})",
+    "apagarArea": "Delete area",
+    "apagarAreaTitulo": "Delete the area \"{{area}}\"?",
+    "apagarAreaMsg": "This deletes the area, its team ({{n}} people) and any dates where someone was already on the rota for it. People stay in the app and in other areas. This cannot be undone."
   },
   "membros": {
     "buscarPeloNome": "Search by name...",

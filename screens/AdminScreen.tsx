@@ -1423,6 +1423,25 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
     ]);
   };
 
+  // Apagar a area inteira (admin). O banco apaga junto, em cascata, o time,
+  // os lideres da area e as datas ja escaladas nela (pedido do Marcos, 17/10).
+  const apagarArea = () => {
+    if (!area) return;
+    Alert.alert(
+      t('admin.apagarAreaTitulo', { area: area.nome }),
+      t('admin.apagarAreaMsg', { n: voluntarios.length }),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        { text: t('admin.apagarArea'), style: 'destructive', onPress: async () => {
+          const ok = await apagarLinha('escala_areas', area.id);
+          if (!ok) return;
+          onChanged();
+          onClose();
+        }},
+      ],
+    );
+  };
+
   if (!area) return null;
 
   return (
@@ -1497,6 +1516,15 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
                     </TouchableOpacity>
                   </View>
                 ))
+              )}
+              {podeMudarVagas && (
+                <TouchableOpacity
+                  onPress={apagarArea}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 22, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: C.danger + '55' }}
+                >
+                  <Ionicons name="trash-outline" size={18} color={C.danger} />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: C.danger }}>{t('admin.apagarArea')}</Text>
+                </TouchableOpacity>
               )}
               <View style={{ height: 10 }} />
             </ScrollView>

@@ -3465,7 +3465,7 @@ function BandaMain() {
   // Nome e papel da própria conta. `autor_nome` fica gravado na mensagem pra
   // sempre, então não dá pra mandar antes de saber o nome de verdade — sem
   // isso, quem abrisse o chat com a rede lenta gravaria o começo do e-mail.
-  const [meuPerfil, setMeuPerfil] = useState<{ nome: string; admin: boolean } | null>(null);
+  const [meuPerfil, setMeuPerfil] = useState<{ nome: string; admin: boolean; adminIgreja?: boolean } | null>(null);
   const [enviandoChat, setEnviandoChat] = useState(false);
   const [cultosModal, setCultosModal] = useState(false);
   const [ensaioModal, setEnsaioModal] = useState(false);
@@ -3694,6 +3694,7 @@ function BandaMain() {
         setMeuPerfil({
           nome: (data?.full_name ?? '').trim(),
           admin: data?.role === 'admin' || (lider ?? []).length > 0,
+          adminIgreja: data?.role === 'admin',
         });
       });
     return () => { vivo = false; };
@@ -4007,7 +4008,9 @@ function BandaMain() {
     // A policy do banco deixa o autor apagar a própria e o admin apagar
     // qualquer uma — a tela precisa oferecer as duas coisas, senão moderar só
     // pelo painel do Supabase.
-    if (msg.autor_id !== user?.id && !meuPerfil?.admin) return;
+    // Desde 17/10/2026: mensagem dos outros, só o ADMIN da igreja apaga
+    // (o líder da banda não). Mesma regra no banco.
+    if (msg.autor_id !== user?.id && !meuPerfil?.adminIgreja) return;
     Alert.alert(t('banda.apagarMensagem'), t('banda.apagarMensagemMsg'), [
       { text: t('common.cancelar'), style: 'cancel' },
       { text: t('common.remover'), style: 'destructive', onPress: async () => {

@@ -831,9 +831,8 @@ export default function ChatGeralModal({
                 {podeApagar(menuDe) && (
                   <ItemMenu icone="trash-outline" texto={t('chatGeral.apagar')} cor="#E84B1A" onPress={() => apagar(menuDe)} />
                 )}
-                {menuDe.autor_id !== userId && (
-                  <ItemMenu icone="flag-outline" texto={t('chatGeral.denunciar')} cor={C.text} onPress={() => denunciar(menuDe)} />
-                )}
+                {/* "Denunciar" removido a pedido do Marcos (17/10/2026): só
+                    quem escreveu e o admin apagam; o admin modera e silencia. */}
                 {ehAdmin && menuDe.autor_id !== userId && (
                   <ItemMenu
                     icone={silenciados.has(menuDe.autor_id) ? 'volume-high-outline' : 'volume-mute-outline'}

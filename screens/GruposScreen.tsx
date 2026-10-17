@@ -1436,7 +1436,8 @@ export default function GruposScreen() {
           cor={grupo.cor}
           userId={user.id}
           userNome={userNome}
-          podeModerar={souLiderDesteGrupo}
+          // Apagar mensagem dos outros: só o admin (decisão do Marcos, 17/10).
+          podeModerar={isAdmin}
           onClose={() => setChatModalVisible(false)}
         />
       )}

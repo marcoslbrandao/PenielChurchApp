@@ -314,6 +314,8 @@ export default function PenielKidsScreen() {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [podeVerFicha, setPodeVerFicha] = useState(false);
+  // Chat: apagar mensagem dos outros é só do admin (17/10/2026).
+  const [souAdmin, setSouAdmin] = useState(false);
   const [fichaAberta, setFichaAberta] = useState(false);
   // Chat do Ministério Infantil (11/10/2026): o mesmo chat dos outros grupos,
   // com grupo = 'infantil'. Quem entra é decidido pelo banco
@@ -330,6 +332,8 @@ export default function PenielKidsScreen() {
     // de ler `group_leaders` no cliente: a função é a permissão.
     const { data: podeEditar } = await supabase.rpc('pode_editar_kids');
     setPodeVerFicha(!!podeEditar);
+    const { data: admin } = await supabase.rpc('is_admin');
+    setSouAdmin(admin === true);
     const { data: acessoChat } = await supabase.rpc('tem_acesso_grupo', { p_grupo: 'infantil' });
     setPodeVerChat(acessoChat === true);
 
@@ -604,7 +608,7 @@ export default function PenielKidsScreen() {
           cor="#E8890C"
           userId={user.id}
           userNome={(user.user_metadata as any)?.full_name ?? ''}
-          podeModerar={podeVerFicha}
+          podeModerar={souAdmin}
           onClose={() => setChatAberto(false)}
         />
       )}

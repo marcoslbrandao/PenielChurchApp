@@ -463,8 +463,20 @@ export default function MeuCadastroScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      {/* Esta tela abre como folha (presentation: 'modal'). No iOS o
+          KeyboardAvoidingView com 'padding' calcula errado numa folha (ela não
+          começa no topo da tela) e o botão Salvar ficava escondido atrás do
+          teclado ao cadastrar um filho (17/10/2026). Mesmo conserto de
+          16/10 (Oferta, Visitantes): a própria ScrollView ajusta o espaço do
+          teclado e o toque no Salvar vale mesmo com o teclado aberto. */}
+      <KeyboardAvoidingView style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          automaticallyAdjustKeyboardInsets
+        >
           <Text style={s.subtitulo}>{t('cadastroMembro.subtitulo')}</Text>
 
           <SectionTitle s={s}>{t('cadastroMembro.secaoPessoal')}</SectionTitle>

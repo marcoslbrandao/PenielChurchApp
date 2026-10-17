@@ -35,7 +35,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking,
   ActivityIndicator, StatusBar, RefreshControl, Modal, Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -204,6 +204,7 @@ function FichaSalaModal({ visible, onClose, C, t }: {
   const [linhas, setLinhas] = useState<FichaLinha[]>([]);
   const [carregando, setCarregando] = useState(true);
   const s = useMemo(() => buildStyles(C), [C]);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!visible) return;
@@ -220,7 +221,11 @@ function FichaSalaModal({ visible, onClose, C, t }: {
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={s.safe} edges={['top']}>
+      {/* Dentro de um <Modal> o <SafeAreaView> mede a view nativa do modal e
+          volta com inset 0 no iOS: o X ficava atrás do relógio e não dava
+          para fechar (17/10/2026). O hook atravessa o modal; respiro à mão,
+          igual ao GrupoChatModal. */}
+      <View style={[s.safe, { paddingTop: Platform.OS === 'ios' ? Math.max(insets.top, 20) : Math.max(insets.top, 12) }]}>
         <StatusBar barStyle="light-content" backgroundColor={C.primary} />
         <View style={s.header}>
           <TouchableOpacity onPress={onClose} style={s.headerBtn} accessibilityLabel={t('common.fechar')}>
@@ -289,7 +294,7 @@ function FichaSalaModal({ visible, onClose, C, t }: {
             </View>
           </ScrollView>
         )}
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }

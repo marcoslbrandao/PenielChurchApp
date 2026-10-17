@@ -873,10 +873,12 @@ export default function ProfileScreen() {
         { icon: 'bookmark-outline', label: t('perfil.versiculosSalvos'), onPress: () => isLoggedIn ? setSavedVersesVisible(true) : pedirLogin(t('perfil.faceLoginVersiculos')) },
         { icon: 'book-outline', label: t('perfil.historicoDeEstudos'), onPress: () => isLoggedIn ? setReadingHistoryVisible(true) : pedirLogin(t('perfil.faceLoginHistorico')) },
         { icon: 'heart-outline', label: t('perfil.pedidosDeOracao'), onPress: () => isLoggedIn ? setPrayerVisible(true) : pedirLogin(t('perfil.faceLoginOracao')) },
-        // Peniel Kids fica no topo das ferramentas porque, para quem tem
-        // filho, é a entrada mais usada da tela — e para quem não tem, não
-        // existe. `tenho_acesso_kids()` decide no banco.
-        ...(temAcessoKids ? [{ icon: 'color-palette-outline' as const, label: t('kids.titulo'), onPress: () => navigation.navigate('PenielKids' as never) }] : []),
+        // Peniel Kids: desde 17/10/2026 aberto para TODO membro (pedido do
+        // Marcos). Quem não tem filho cadastrado vê o convite para cadastrar.
+        // `tenho_acesso_kids()` continua valendo para quem ainda não é membro
+        // mas tem acesso (ex.: líder da sala). O material em si continua
+        // protegido no banco por `kit_da_semana`.
+        ...((temAcessoKids || ehMembro) ? [{ icon: 'color-palette-outline' as const, label: t('kids.titulo'), onPress: () => navigation.navigate('PenielKids' as never) }] : []),
         // Aniversariantes é do ADMIN. A lista traz o nome e o dia de toda a
         // igreja, crianças inclusive — e a decisão do Marcos em 18/09 foi que
         // isso é ferramenta de liderança, não conteúdo de congregação. A RPC

@@ -344,7 +344,12 @@
       "apagarTitulo": "Apagar anotação",
       "apagarMsg": "Apagar esta anotação? Não dá para desfazer.",
       "vazioLongo": "Seu caderno está em branco. Anote o que aprendeu, versículos e pedidos de oração. As anotações que você faz dentro das aulas também aparecem aqui."
-    }
+    },
+    "tabInfantil": "Kids",
+    "infantilNome": "Ministério Infantil",
+    "infantilSubtitulo": "Peniel Kids · domingos",
+    "infantilDescricao": "O grupo de quem serve no Ministério Infantil: avisos, encontros, materiais da sala e o chat da equipe.",
+    "infantilAbrirKids": "Lição da semana para as famílias: história, vídeo, música e atividade"
   },
   "devocionais": {
     "titulo": "Devocionais",

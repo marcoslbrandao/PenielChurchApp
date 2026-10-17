@@ -344,7 +344,12 @@
       "apagarTitulo": "Delete note",
       "apagarMsg": "Delete this note? This can't be undone.",
       "vazioLongo": "Your notebook is empty. Write down what you learned, verses and prayer requests. The notes you take inside each class also show up here."
-    }
+    },
+    "tabInfantil": "Kids",
+    "infantilNome": "Children's Ministry",
+    "infantilSubtitulo": "Peniel Kids · Sundays",
+    "infantilDescricao": "The group for everyone serving in the Children's Ministry: notices, meetings, classroom materials and the team chat.",
+    "infantilAbrirKids": "This week's lesson for families: story, video, song and activity"
   },
   "devocionais": {
     "titulo": "Devotionals",

@@ -37,6 +37,7 @@ function paleta(isDark: boolean) {
     homens: '#3D8FE0', homensDim: '#16273F',
     jovens: '#8F79FF', jovensDim: '#241B4D',
     estudoBiblico: '#2FBF9F', estudoBiblicoDim: '#123B33',
+    infantil: '#FF9A3D', infantilDim: '#3D2410',
   } : {
     bg: '#F7F4EE', surface: '#FFFFFF', surfaceAlt: '#F0EDE8',
     border: '#E5E0D8', primary: '#1A1740', text: '#1A1A2E',
@@ -47,11 +48,13 @@ function paleta(isDark: boolean) {
     // Mesmo lilás escuro do card "Peniel Alive" na Home
     jovens: '#4A1AA8', jovensDim: '#EDE4FB',
     estudoBiblico: '#0F8F73', estudoBiblicoDim: '#DFF5EE',
+    // Mesmo laranja do Ministério Infantil no compartilhar.
+    infantil: '#EF6C00', infantilDim: '#FFF1E3',
   };
 }
 type Paleta = ReturnType<typeof paleta>;
 
-type Tab = 'mulheres' | 'homens' | 'jovens' | 'estudo_biblico';
+type Tab = 'mulheres' | 'homens' | 'jovens' | 'estudo_biblico' | 'infantil';
 
 type GrupoEvento = {
   id: string;
@@ -147,6 +150,18 @@ function buildGrupos(t: (key: string) => string, C: Paleta) {
       corDim: C.estudoBiblicoDim,
       descricao: t('grupos.estudoBiblicoDescricao'),
       mensagemContato: 'Olá! Quero saber mais sobre o Estudo Bíblico da Peniel Church.',
+    },
+    // Ministério Infantil (17/10/2026): grupo no mesmo padrão dos outros, para
+    // quem serve na sala (professores e auxiliares). O banco já aceitava o
+    // grupo `infantil` desde a migração do Peniel Kids (19/09).
+    infantil: {
+      nome: t('grupos.infantilNome'),
+      subtitulo: t('grupos.infantilSubtitulo'),
+      icon: 'happy-outline' as const,
+      cor: C.infantil,
+      corDim: C.infantilDim,
+      descricao: t('grupos.infantilDescricao'),
+      mensagemContato: 'Olá! Quero saber mais sobre o Ministério Infantil da Peniel Church.',
     },
   };
 }
@@ -892,6 +907,7 @@ export default function GruposScreen() {
     { id: 'mulheres',      label: t('grupos.tabMulheres'),       icon: 'flower-outline'  },
     { id: 'jovens',        label: t('grupos.tabAlive'),          icon: 'flame-outline'   },
     { id: 'estudo_biblico', label: t('grupos.tabEstudoBiblico'), icon: 'school-outline'  },
+    { id: 'infantil',      label: t('grupos.tabInfantil'),       icon: 'happy-outline'   },
   ];
 
   return (
@@ -996,6 +1012,24 @@ export default function GruposScreen() {
             <Text style={s.heroSub}>{grupo.subtitulo}</Text>
           </View>
         </View>
+        {/* Ministério Infantil: atalho para o Peniel Kids (material da semana
+            para as famílias), aberto para todos os membros. */}
+        {activeTab === 'infantil' && (
+          <TouchableOpacity
+            style={[s.descricaoCard, { borderLeftColor: grupo.cor, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }]}
+            onPress={() => navigation.navigate('PenielKids')}
+            activeOpacity={0.85}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: grupo.corDim, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="color-palette-outline" size={22} color={grupo.cor} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: C.text }}>{t('kids.titulo')}</Text>
+              <Text style={{ fontSize: 12.5, color: C.textMuted, marginTop: 2 }}>{t('grupos.infantilAbrirKids')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={C.textDim} />
+          </TouchableOpacity>
+        )}
         <View style={[s.descricaoCard, { borderLeftColor: grupo.cor }]}>
           <Text style={s.descricaoTexto}>{grupo.descricao}</Text>
         </View>

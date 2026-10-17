@@ -344,7 +344,12 @@
       "apagarTitulo": "Borrar nota",
       "apagarMsg": "¿Borrar esta nota? No se puede deshacer.",
       "vazioLongo": "Tu cuaderno está vacío. Anota lo que aprendiste, versículos y peticiones de oración. Las notas que tomas dentro de las clases también aparecen aquí."
-    }
+    },
+    "tabInfantil": "Kids",
+    "infantilNome": "Ministerio Infantil",
+    "infantilSubtitulo": "Peniel Kids · domingos",
+    "infantilDescricao": "El grupo de quienes sirven en el Ministerio Infantil: avisos, encuentros, materiales de la sala y el chat del equipo.",
+    "infantilAbrirKids": "Lección de la semana para las familias: historia, video, música y actividad"
   },
   "devocionais": {
     "titulo": "Devocionales",

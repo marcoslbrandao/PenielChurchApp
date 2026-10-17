@@ -38,6 +38,7 @@ const GRUPO_LABEL_KEY: Record<string, string> = {
   mulheres: 'grupos.tabMulheres',
   jovens: 'grupos.tabAlive',
   estudo_biblico: 'grupos.tabEstudoBiblico',
+  infantil: 'grupos.tabInfantil',
 };
 
 function DevocionalItem({ dev, aberto, onToggle }: { dev: Devocional; aberto: boolean; onToggle: () => void }) {

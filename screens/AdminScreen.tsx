@@ -88,6 +88,7 @@ type PrayerRequest = {
 const NOME_GRUPO: Record<string, string> = {
   mulheres: 'admin.grupoDeMulheres', homens: 'admin.grupoDeHomens',
   jovens: 'admin.penielAlive', estudo_biblico: 'admin.estudoBiblico',
+  infantil: 'membros.penielKids',
 };
 
 // Opções de destino do devocional: geral (aparece pra todo mundo na Home)
@@ -100,6 +101,7 @@ const GRUPO_DEVOCIONAL_OPCOES: { valor: string | null; chave: string }[] = [
   { valor: 'homens', chave: 'admin.homens' },
   { valor: 'jovens', chave: 'admin.penielAlive' },
   { valor: 'estudo_biblico', chave: 'admin.estudoBiblico' },
+  { valor: 'infantil', chave: 'membros.penielKids' },
 ];
 
 type EscalaArea = { id: string; nome: string; vagas_padrao: number; em_duplas?: boolean; exige_lider?: boolean };

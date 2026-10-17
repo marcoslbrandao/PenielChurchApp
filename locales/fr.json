@@ -344,7 +344,12 @@
       "apagarTitulo": "Supprimer la note",
       "apagarMsg": "Supprimer cette note ? Impossible d'annuler.",
       "vazioLongo": "Votre carnet est vide. Notez ce que vous avez appris, des versets et des sujets de prière. Les notes prises pendant les cours apparaissent aussi ici."
-    }
+    },
+    "tabInfantil": "Kids",
+    "infantilNome": "Ministère des enfants",
+    "infantilSubtitulo": "Peniel Kids · dimanches",
+    "infantilDescricao": "Le groupe de ceux qui servent au ministère des enfants : annonces, rencontres, supports de la salle et le chat de l'équipe.",
+    "infantilAbrirKids": "Leçon de la semaine pour les familles : histoire, vidéo, chant et activité"
   },
   "devocionais": {
     "titulo": "Dévotions",

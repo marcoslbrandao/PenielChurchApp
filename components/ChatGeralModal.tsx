@@ -26,6 +26,7 @@ import {
 } from '../lib/chatGeral';
 import { formatarTempo, duracaoDoAudio } from '../lib/chatAudio';
 import RegrasDoChat from './RegrasDoChat';
+import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/moderacao';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
@@ -143,6 +144,9 @@ export default function ChatGeralModal({
     return () => { s1.remove(); s2.remove(); };
   }, []);
   const padBottom = tecladoAberto ? 0 : Math.max(insets.bottom, 10);
+  // Android edge-to-edge: ver lib/folgaDoTeclado.ts (17/10/2026).
+  const areaRef = useRef<View>(null);
+  const folgaTeclado = useFolgaDoTeclado(areaRef, visible);
 
   // ── Carregar ──────────────────────────────────────────────────────────────
   const carregar = useCallback(async () => {
@@ -691,6 +695,7 @@ export default function ChatGeralModal({
           </TouchableOpacity>
         </View>
 
+        <View ref={areaRef} collapsable={false} style={{ flex: 1, paddingBottom: folgaTeclado }}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           {loading ? (
             <View style={{ flex: 1 }}><ActivityIndicator color={COR} style={{ marginTop: 30 }} /></View>
@@ -812,6 +817,7 @@ export default function ChatGeralModal({
             </View>
           )}
         </KeyboardAvoidingView>
+        </View>
 
         {/* ── Menu ao segurar a mensagem ─────────────────────────────────── */}
         <Modal visible={!!menuDe} transparent animationType="fade" onRequestClose={() => setMenuDe(null)}>

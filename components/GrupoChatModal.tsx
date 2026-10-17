@@ -18,6 +18,7 @@ import AnexoMensagem from './AnexoMensagem';
 import { abrirMenuDeAnexo, apagarAnexo, legendaDoAnexo, type CamposAnexo, type TipoAnexo } from '../lib/chatAnexos';
 import MenuMensagem, { type AcaoMenu } from './MenuMensagem';
 import RegrasDoChat from './RegrasDoChat';
+import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo, alternarSuspensao } from '../lib/moderacao';
 
 function paletaChat(isDark: boolean) {
@@ -135,6 +136,10 @@ export default function GrupoChatModal({
   }, []);
 
   const padBottom = tecladoAberto ? 0 : Math.max(insets.bottom, 10);
+  // Android edge-to-edge: o sistema não encolhe a tela com o teclado; a folga
+  // medida sobe a barra de digitar (ver lib/folgaDoTeclado.ts, 17/10/2026).
+  const areaRef = useRef<View>(null);
+  const folgaTeclado = useFolgaDoTeclado(areaRef, visible);
   const C = useMemo(() => paletaChat(isDark), [isDark]);
   const cs = useMemo(() => buildStyles(C), [C]);
 
@@ -262,6 +267,7 @@ export default function GrupoChatModal({
           <Ionicons name="chatbubbles-outline" size={20} color="rgba(255,255,255,0.7)" />
         </View>
 
+        <View ref={areaRef} collapsable={false} style={{ flex: 1, paddingBottom: folgaTeclado }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -394,6 +400,7 @@ export default function GrupoChatModal({
           </View>
           )}
         </KeyboardAvoidingView>
+        </View>
 
         <MenuMensagem
           visivel={!!menuDe}

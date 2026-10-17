@@ -16,6 +16,7 @@ import { enviarCompartilhado } from '../lib/chatAnexos';
 import { primeiroLinkDeImagem } from '../lib/links';
 import { baixarImagemDoLink } from '../lib/imagemDoLink';
 import ChatGeralModal from './ChatGeralModal';
+import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 
 // ─── "Compartilhar → Peniel" (13/10/2026; destino escolhido desde 14/10) ─────
 // No app da RTM (ou em Arquivos, Fotos, Safari, WhatsApp...), o membro toca em
@@ -71,6 +72,9 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
   // não entrega nada e antes o app abria em silêncio. Agora avisa, com o tipo
   // que a extensão tentou (#file, #media, #text, #weburl) para diagnóstico.
   const ultimoRecebido = useRef(0);
+  // Campo de legenda da folha "Enviar para": no Android edge-to-edge o
+  // teclado cobria o campo (lib/folgaDoTeclado.ts, 17/10/2026).
+  const folhaRef = useRef<View>(null);
   useEffect(() => {
     const verificar = (url: string | null) => {
       if (!url || !url.includes('dataUrl=')) return;
@@ -227,7 +231,10 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
     : (arq.mime ?? '').startsWith('video/') ? 'videocam'
     : (arq.mime ?? '').startsWith('audio/') ? 'musical-notes' : 'document-text';
 
+  // Antes do return condicional: hook não pode ficar depois dele.
+  const folgaTeclado = useFolgaDoTeclado(folhaRef, !!destinos);
   if (!user || !ehMembro) return null;
+
   return (
     <>
       <Modal visible={baixandoImagem} transparent animationType="fade">
@@ -240,6 +247,7 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
       </Modal>
 
       <Modal visible={!!destinos} transparent animationType="slide" onRequestClose={fecharFolha}>
+        <View ref={folhaRef} collapsable={false} style={{ flex: 1, paddingBottom: folgaTeclado }}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Pressable style={st.fundo} onPress={enviando ? undefined : fecharFolha}>
             <Pressable style={[st.folha, { backgroundColor: C.bg, paddingBottom: 16 + insets.bottom }]} onPress={() => {}}>
@@ -304,6 +312,7 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       <ChatGeralModal

@@ -23,6 +23,7 @@ import { paletaBanda, type BandaColors } from '../lib/temaBanda';
 import MetronomoModal from '../components/MetronomoModal';
 import MenuMensagem, { type AcaoMenu } from '../components/MenuMensagem';
 import RegrasDoChat from '../components/RegrasDoChat';
+import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo, alternarSuspensao } from '../lib/moderacao';
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
@@ -3950,6 +3951,8 @@ function BandaMain() {
   const nomePronto = meuPerfil !== null || membros.length > 0;
 
   const mod = useModeracaoChat(user?.id, activeTab === 'chat');
+  // Android edge-to-edge: o teclado cobria a caixa de mensagem (17/10/2026).
+  const folgaTeclado = useFolgaDoTeclado(chatKavRef, activeTab === 'chat');
   const mensagensVisiveis = useMemo(() => messages.filter(m => !mod.bloqueados.has(m.autor_id)), [messages, mod.bloqueados]);
   const acaoDoMenuChat = (msg: ChatMsg, acao: AcaoMenu) => {
     if (acao === 'apagar') apagarMensagem(msg);
@@ -5016,7 +5019,7 @@ function BandaMain() {
 
       {/* ══ CHAT ══════════════════════════════════════════════════════════════ */}
       {activeTab === 'chat' && (
-        <View ref={chatKavRef} collapsable={false} style={{ flex: 1 }} onLayout={medirChatKav}>
+        <View ref={chatKavRef} collapsable={false} style={{ flex: 1, paddingBottom: folgaTeclado }} onLayout={medirChatKav}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}

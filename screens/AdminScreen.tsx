@@ -18,6 +18,7 @@ import { useAuth } from '../lib/useAuth';
 import { useBirthdays } from '../lib/useBirthdays';
 import { useTranslation } from 'react-i18next';
 import { APP_LINK_URL } from '../lib/appLinks';
+import { versaoDoBinario } from '../lib/recursosNativos';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -2477,6 +2478,101 @@ const TEXTOS_EDITAVEIS: { chave: string; titulo: string; dica: string }[] = [
     dica: 'Só o próprio visitante vê, na Home dele e num push às 7h do dia do aniversário.' },
 ];
 
+// ─── Versão do app nas lojas (admin) ──────────────────────────────────────────
+// 17/10/2026. `versao_recomendada`: aviso suave ("versão nova disponível",
+// dá para fechar) para quem está abaixo — iPhone e Android. `versao_minima`:
+// tela obrigatória "Atualize para continuar". Só subir depois que a versão
+// estiver PUBLICADA naquela loja (não "em revisão"), senão a pessoa é mandada
+// para uma loja que ainda não tem a versão.
+const RE_VERSAO = /^\d+\.\d+\.\d+$/;
+function VersaoDoAppPanel() {
+  const { t } = useTranslation();
+  const [linhas, setLinhas] = useState<Record<string, { recomendada: string; minima: string }>>({});
+  const [salvando, setSalvando] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    const { data } = await supabase.from('app_versao').select('*');
+    const m: Record<string, { recomendada: string; minima: string }> = {};
+    ((data ?? []) as any[]).forEach(r => {
+      m[r.plataforma] = { recomendada: r.versao_recomendada ?? '0.0.0', minima: r.versao_minima ?? '0.0.0' };
+    });
+    setLinhas(m);
+  }, []);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const mudar = (plat: string, campo: 'recomendada' | 'minima', v: string) =>
+    setLinhas(l => ({ ...l, [plat]: { ...l[plat], [campo]: v.replace(/[^0-9.]/g, '') } }));
+
+  const salvar = (plat: string) => {
+    const l = linhas[plat];
+    if (!l || !RE_VERSAO.test(l.recomendada) || !RE_VERSAO.test(l.minima)) {
+      Alert.alert(t('common.atencao'), t('admin.versaoFormato'));
+      return;
+    }
+    Alert.alert(
+      t('admin.versaoConfirmarTitulo', { plataforma: plat === 'ios' ? 'iPhone' : 'Android' }),
+      t('admin.versaoConfirmarMsg', { recomendada: l.recomendada, minima: l.minima }),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        { text: t('common.salvar'), onPress: async () => {
+          setSalvando(plat);
+          const { error } = await supabase.from('app_versao')
+            .update({ versao_recomendada: l.recomendada, versao_minima: l.minima, atualizado_em: new Date().toISOString() })
+            .eq('plataforma', plat);
+          setSalvando(null);
+          if (error) { Alert.alert(t('common.erro'), error.message); return; }
+          carregar();
+          Alert.alert(t('admin.versaoSalva'));
+        }},
+      ],
+    );
+  };
+
+  return (
+    <View style={{ marginBottom: 20 }}>
+      <Text style={s.sectionLabel}>{t('admin.versaoTitulo')}</Text>
+      <View style={{ backgroundColor: C.surface, borderRadius: 14, borderWidth: 1, borderColor: C.border, padding: 14 }}>
+        <Text style={{ fontSize: 12, color: C.textMuted, lineHeight: 18, marginBottom: 12 }}>
+          {t('admin.versaoExplicacao', { atual: versaoDoBinario() ?? '—' })}
+        </Text>
+        {(['ios', 'android'] as const).map(plat => {
+          const l = linhas[plat];
+          if (!l) return null;
+          return (
+            <View key={plat} style={{ marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Ionicons name={plat === 'ios' ? 'logo-apple' : 'logo-android'} size={16} color={C.text} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{plat === 'ios' ? 'iPhone' : 'Android'}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>{t('admin.versaoRecomendada')}</Text>
+                  <View style={mo.fieldRow}>
+                    <TextInput style={mo.fieldInput} value={l.recomendada} onChangeText={v => mudar(plat, 'recomendada', v)}
+                      keyboardType="numbers-and-punctuation" placeholder="1.5.0" placeholderTextColor={C.textDim} maxLength={10} />
+                  </View>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>{t('admin.versaoMinima')}</Text>
+                  <View style={mo.fieldRow}>
+                    <TextInput style={mo.fieldInput} value={l.minima} onChangeText={v => mudar(plat, 'minima', v)}
+                      keyboardType="numbers-and-punctuation" placeholder="1.5.0" placeholderTextColor={C.textDim} maxLength={10} />
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => salvar(plat)} disabled={salvando === plat}
+                  style={{ alignSelf: 'flex-end', height: 46, paddingHorizontal: 14, borderRadius: 10, backgroundColor: C.purple, justifyContent: 'center' }}>
+                  {salvando === plat ? <ActivityIndicator color="#fff" /> : <Ionicons name="checkmark" size={20} color="#fff" />}
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })}
+        <Text style={{ fontSize: 11, color: C.textDim, lineHeight: 16 }}>{t('admin.versaoAviso')}</Text>
+      </View>
+    </View>
+  );
+}
+
 function TextosAppEditor() {
   const [textos, setTextos] = useState<Record<string, string>>({});
   const [originais, setOriginais] = useState<Record<string, string>>({});
@@ -3486,6 +3582,7 @@ export default function AdminScreen() {
           {abaAtual === 'stats' && (
             <>
               <TraducaoAoVivoAdminPanel />
+              {ehAdmin && <VersaoDoAppPanel />}
               <Text style={s.sectionLabel}>{t('admin.usuariosDoApp')}</Text>
               <View style={s.statsGrid}>
                 {[

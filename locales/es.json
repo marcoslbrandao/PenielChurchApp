@@ -1247,7 +1247,16 @@
     "liderObrigatorioDesligado": "Apagado: cualquiera del equipo puede ocupar cualquier puesto.",
     "liderDeTurno": "Líder",
     "auxiliar": "Auxiliar",
-    "escalaSemLider": "Sin líder disponible en: {{lista}}. Ajústalo en \"Ver y editar escala\"."
+    "escalaSemLider": "Sin líder disponible en: {{lista}}. Ajústalo en \"Ver y editar escala\".",
+    "versaoTitulo": "Versión de la app en las tiendas",
+    "versaoExplicacao": "Quien tenga una versión inferior a la RECOMENDADA ve un aviso que puede cerrar. Por debajo de la MÍNIMA, la pantalla obligatoria \"Actualiza para continuar\". Este dispositivo: {{atual}}.",
+    "versaoRecomendada": "Recomendada",
+    "versaoMinima": "Mínima",
+    "versaoFormato": "Usa el formato 1.5.0 en los dos campos.",
+    "versaoConfirmarTitulo": "¿Guardar versiones de {{plataforma}}?",
+    "versaoConfirmarMsg": "Recomendada {{recomendada}} · mínima {{minima}}.\n\nComprueba que esa versión ya está PUBLICADA en la tienda (no en revisión).",
+    "versaoSalva": "Versiones guardadas.",
+    "versaoAviso": "Súbela solo después de que la tienda apruebe y publique la versión. Para desactivar, usa 0.0.0."
   },
   "membros": {
     "buscarPeloNome": "Buscar por nombre...",

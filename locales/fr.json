@@ -1247,7 +1247,16 @@
     "liderObrigatorioDesligado": "Désactivé : n'importe qui de l'équipe peut prendre n'importe quelle place.",
     "liderDeTurno": "Responsable",
     "auxiliar": "Aide",
-    "escalaSemLider": "Aucun responsable disponible le : {{lista}}. Corrigez dans « Voir et modifier le planning »."
+    "escalaSemLider": "Aucun responsable disponible le : {{lista}}. Corrigez dans « Voir et modifier le planning ».",
+    "versaoTitulo": "Version de l'app dans les stores",
+    "versaoExplicacao": "En dessous de la version RECOMMANDÉE, un avis qu'on peut fermer. En dessous de la MINIMALE, l'écran obligatoire « Mettez à jour pour continuer ». Cet appareil : {{atual}}.",
+    "versaoRecomendada": "Recommandée",
+    "versaoMinima": "Minimale",
+    "versaoFormato": "Utilisez le format 1.5.0 dans les deux champs.",
+    "versaoConfirmarTitulo": "Enregistrer les versions {{plataforma}} ?",
+    "versaoConfirmarMsg": "Recommandée {{recomendada}} · minimale {{minima}}.\n\nVérifiez que cette version est déjà PUBLIÉE dans le store (pas en examen).",
+    "versaoSalva": "Versions enregistrées.",
+    "versaoAviso": "À relever seulement après l'approbation et la publication par le store. Pour désactiver, utilisez 0.0.0."
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",

@@ -64,15 +64,19 @@ async function versaoNaAppStore(): Promise<string | null> {
   return null;
 }
 
-async function versaoMinima(): Promise<string | null> {
+// `versao_recomendada` (17/10/2026): a versão que está nas lojas, informada
+// pelo admin no painel. É o que faz o aviso suave chegar também no Android,
+// que não tem consulta pública de versão como a App Store.
+async function versoesDoBanco(): Promise<{ minima: string | null; recomendada: string | null }> {
   const r = await comTempoLimite(
     Promise.resolve(
-      supabase.from('app_versao').select('versao_minima').eq('plataforma', Platform.OS).maybeSingle(),
+      supabase.from('app_versao').select('*').eq('plataforma', Platform.OS).maybeSingle(),
     ),
     8000,
   );
-  const v = (r as any)?.data?.versao_minima;
-  return typeof v === 'string' ? v : null;
+  const d = (r as any)?.data;
+  const ok = (v: unknown) => (typeof v === 'string' && /^\d+(\.\d+)*$/.test(v) ? v : null);
+  return { minima: ok(d?.versao_minima), recomendada: ok(d?.versao_recomendada) };
 }
 
 export type SituacaoDaVersao =
@@ -86,10 +90,14 @@ export async function verificarVersao(): Promise<SituacaoDaVersao> {
   const instalada = versaoDoBinario();
   if (!instalada || (Platform.OS !== 'ios' && Platform.OS !== 'android')) return { tipo: 'ok' };
 
-  const [minima, naLoja] = await Promise.all([
-    versaoMinima(),
+  const [{ minima, recomendada }, naAppStore] = await Promise.all([
+    versoesDoBanco(),
     Platform.OS === 'ios' ? versaoNaAppStore() : Promise.resolve(null),
   ]);
+  // A maior entre a App Store (só iPhone) e a recomendada pelo admin.
+  const naLoja = [naAppStore, recomendada]
+    .filter((v): v is string => !!v)
+    .sort((a, b) => compararVersoes(b, a))[0] ?? null;
 
   if (minima && compararVersoes(instalada, minima) < 0) {
     return { tipo: 'obrigatoria', instalada, minima };

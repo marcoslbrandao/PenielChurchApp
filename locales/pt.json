@@ -1247,7 +1247,16 @@
     "liderObrigatorioDesligado": "Desligado: qualquer pessoa do time pode ocupar qualquer vaga.",
     "liderDeTurno": "Líder",
     "auxiliar": "Auxiliar",
-    "escalaSemLider": "Sem líder disponível em: {{lista}}. Ajuste em \"Ver e editar escala\"."
+    "escalaSemLider": "Sem líder disponível em: {{lista}}. Ajuste em \"Ver e editar escala\".",
+    "versaoTitulo": "Versão do app nas lojas",
+    "versaoExplicacao": "Quem tiver versão abaixo da RECOMENDADA vê um aviso que dá para fechar. Abaixo da MÍNIMA, a tela obrigatória \"Atualize para continuar\". Este aparelho: {{atual}}.",
+    "versaoRecomendada": "Recomendada",
+    "versaoMinima": "Mínima",
+    "versaoFormato": "Use o formato 1.5.0 nos dois campos.",
+    "versaoConfirmarTitulo": "Salvar versões do {{plataforma}}?",
+    "versaoConfirmarMsg": "Recomendada {{recomendada}} · mínima {{minima}}.\n\nConfira se essa versão já está PUBLICADA na loja (não em revisão).",
+    "versaoSalva": "Versões salvas.",
+    "versaoAviso": "Só suba depois que a loja aprovar e publicar a versão. Para desligar, use 0.0.0."
   },
   "membros": {
     "buscarPeloNome": "Buscar pelo nome...",

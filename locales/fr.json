@@ -1236,7 +1236,13 @@
     "duplasEmDuplaCom": "en binôme avec {{nome}}",
     "duplasNenhumCasalTitulo": "Aucun couple trouvé",
     "duplasNenhumCasalMsg": "Personne dans l'équipe n'est lié à son conjoint dans la fiche Membres (ou ils sont déjà en binôme). Formez les binômes à la main.",
-    "duplasCasaisJuntados": "{{n}} couple(s) associé(s)."
+    "duplasCasaisJuntados": "{{n}} couple(s) associé(s).",
+    "liderObrigatorio": "Toujours un responsable par culte",
+    "liderObrigatorioLigado": "Activé : la 1re place de chaque culte revient à un responsable (⭐). Les autres, à n'importe qui de l'équipe. Responsables marqués : {{n}}.",
+    "liderObrigatorioDesligado": "Désactivé : n'importe qui de l'équipe peut prendre n'importe quelle place.",
+    "liderDeTurno": "Responsable",
+    "auxiliar": "Aide",
+    "escalaSemLider": "Aucun responsable disponible le : {{lista}}. Corrigez dans « Voir et modifier le planning »."
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",

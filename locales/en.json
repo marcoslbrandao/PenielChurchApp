@@ -1236,7 +1236,13 @@
     "duplasEmDuplaCom": "paired with {{nome}}",
     "duplasNenhumCasalTitulo": "No couples found",
     "duplasNenhumCasalMsg": "Nobody in this team is linked to their spouse in the Members record (or they are already paired). Make the pairs by hand.",
-    "duplasCasaisJuntados": "{{n}} couple(s) paired."
+    "duplasCasaisJuntados": "{{n}} couple(s) paired.",
+    "liderObrigatorio": "Always one leader per service",
+    "liderObrigatorioLigado": "On: the 1st slot of each service goes to a leader (⭐). Other slots go to anyone on the team. Leaders marked: {{n}}.",
+    "liderObrigatorioDesligado": "Off: anyone on the team can take any slot.",
+    "liderDeTurno": "Leader",
+    "auxiliar": "Helper",
+    "escalaSemLider": "No leader available on: {{lista}}. Fix it in \"View and edit rota\"."
   },
   "membros": {
     "buscarPeloNome": "Search by name...",

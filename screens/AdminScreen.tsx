@@ -102,9 +102,9 @@ const GRUPO_DEVOCIONAL_OPCOES: { valor: string | null; chave: string }[] = [
   { valor: 'estudo_biblico', chave: 'admin.estudoBiblico' },
 ];
 
-type EscalaArea = { id: string; nome: string; vagas_padrao: number; em_duplas?: boolean };
+type EscalaArea = { id: string; nome: string; vagas_padrao: number; em_duplas?: boolean; exige_lider?: boolean };
 type EscalaDupla = { id: string; area_id: string; membro_a: string; membro_b: string };
-type AreaVoluntario = { id: string; area_id: string; membro_id: string; nome: string; sobrenome: string };
+type AreaVoluntario = { id: string; area_id: string; membro_id: string; nome: string; sobrenome: string; lider_de_turno?: boolean };
 // Sem telefone: quem lidera uma área de escala monta o time da área, mas não
 // tem acesso ao diretório da igreja. A busca vem de `membros_para_area_escala`
 // no Supabase, que devolve só nome e checa a permissão lá dentro.
@@ -1380,6 +1380,29 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
   };
   const duplaDe = (membroId: string) => duplas.find(d => d.membro_a === membroId || d.membro_b === membroId);
 
+  // ── Lider obrigatorio (ex.: Ministerio Infantil) ── pedido do Marcos, 17/10.
+  // 1a vaga de cada culto sempre e de um lider; as outras, de qualquer um.
+  const [exigeLider, setExigeLider] = useState(false);
+  useEffect(() => { setExigeLider(!!area?.exige_lider); }, [area?.id, area?.exige_lider]);
+  const alternarExigeLider = async (valor: boolean) => {
+    if (!area) return;
+    setExigeLider(valor);
+    const { error } = await supabase.from('escala_areas').update({ exige_lider: valor }).eq('id', area.id);
+    if (error) { setExigeLider(!valor); Alert.alert(t('common.erro'), error.message); return; }
+    onChanged();
+  };
+  const alternarLiderDeTurno = async (v: AreaVoluntario) => {
+    const novo = !v.lider_de_turno;
+    setVoluntarios(vs => vs.map(x => (x.id === v.id ? { ...x, lider_de_turno: novo } : x)));
+    const { error } = await supabase.from('escala_area_voluntarios').update({ lider_de_turno: novo }).eq('id', v.id);
+    if (error) {
+      setVoluntarios(vs => vs.map(x => (x.id === v.id ? { ...x, lider_de_turno: !novo } : x)));
+      Alert.alert(t('common.erro'), error.message);
+      return;
+    }
+    onChanged();
+  };
+
   const alternarEmDuplas = async (valor: boolean) => {
     if (!area) return;
     setEmDuplas(valor);
@@ -1446,7 +1469,7 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
     const { data } = await supabase.rpc('voluntarios_da_area', { p_area_id: area.id });
     setVoluntarios(((data ?? []) as any[]).map(row => ({
       id: row.id, area_id: row.area_id, membro_id: row.membro_id,
-      nome: row.nome ?? '', sobrenome: row.sobrenome ?? '',
+      nome: row.nome ?? '', sobrenome: row.sobrenome ?? '', lider_de_turno: !!row.lider_de_turno,
     })));
     setLoading(false);
   }, [area]);
@@ -1568,6 +1591,18 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
 
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.purple + '10', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginTop: 10 }}>
               <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{t('admin.liderObrigatorio')}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  {exigeLider
+                    ? t('admin.liderObrigatorioLigado', { n: voluntarios.filter(v => v.lider_de_turno).length })
+                    : t('admin.liderObrigatorioDesligado')}
+                </Text>
+              </View>
+              <Switch value={exigeLider} onValueChange={alternarExigeLider} disabled={!podeMudarVagas} trackColor={{ true: C.purple }} />
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.purple + '10', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginTop: 10 }}>
+              <View style={{ flex: 1, marginRight: 10 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{t('admin.duplasServemEmDupla')}</Text>
                 <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
                   {emDuplas ? t('admin.duplasLigadoDesc') : t('admin.duplasDesligadoDesc')}
@@ -1645,11 +1680,21 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
                         )}
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 14, color: C.text }}>{v.nome} {v.sobrenome}</Text>
+                          {exigeLider && (
+                            <Text style={{ fontSize: 11, color: v.lider_de_turno ? C.purple : C.textMuted, marginTop: 2, fontWeight: v.lider_de_turno ? '700' : '400' }}>
+                              {v.lider_de_turno ? t('admin.liderDeTurno') : t('admin.auxiliar')}
+                            </Text>
+                          )}
                           {parceiro && (
                             <Text style={{ fontSize: 11, color: C.purple, marginTop: 2 }}>{t('admin.duplasEmDuplaCom', { nome: nomeDe(parceiro) })}</Text>
                           )}
                         </View>
                       </View>
+                      {!formando && exigeLider && (
+                        <TouchableOpacity onPress={() => alternarLiderDeTurno(v)} hitSlop={8} style={{ marginRight: 16 }}>
+                          <Ionicons name={v.lider_de_turno ? 'star' : 'star-outline'} size={20} color={v.lider_de_turno ? C.accent ?? C.purple : C.textDim} />
+                        </TouchableOpacity>
+                      )}
                       {!formando && (
                         <TouchableOpacity onPress={() => remover(v)}>
                           <Ionicons name="trash-outline" size={18} color={C.danger} />
@@ -2111,6 +2156,8 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
 
     const novas: { area_id: string; membro_id: string; data: string; gerado_automaticamente: boolean; criado_por: string | undefined }[] = [];
     let vagasSemNinguem = 0;
+    const semLider: string[] = []; // "Area dd/mm" sem lider disponivel
+    const liderSet = new Set(voluntarios.filter(v => v.lider_de_turno).map(v => `${v.area_id}|${v.membro_id}`));
 
     ativas.forEach(data => {
       const usadosHoje = (usadoNoDia[data] ??= new Set());
@@ -2130,10 +2177,24 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
             || ultimaU(a).localeCompare(ultimaU(b))
             || ((ordemNaFila[a[0]] ?? 0) - (ordemNaFila[b[0]] ?? 0)));
         const escolhidos: string[] = [];
-        for (const u of candidatos) {
+        let restantes = candidatos;
+        // Lider obrigatorio: a 1a escolha e a unidade (pessoa ou dupla) com
+        // um lider que serviu menos; o resto completa com qualquer um.
+        const jaTemLider = (existentesData ?? []).some((e: any) =>
+          e.area_id === area.id && e.data === data && liderSet.has(`${area.id}|${e.membro_id}`));
+        if (area.exige_lider && !jaTemLider) {
+          const comLider = candidatos.find(u => u.length <= precisa && u.some(id => liderSet.has(`${area.id}|${id}`)));
+          if (comLider) {
+            escolhidos.push(...comLider);
+            restantes = candidatos.filter(u => u !== comLider);
+          } else {
+            semLider.push(`${area.nome} ${formatarDataBR(data).slice(0, 5)}`);
+          }
+        }
+        for (const u of restantes) {
+          if (escolhidos.length === precisa) break;
           if (escolhidos.length + u.length > precisa) continue;
           escolhidos.push(...u);
-          if (escolhidos.length === precisa) break;
         }
         vagasSemNinguem += precisa - escolhidos.length;
         escolhidos.forEach(id => {
@@ -2160,7 +2221,8 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
     Alert.alert(
       t('admin.escalaGerada'),
       t('admin.escalaGeradaResumo', { n: novas.length, datas: ativas.length, ate: formatarDataBR(ultima) })
-        + (vagasSemNinguem > 0 ? `\n\n${t('admin.escalaVagasSemNinguem', { n: vagasSemNinguem })}` : ''),
+        + (vagasSemNinguem > 0 ? `\n\n${t('admin.escalaVagasSemNinguem', { n: vagasSemNinguem })}` : '')
+        + (semLider.length > 0 ? `\n\n${t('admin.escalaSemLider', { lista: semLider.join(', ') })}` : ''),
     );
   };
 
@@ -2604,11 +2666,11 @@ export default function AdminScreen() {
     if (areasData) setEscalaAreas(areasData as EscalaArea[]);
     const { data: volData } = await supabase
       .from('escala_area_voluntarios')
-      .select('id, area_id, membro_id, members(nome, sobrenome)');
+      .select('id, area_id, membro_id, lider_de_turno, members(nome, sobrenome)');
     if (volData) {
       setAreaVoluntarios((volData as any[]).map(v => ({
         id: v.id, area_id: v.area_id, membro_id: v.membro_id,
-        nome: v.members?.nome ?? '', sobrenome: v.members?.sobrenome ?? '',
+        nome: v.members?.nome ?? '', sobrenome: v.members?.sobrenome ?? '', lider_de_turno: !!v.lider_de_turno,
       })));
     }
     if (user) {

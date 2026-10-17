@@ -1236,7 +1236,13 @@
     "duplasEmDuplaCom": "em dupla com {{nome}}",
     "duplasNenhumCasalTitulo": "Nenhum casal encontrado",
     "duplasNenhumCasalMsg": "Não há no time marido e esposa ligados como cônjuges na ficha de Membros (ou já estão em dupla). Forme as duplas à mão.",
-    "duplasCasaisJuntados": "{{n}} casal(is) juntado(s) em dupla."
+    "duplasCasaisJuntados": "{{n}} casal(is) juntado(s) em dupla.",
+    "liderObrigatorio": "Sempre um líder por culto",
+    "liderObrigatorioLigado": "Ligado: a 1ª vaga de cada culto é de um líder (⭐). As outras vagas, de qualquer um do time. Líderes marcados: {{n}}.",
+    "liderObrigatorioDesligado": "Desligado: qualquer pessoa do time pode ocupar qualquer vaga.",
+    "liderDeTurno": "Líder",
+    "auxiliar": "Auxiliar",
+    "escalaSemLider": "Sem líder disponível em: {{lista}}. Ajuste em \"Ver e editar escala\"."
   },
   "membros": {
     "buscarPeloNome": "Buscar pelo nome...",

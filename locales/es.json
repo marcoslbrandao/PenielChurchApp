@@ -1236,7 +1236,13 @@
     "duplasEmDuplaCom": "en pareja con {{nome}}",
     "duplasNenhumCasalTitulo": "No se encontraron matrimonios",
     "duplasNenhumCasalMsg": "Nadie del equipo está vinculado a su cónyuge en la ficha de Miembros (o ya están en pareja). Forma las parejas a mano.",
-    "duplasCasaisJuntados": "{{n}} matrimonio(s) unido(s) en pareja."
+    "duplasCasaisJuntados": "{{n}} matrimonio(s) unido(s) en pareja.",
+    "liderObrigatorio": "Siempre un líder por culto",
+    "liderObrigatorioLigado": "Activado: el 1er puesto de cada culto es de un líder (⭐). Los demás, de cualquiera del equipo. Líderes marcados: {{n}}.",
+    "liderObrigatorioDesligado": "Apagado: cualquiera del equipo puede ocupar cualquier puesto.",
+    "liderDeTurno": "Líder",
+    "auxiliar": "Auxiliar",
+    "escalaSemLider": "Sin líder disponible en: {{lista}}. Ajústalo en \"Ver y editar escala\"."
   },
   "membros": {
     "buscarPeloNome": "Buscar por nombre...",

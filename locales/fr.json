@@ -1222,7 +1222,21 @@
     "timeAtual": "Équipe actuelle ({{n}})",
     "apagarArea": "Supprimer l'équipe",
     "apagarAreaTitulo": "Supprimer l'équipe « {{area}} » ?",
-    "apagarAreaMsg": "Cela supprime l'équipe, ses membres ({{n}} personnes) et les dates où quelqu'un y était déjà inscrit. Les personnes restent dans l'app et dans les autres équipes. Action irréversible."
+    "apagarAreaMsg": "Cela supprime l'équipe, ses membres ({{n}} personnes) et les dates où quelqu'un y était déjà inscrit. Les personnes restent dans l'app et dans les autres équipes. Action irréversible.",
+    "duplasServemEmDupla": "Servent en binôme",
+    "duplasLigadoDesc": "Le planning place chaque binôme ci-dessous au même culte. Ceux qui ne sont pas en binôme servent seuls.",
+    "duplasDesligadoDesc": "Désactivé : le planning choisit personne par personne, au hasard.",
+    "duplasTitulo": "Binômes ({{n}})",
+    "duplasNenhuma": "Aucun binôme pour le moment.",
+    "duplasFormar": "Former un binôme",
+    "duplasPronto": "Terminé",
+    "duplasJuntarCasais": "Associer les couples",
+    "duplasEscolhaPrimeiro": "Touchez la première personne du binôme dans la liste de l'équipe.",
+    "duplasEscolhaSegundo": "Touchez maintenant la personne qui servira avec {{nome}}.",
+    "duplasEmDuplaCom": "en binôme avec {{nome}}",
+    "duplasNenhumCasalTitulo": "Aucun couple trouvé",
+    "duplasNenhumCasalMsg": "Personne dans l'équipe n'est lié à son conjoint dans la fiche Membres (ou ils sont déjà en binôme). Formez les binômes à la main.",
+    "duplasCasaisJuntados": "{{n}} couple(s) associé(s)."
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",

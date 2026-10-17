@@ -1222,7 +1222,21 @@
     "timeAtual": "Current team ({{n}})",
     "apagarArea": "Delete area",
     "apagarAreaTitulo": "Delete the area \"{{area}}\"?",
-    "apagarAreaMsg": "This deletes the area, its team ({{n}} people) and any dates where someone was already on the rota for it. People stay in the app and in other areas. This cannot be undone."
+    "apagarAreaMsg": "This deletes the area, its team ({{n}} people) and any dates where someone was already on the rota for it. People stay in the app and in other areas. This cannot be undone.",
+    "duplasServemEmDupla": "Serve in pairs",
+    "duplasLigadoDesc": "The rota puts each pair below on the same service. Anyone not in a pair serves alone.",
+    "duplasDesligadoDesc": "Off: the rota picks people one by one, at random.",
+    "duplasTitulo": "Pairs ({{n}})",
+    "duplasNenhuma": "No pairs yet.",
+    "duplasFormar": "Make a pair",
+    "duplasPronto": "Done",
+    "duplasJuntarCasais": "Pair couples",
+    "duplasEscolhaPrimeiro": "Tap the first person of the pair in the team list below.",
+    "duplasEscolhaSegundo": "Now tap who will serve with {{nome}}.",
+    "duplasEmDuplaCom": "paired with {{nome}}",
+    "duplasNenhumCasalTitulo": "No couples found",
+    "duplasNenhumCasalMsg": "Nobody in this team is linked to their spouse in the Members record (or they are already paired). Make the pairs by hand.",
+    "duplasCasaisJuntados": "{{n}} couple(s) paired."
   },
   "membros": {
     "buscarPeloNome": "Search by name...",

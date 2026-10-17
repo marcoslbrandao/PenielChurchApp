@@ -1222,7 +1222,21 @@
     "timeAtual": "Time atual ({{n}})",
     "apagarArea": "Apagar área",
     "apagarAreaTitulo": "Apagar a área \"{{area}}\"?",
-    "apagarAreaMsg": "Isso apaga a área, o time dela ({{n}} pessoas) e as datas em que alguém já estava escalado nela. As pessoas continuam no app e nas outras áreas. Não dá para desfazer."
+    "apagarAreaMsg": "Isso apaga a área, o time dela ({{n}} pessoas) e as datas em que alguém já estava escalado nela. As pessoas continuam no app e nas outras áreas. Não dá para desfazer.",
+    "duplasServemEmDupla": "Servem em dupla",
+    "duplasLigadoDesc": "A escala junta as duplas abaixo no mesmo culto. Quem não está em dupla serve sozinho.",
+    "duplasDesligadoDesc": "Desligado: a escala escolhe pessoa por pessoa, de forma aleatória.",
+    "duplasTitulo": "Duplas ({{n}})",
+    "duplasNenhuma": "Nenhuma dupla formada ainda.",
+    "duplasFormar": "Formar dupla",
+    "duplasPronto": "Pronto",
+    "duplasJuntarCasais": "Juntar casais",
+    "duplasEscolhaPrimeiro": "Toque na primeira pessoa da dupla, na lista do time abaixo.",
+    "duplasEscolhaSegundo": "Agora toque em quem vai servir com {{nome}}.",
+    "duplasEmDuplaCom": "em dupla com {{nome}}",
+    "duplasNenhumCasalTitulo": "Nenhum casal encontrado",
+    "duplasNenhumCasalMsg": "Não há no time marido e esposa ligados como cônjuges na ficha de Membros (ou já estão em dupla). Forme as duplas à mão.",
+    "duplasCasaisJuntados": "{{n}} casal(is) juntado(s) em dupla."
   },
   "membros": {
     "buscarPeloNome": "Buscar pelo nome...",

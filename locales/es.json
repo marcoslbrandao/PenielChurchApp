@@ -1222,7 +1222,21 @@
     "timeAtual": "Equipo actual ({{n}})",
     "apagarArea": "Eliminar área",
     "apagarAreaTitulo": "¿Eliminar el área \"{{area}}\"?",
-    "apagarAreaMsg": "Esto elimina el área, su equipo ({{n}} personas) y las fechas en que alguien ya estaba en la escala de ella. Las personas siguen en la app y en otras áreas. No se puede deshacer."
+    "apagarAreaMsg": "Esto elimina el área, su equipo ({{n}} personas) y las fechas en que alguien ya estaba en la escala de ella. Las personas siguen en la app y en otras áreas. No se puede deshacer.",
+    "duplasServemEmDupla": "Sirven en pareja",
+    "duplasLigadoDesc": "La escala pone cada pareja de abajo en el mismo culto. Quien no está en pareja sirve solo.",
+    "duplasDesligadoDesc": "Apagado: la escala elige persona por persona, al azar.",
+    "duplasTitulo": "Parejas ({{n}})",
+    "duplasNenhuma": "Ninguna pareja todavía.",
+    "duplasFormar": "Formar pareja",
+    "duplasPronto": "Listo",
+    "duplasJuntarCasais": "Unir matrimonios",
+    "duplasEscolhaPrimeiro": "Toca a la primera persona de la pareja en la lista del equipo.",
+    "duplasEscolhaSegundo": "Ahora toca a quien servirá con {{nome}}.",
+    "duplasEmDuplaCom": "en pareja con {{nome}}",
+    "duplasNenhumCasalTitulo": "No se encontraron matrimonios",
+    "duplasNenhumCasalMsg": "Nadie del equipo está vinculado a su cónyuge en la ficha de Miembros (o ya están en pareja). Forma las parejas a mano.",
+    "duplasCasaisJuntados": "{{n}} matrimonio(s) unido(s) en pareja."
   },
   "membros": {
     "buscarPeloNome": "Buscar por nombre...",

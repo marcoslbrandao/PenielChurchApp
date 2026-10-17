@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, StatusBar, ActivityIndicator,
   Share, RefreshControl, Modal, Image,
-  KeyboardAvoidingView, Platform, Linking,
+  KeyboardAvoidingView, Platform, Linking, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
@@ -102,7 +102,8 @@ const GRUPO_DEVOCIONAL_OPCOES: { valor: string | null; chave: string }[] = [
   { valor: 'estudo_biblico', chave: 'admin.estudoBiblico' },
 ];
 
-type EscalaArea = { id: string; nome: string; vagas_padrao: number };
+type EscalaArea = { id: string; nome: string; vagas_padrao: number; em_duplas?: boolean };
+type EscalaDupla = { id: string; area_id: string; membro_a: string; membro_b: string };
 type AreaVoluntario = { id: string; area_id: string; membro_id: string; nome: string; sobrenome: string };
 // Sem telefone: quem lidera uma área de escala monta o time da área, mas não
 // tem acesso ao diretório da igreja. A busca vem de `membros_para_area_escala`
@@ -1357,6 +1358,72 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
   const [vagas, setVagas] = useState(1);
   const [salvandoVagas, setSalvandoVagas] = useState(false);
   useEffect(() => { if (area) setVagas(area.vagas_padrao); }, [area?.id, area?.vagas_padrao]);
+
+  // ── Duplas (ex.: casais nos Diaconos) ── pedido do Marcos, 17/10.
+  // Area "em dupla": o gerador escala as duplas juntas; quem nao esta em
+  // dupla segue sozinho. Liga/desliga so o admin; o lider monta as duplas.
+  const [emDuplas, setEmDuplas] = useState(false);
+  const [duplas, setDuplas] = useState<EscalaDupla[]>([]);
+  const [formando, setFormando] = useState(false);
+  const [primeiro, setPrimeiro] = useState<string | null>(null);
+  useEffect(() => { setEmDuplas(!!area?.em_duplas); setFormando(false); setPrimeiro(null); }, [area?.id, area?.em_duplas]);
+  const carregarDuplas = useCallback(async () => {
+    if (!area) return;
+    const { data } = await supabase.from('escala_duplas').select('id, area_id, membro_a, membro_b').eq('area_id', area.id);
+    setDuplas((data ?? []) as EscalaDupla[]);
+  }, [area?.id]);
+  useEffect(() => { if (visible && area) carregarDuplas(); }, [visible, carregarDuplas]);
+
+  const nomeDe = (membroId: string) => {
+    const v = voluntarios.find(x => x.membro_id === membroId);
+    return v ? `${v.nome} ${v.sobrenome}`.trim() : '?';
+  };
+  const duplaDe = (membroId: string) => duplas.find(d => d.membro_a === membroId || d.membro_b === membroId);
+
+  const alternarEmDuplas = async (valor: boolean) => {
+    if (!area) return;
+    setEmDuplas(valor);
+    const { error } = await supabase.from('escala_areas').update({ em_duplas: valor }).eq('id', area.id);
+    if (error) { setEmDuplas(!valor); Alert.alert(t('common.erro'), error.message); return; }
+    onChanged();
+  };
+
+  const tocarParaDupla = async (membroId: string) => {
+    if (!area || duplaDe(membroId)) return;
+    if (!primeiro) { setPrimeiro(membroId); return; }
+    if (primeiro === membroId) { setPrimeiro(null); return; }
+    const { error } = await supabase.from('escala_duplas').insert({ area_id: area.id, membro_a: primeiro, membro_b: membroId });
+    setPrimeiro(null);
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
+    carregarDuplas();
+  };
+
+  const desfazerDupla = async (d: EscalaDupla) => {
+    if (await apagarLinha('escala_duplas', d.id)) carregarDuplas();
+  };
+
+  // Junta automaticamente quem esta no time junto com o conjuge (campo
+  // "conjuge" da ficha em Membros). So o admin le as fichas.
+  const juntarCasais = async () => {
+    if (!area) return;
+    const ids = voluntarios.map(v => v.membro_id);
+    const { data, error } = await supabase.from('members').select('id, conjuge_id').in('id', ids);
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
+    const noTime = new Set(ids);
+    const usados = new Set(duplas.flatMap(d => [d.membro_a, d.membro_b]));
+    const novas: { area_id: string; membro_a: string; membro_b: string }[] = [];
+    ((data ?? []) as any[]).forEach(m => {
+      const c = m.conjuge_id as string | null;
+      if (!c || !noTime.has(c) || usados.has(m.id) || usados.has(c)) return;
+      usados.add(m.id); usados.add(c);
+      novas.push({ area_id: area.id, membro_a: m.id, membro_b: c });
+    });
+    if (novas.length === 0) { Alert.alert(t('admin.duplasNenhumCasalTitulo'), t('admin.duplasNenhumCasalMsg')); return; }
+    const { error: e2 } = await supabase.from('escala_duplas').insert(novas);
+    if (e2) { Alert.alert(t('common.erro'), e2.message); return; }
+    carregarDuplas();
+    Alert.alert(t('admin.duplasCasaisJuntados', { n: novas.length }));
+  };
   const mudarVagas = async (nova: number) => {
     if (!area || nova < 1 || nova > 20 || salvandoVagas) return;
     const anterior = vagas;
@@ -1499,6 +1566,57 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
               )}
             </View>
 
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.purple + '10', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginTop: 10 }}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{t('admin.duplasServemEmDupla')}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  {emDuplas ? t('admin.duplasLigadoDesc') : t('admin.duplasDesligadoDesc')}
+                </Text>
+              </View>
+              <Switch value={emDuplas} onValueChange={alternarEmDuplas} disabled={!podeMudarVagas} trackColor={{ true: C.purple }} />
+            </View>
+
+            {emDuplas && (
+              <View style={{ marginTop: 12 }}>
+                <Text style={s.sectionLabel}>{t('admin.duplasTitulo', { n: duplas.length })}</Text>
+                {duplas.length === 0 && <Text style={s.emptyText}>{t('admin.duplasNenhuma')}</Text>}
+                {duplas.map(d => (
+                  <View key={d.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.border, gap: 8 }}>
+                    <Ionicons name="people" size={18} color={C.purple} />
+                    <Text style={{ flex: 1, fontSize: 14, color: C.text }}>{nomeDe(d.membro_a)} & {nomeDe(d.membro_b)}</Text>
+                    <TouchableOpacity onPress={() => desfazerDupla(d)} hitSlop={8}>
+                      <Ionicons name="close-circle-outline" size={20} color={C.danger} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => { setFormando(f => !f); setPrimeiro(null); }}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: formando ? C.purple : C.purple + '15' }}
+                  >
+                    <Ionicons name={formando ? 'checkmark' : 'add'} size={16} color={formando ? '#fff' : C.purple} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: formando ? '#fff' : C.purple }}>
+                      {formando ? t('admin.duplasPronto') : t('admin.duplasFormar')}
+                    </Text>
+                  </TouchableOpacity>
+                  {podeMudarVagas && (
+                    <TouchableOpacity
+                      onPress={juntarCasais}
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: C.purple + '15' }}
+                    >
+                      <Ionicons name="heart-outline" size={16} color={C.purple} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: C.purple }}>{t('admin.duplasJuntarCasais')}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {formando && (
+                  <Text style={{ fontSize: 12, color: C.purple, marginTop: 8, lineHeight: 17 }}>
+                    {primeiro ? t('admin.duplasEscolhaSegundo', { nome: nomeDe(primeiro) }) : t('admin.duplasEscolhaPrimeiro')}
+                  </Text>
+                )}
+              </View>
+            )}
+
             <Text style={[s.sectionLabel, { marginTop: 16 }]}>
               {t('admin.timeAtual', { n: voluntarios.length })}
             </Text>
@@ -1508,14 +1626,38 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
               ) : voluntarios.length === 0 ? (
                 <Text style={s.emptyText}>{t('admin.ninguemAdicionadoAinda')}</Text>
               ) : (
-                voluntarios.map(v => (
-                  <View key={v.id} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border }}>
-                    <Text style={{ fontSize: 14, color: C.text }}>{v.nome} {v.sobrenome}</Text>
-                    <TouchableOpacity onPress={() => remover(v)}>
-                      <Ionicons name="trash-outline" size={18} color={C.danger} />
+                voluntarios.map(v => {
+                  const dupla = emDuplas ? duplaDe(v.membro_id) : undefined;
+                  const parceiro = dupla ? (dupla.membro_a === v.membro_id ? dupla.membro_b : dupla.membro_a) : null;
+                  const selecionavel = formando && !dupla;
+                  const selecionado = primeiro === v.membro_id;
+                  return (
+                    <TouchableOpacity
+                      key={v.id}
+                      disabled={!selecionavel}
+                      onPress={() => tocarParaDupla(v.membro_id)}
+                      activeOpacity={0.7}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: selecionado ? 8 : 0, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: selecionado ? C.purple + '18' : 'transparent', borderRadius: selecionado ? 8 : 0, opacity: formando && dupla ? 0.4 : 1 }}
+                    >
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {selecionavel && (
+                          <Ionicons name={selecionado ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={C.purple} />
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 14, color: C.text }}>{v.nome} {v.sobrenome}</Text>
+                          {parceiro && (
+                            <Text style={{ fontSize: 11, color: C.purple, marginTop: 2 }}>{t('admin.duplasEmDuplaCom', { nome: nomeDe(parceiro) })}</Text>
+                          )}
+                        </View>
+                      </View>
+                      {!formando && (
+                        <TouchableOpacity onPress={() => remover(v)}>
+                          <Ionicons name="trash-outline" size={18} color={C.danger} />
+                        </TouchableOpacity>
+                      )}
                     </TouchableOpacity>
-                  </View>
-                ))
+                  );
+                })
               )}
               {podeMudarVagas && (
                 <TouchableOpacity
@@ -1935,12 +2077,35 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
     });
     const indisponivel = new Set((indData ?? []).map((i: any) => `${i.membro_id}|${i.data}`));
 
+    // Areas "em dupla": as duplas viram uma unidade so (as duas pessoas no
+    // mesmo culto). Quem do time nao esta em dupla segue sozinho.
+    const idsEmDupla = areas.filter(a => a.em_duplas).map(a => a.id);
+    let duplasDb: EscalaDupla[] = [];
+    if (idsEmDupla.length) {
+      const { data: dd, error: de } = await supabase.from('escala_duplas').select('id, area_id, membro_a, membro_b').in('area_id', idsEmDupla);
+      if (de) { setGerando(false); Alert.alert(t('common.erro'), de.message); return; }
+      duplasDb = (dd ?? []) as EscalaDupla[];
+    }
+
     // Areas com time menor escolhem primeiro: quem serve em duas areas fica
     // pra area que mais depende dele.
     const poolPorArea: Record<string, string[]> = {};
     areas.forEach(a => { poolPorArea[a.id] = voluntarios.filter(v => v.area_id === a.id).map(v => v.membro_id); });
     const areasOrdenadas = [...areas].sort((a, b) =>
       (poolPorArea[a.id].length - poolPorArea[b.id].length) || a.nome.localeCompare(b.nome));
+    // Unidades de cada area: [pessoa] ou [pessoa, pessoa] (dupla).
+    const unidadesPorArea: Record<string, string[][]> = {};
+    areas.forEach(a => {
+      const pool = poolPorArea[a.id];
+      if (!a.em_duplas) { unidadesPorArea[a.id] = pool.map(id => [id]); return; }
+      const noTime = new Set(pool);
+      const pares = duplasDb.filter(d => d.area_id === a.id && noTime.has(d.membro_a) && noTime.has(d.membro_b));
+      const emPar = new Set(pares.flatMap(d => [d.membro_a, d.membro_b]));
+      unidadesPorArea[a.id] = [
+        ...pares.map(d => [d.membro_a, d.membro_b]),
+        ...pool.filter(id => !emPar.has(id)).map(id => [id]),
+      ];
+    });
     const ordemNaFila: Record<string, number> = {};
     voluntarios.forEach((v, i) => { ordemNaFila[v.membro_id] ??= i; });
 
@@ -1952,16 +2117,24 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
       areasOrdenadas.forEach(area => {
         const precisa = area.vagas_padrao - (existentesPorAreaData[`${area.id}|${data}`] ?? 0);
         if (precisa <= 0) return;
-        const pool = poolPorArea[area.id];
-        if (!pool.length) return;
+        const unidades = unidadesPorArea[area.id];
+        if (!unidades.length) return;
         // Quem serviu menos vem primeiro; empate: quem serviu ha mais tempo.
-        const candidatos = pool
-          .filter(id => !usadosHoje.has(id) && !indisponivel.has(`${id}|${data}`))
+        // Numa dupla vale a pessoa da dupla que serviu mais.
+        const vezesU = (u: string[]) => Math.max(...u.map(id => vezes[id] ?? 0));
+        const ultimaU = (u: string[]) => u.map(id => ultimaVez[id] ?? '').sort().reverse()[0];
+        const candidatos = unidades
+          .filter(u => u.every(id => !usadosHoje.has(id) && !indisponivel.has(`${id}|${data}`)))
           .sort((a, b) =>
-            ((vezes[a] ?? 0) - (vezes[b] ?? 0))
-            || (ultimaVez[a] ?? '').localeCompare(ultimaVez[b] ?? '')
-            || ((ordemNaFila[a] ?? 0) - (ordemNaFila[b] ?? 0)));
-        const escolhidos = candidatos.slice(0, precisa);
+            (vezesU(a) - vezesU(b))
+            || ultimaU(a).localeCompare(ultimaU(b))
+            || ((ordemNaFila[a[0]] ?? 0) - (ordemNaFila[b[0]] ?? 0)));
+        const escolhidos: string[] = [];
+        for (const u of candidatos) {
+          if (escolhidos.length + u.length > precisa) continue;
+          escolhidos.push(...u);
+          if (escolhidos.length === precisa) break;
+        }
         vagasSemNinguem += precisa - escolhidos.length;
         escolhidos.forEach(id => {
           usadosHoje.add(id);

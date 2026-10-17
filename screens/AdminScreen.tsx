@@ -1348,10 +1348,25 @@ function NovaAreaModal({ visible, onClose, onSaved }: {
 }
 
 // ─── Time de Voluntários por Área Modal (líder da área / admin) ────────────────
-function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
-  visible: boolean; area: EscalaArea | null; onClose: () => void; onChanged: () => void;
+function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChanged }: {
+  visible: boolean; area: EscalaArea | null; podeMudarVagas: boolean; onClose: () => void; onChanged: () => void;
 }) {
   const { t } = useTranslation();
+  // Vagas por culto: o admin ajusta aqui antes de gerar (pedido do Marcos,
+  // 17/10). A RLS de `escala_areas` so deixa o admin alterar.
+  const [vagas, setVagas] = useState(1);
+  const [salvandoVagas, setSalvandoVagas] = useState(false);
+  useEffect(() => { if (area) setVagas(area.vagas_padrao); }, [area?.id, area?.vagas_padrao]);
+  const mudarVagas = async (nova: number) => {
+    if (!area || nova < 1 || nova > 20 || salvandoVagas) return;
+    const anterior = vagas;
+    setVagas(nova);
+    setSalvandoVagas(true);
+    const { error } = await supabase.from('escala_areas').update({ vagas_padrao: nova }).eq('id', area.id);
+    setSalvandoVagas(false);
+    if (error) { setVagas(anterior); Alert.alert(t('common.erro'), error.message); return; }
+    onChanged();
+  };
   const [voluntarios, setVoluntarios] = useState<AreaVoluntario[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -1445,8 +1460,28 @@ function AreaVoluntariosModal({ visible, area, onClose, onChanged }: {
               </TouchableOpacity>
             ))}
 
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.purple + '10', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginTop: 16 }}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{t('admin.vagasPorCulto')}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{t('admin.vagasPorCultoDesc')}</Text>
+              </View>
+              {podeMudarVagas ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <TouchableOpacity onPress={() => mudarVagas(vagas - 1)} disabled={vagas <= 1 || salvandoVagas} hitSlop={8}>
+                    <Ionicons name="remove-circle" size={32} color={vagas <= 1 ? C.textDim : C.purple} />
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: C.text, minWidth: 24, textAlign: 'center' }}>{vagas}</Text>
+                  <TouchableOpacity onPress={() => mudarVagas(vagas + 1)} disabled={vagas >= 20 || salvandoVagas} hitSlop={8}>
+                    <Ionicons name="add-circle" size={32} color={C.purple} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={{ fontSize: 20, fontWeight: '800', color: C.text }}>{vagas}</Text>
+              )}
+            </View>
+
             <Text style={[s.sectionLabel, { marginTop: 16 }]}>
-              Time atual ({voluntarios.length}) · vagas por domingo: {area.vagas_padrao}
+              {t('admin.timeAtual', { n: voluntarios.length })}
             </Text>
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320, flexShrink: 1 }}>
               {loading ? (
@@ -3168,7 +3203,7 @@ export default function AdminScreen() {
                           <View style={s.inviteMetaRow}>
                             <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
                               <Text style={[s.statusBadgeText, { color: C.purple }]}>
-                                {time.length} no time · {area.vagas_padrao} vagas/domingo
+                                {time.length} no time · {area.vagas_padrao} vagas por culto
                               </Text>
                             </View>
                           </View>
@@ -3296,6 +3331,7 @@ export default function AdminScreen() {
       <AreaVoluntariosModal
         visible={!!areaGerenciarVisible}
         area={areaGerenciarVisible}
+        podeMudarVagas={role === 'admin'}
         onClose={() => setAreaGerenciarVisible(null)}
         onChanged={fetchData}
       />

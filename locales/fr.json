@@ -1216,7 +1216,10 @@
     "escalaGeradaResumo": "{{n}} affectations créées sur {{datas}} dates, jusqu'au {{ate}}.",
     "escalaVagasSemNinguem": "{{n}} place(s) sont restées libres faute de personne disponible. Complétez-les dans « Voir et modifier le planning ».",
     "escalaMarcouIndisponivel": "a indiqué ne pas pouvoir ce jour-là",
-    "escalaMarcouIndisponivelTrocar": "A indiqué ne pas pouvoir — remplacer"
+    "escalaMarcouIndisponivelTrocar": "A indiqué ne pas pouvoir — remplacer",
+    "vagasPorCulto": "Places par culte",
+    "vagasPorCultoDesc": "Combien de personnes de cette équipe servent à chaque culte",
+    "timeAtual": "Équipe actuelle ({{n}})"
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",

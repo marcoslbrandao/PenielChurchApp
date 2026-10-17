@@ -1216,7 +1216,10 @@
     "escalaGeradaResumo": "{{n}} assignments created across {{datas}} dates, up to {{ate}}.",
     "escalaVagasSemNinguem": "{{n}} slot(s) were left open because nobody was available. Fill them in \"View and edit rota\".",
     "escalaMarcouIndisponivel": "marked they can't make this day",
-    "escalaMarcouIndisponivelTrocar": "Marked they can't — swap"
+    "escalaMarcouIndisponivelTrocar": "Marked they can't — swap",
+    "vagasPorCulto": "Slots per service",
+    "vagasPorCultoDesc": "How many people from this area serve at each service",
+    "timeAtual": "Current team ({{n}})"
   },
   "membros": {
     "buscarPeloNome": "Search by name...",

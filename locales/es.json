@@ -1216,7 +1216,10 @@
     "escalaGeradaResumo": "{{n}} asignaciones creadas en {{datas}} fechas, hasta el {{ate}}.",
     "escalaVagasSemNinguem": "{{n}} puesto(s) quedaron libres porque no había nadie disponible. Complétalos en \"Ver y editar escala\".",
     "escalaMarcouIndisponivel": "marcó que no puede este día",
-    "escalaMarcouIndisponivelTrocar": "Marcó que no puede — cambiar"
+    "escalaMarcouIndisponivelTrocar": "Marcó que no puede — cambiar",
+    "vagasPorCulto": "Puestos por culto",
+    "vagasPorCultoDesc": "Cuántas personas de esta área sirven en cada culto",
+    "timeAtual": "Equipo actual ({{n}})"
   },
   "membros": {
     "buscarPeloNome": "Buscar por nombre...",

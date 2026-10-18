@@ -680,7 +680,11 @@ export default function ChatGeralModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={fechar}>
-      <View style={cs.safe}>
+      {/* ref e folga na RAIZ, não num View em volta do KeyboardAvoidingView:
+          o KAV do iPhone calcula a posição relativa ao pai. Com um View novo
+          em volta, ele perdia a altura do cabeçalho e o teclado cobria a
+          caixa de digitar no iPhone (18/10/2026). */}
+      <View ref={areaRef} collapsable={false} style={[cs.safe, { paddingBottom: folgaTeclado }]}>
         <StatusBar barStyle="light-content" />
         <View style={[cs.header, { paddingTop: padTop + 10 }]}>
           <TouchableOpacity onPress={fechar} style={cs.headerBtn} hitSlop={10}>
@@ -695,7 +699,6 @@ export default function ChatGeralModal({
           </TouchableOpacity>
         </View>
 
-        <View ref={areaRef} collapsable={false} style={{ flex: 1, paddingBottom: folgaTeclado }}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           {loading ? (
             <View style={{ flex: 1 }}><ActivityIndicator color={COR} style={{ marginTop: 30 }} /></View>
@@ -817,7 +820,6 @@ export default function ChatGeralModal({
             </View>
           )}
         </KeyboardAvoidingView>
-        </View>
 
         {/* ── Menu ao segurar a mensagem ─────────────────────────────────── */}
         <Modal visible={!!menuDe} transparent animationType="fade" onRequestClose={() => setMenuDe(null)}>

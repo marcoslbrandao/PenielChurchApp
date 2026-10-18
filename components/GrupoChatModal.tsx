@@ -254,7 +254,11 @@ export default function GrupoChatModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={cs.safe}>
+      {/* ref e folga na RAIZ, não num View em volta do KeyboardAvoidingView:
+          o KAV do iPhone calcula a posição relativa ao pai. Com um View novo
+          em volta, ele perdia a altura do cabeçalho e o teclado cobria a
+          caixa de digitar no iPhone (18/10/2026). */}
+      <View ref={areaRef} collapsable={false} style={[cs.safe, { paddingBottom: folgaTeclado }]}>
         <StatusBar barStyle="light-content" />
         <View style={[cs.header, { backgroundColor: cor, paddingTop: padTop + 10 }]}>
           <TouchableOpacity onPress={onClose} style={cs.headerBtn} hitSlop={10}>
@@ -267,7 +271,6 @@ export default function GrupoChatModal({
           <Ionicons name="chatbubbles-outline" size={20} color="rgba(255,255,255,0.7)" />
         </View>
 
-        <View ref={areaRef} collapsable={false} style={{ flex: 1, paddingBottom: folgaTeclado }}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -400,7 +403,6 @@ export default function GrupoChatModal({
           </View>
           )}
         </KeyboardAvoidingView>
-        </View>
 
         <MenuMensagem
           visivel={!!menuDe}

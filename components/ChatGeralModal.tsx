@@ -28,6 +28,10 @@ import { formatarTempo, duracaoDoAudio } from '../lib/chatAudio';
 import RegrasDoChat from './RegrasDoChat';
 import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 import { registrarChatAberto } from '../lib/chatAberto';
+import BotaoNegrito from './BotaoNegrito';
+import EscolherEmoji from './EscolherEmoji';
+import { useEmojisFavoritos } from '../lib/emojisFavoritos';
+import { alternarNegrito, semFormatacao } from '../lib/negrito';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/moderacao';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
@@ -117,9 +121,26 @@ export default function ChatGeralModal({
   // voltaram ao menu, Regras da comunidade antes de entrar, filtro de
   // palavras no envio. Silenciar = suspender de TODOS os chats.
   const mod = useModeracaoChat(userId, visible);
+  // Reações (18/10/2026): as 6 do menu são as mais usadas pela pessoa, e o
+  // "+" abre todos os emojis.
+  const { favoritos, registrarUso } = useEmojisFavoritos(userId);
+  const [emojiPara, setEmojiPara] = useState<MensagemGeral | null>(null);
+  const abrirTodosEmojis = (m: MensagemGeral) => {
+    setMenuDe(null);
+    // Espera o menu fechar: dois Modals trocando juntos travam no iPhone.
+    setTimeout(() => setEmojiPara(m), 350);
+  };
   // Arquivo recebido pelo menu Compartilhar, esperando o toque em Enviar.
   const [pendente, setPendente] = useState<Compartilhado['arquivo'] | null>(null);
   const mostrarMic = podeGravar && !pendente && (gravando || !texto.trim());
+  // Negrito (18/10/2026): selecionar um trecho mostra o botão "B Negrito".
+  const [selecao, setSelecao] = useState({ start: 0, end: 0 });
+  const temSelecao = selecao.end !== selecao.start;
+  const aplicarNegrito = () => {
+    const r = alternarNegrito(texto, selecao);
+    setTexto(r.texto);
+    setSelecao({ start: r.cursor, end: r.cursor });
+  };
 
   // Compartilhar › Peniel com este chat JÁ aberto: entra direto aqui, sem a
   // folha "Enviar para" (que não aparece por cima do chat). 18/10/2026.
@@ -478,6 +499,7 @@ export default function ChatGeralModal({
       setReacoes(prev => prev.filter(r => !(r.mensagem_id === msg.id && r.user_id === userId)));
       await supabase.from('chat_geral_reacoes').delete().eq('mensagem_id', msg.id).eq('user_id', userId);
     } else {
+      registrarUso(emoji);
       setReacoes(prev => [...prev.filter(r => !(r.mensagem_id === msg.id && r.user_id === userId)), { mensagem_id: msg.id, user_id: userId, emoji }]);
       await supabase.from('chat_geral_reacoes').upsert({ mensagem_id: msg.id, user_id: userId, emoji }, { onConflict: 'mensagem_id,user_id' });
     }
@@ -543,7 +565,7 @@ export default function ChatGeralModal({
     if (m.tipo === 'audio') return t('chatGeral.audio');
     if (m.tipo === 'video') return m.texto ? `${t('chatGeral.video')} · ${m.texto}` : t('chatGeral.video');
     if (m.tipo === 'arquivo') return `${anexoEhAudio(m) ? '🎵' : '📎'} ${m.midia_nome ?? t('chatGeral.arquivo')}`;
-    return m.texto;
+    return semFormatacao(m.texto);
   };
 
   // ── Bolha ─────────────────────────────────────────────────────────────────
@@ -784,6 +806,10 @@ export default function ChatGeralModal({
               <Text style={cs.silenciadoTexto}>{t('moderacao.suspensoAviso')}</Text>
             </View>
           ) : (
+            <>
+            {temSelecao && (
+              <BotaoNegrito cor={COR} corTexto={C.text} corSuave={C.textMuted} corFundo={C.inputBarBg} corBorda={C.inputBarBorder} onPress={aplicarNegrito} />
+            )}
             <View style={[cs.inputRow, { paddingBottom: 10 + padBottom }]}>
               {!gravando && (
                 <TouchableOpacity onPress={anexar} style={cs.anexarBtn} disabled={enviando} hitSlop={6}>
@@ -798,6 +824,7 @@ export default function ChatGeralModal({
                   placeholderTextColor={C.placeholder}
                   value={texto}
                   onChangeText={setTexto}
+                  onSelectionChange={e => setSelecao(e.nativeEvent.selection)}
                   multiline
                   maxLength={2000}
                 />
@@ -832,6 +859,7 @@ export default function ChatGeralModal({
                 </TouchableOpacity>
               )}
             </View>
+            </>
           )}
         </KeyboardAvoidingView>
 
@@ -841,11 +869,15 @@ export default function ChatGeralModal({
             {menuDe && (
               <Pressable style={cs.menu} onPress={() => {}}>
                 <View style={cs.menuReacoes}>
-                  {REACOES.map(e => (
+                  {favoritos.map(e => (
                     <TouchableOpacity key={e} onPress={() => reagir(menuDe, e)} style={cs.menuReacao}>
                       <Text style={{ fontSize: 28 }}>{e}</Text>
                     </TouchableOpacity>
                   ))}
+                  <TouchableOpacity onPress={() => abrirTodosEmojis(menuDe)} style={[cs.menuReacao, cs.menuMaisEmoji]}
+                    accessibilityLabel={t('chatGeral.escolherEmoji')}>
+                    <Ionicons name="add" size={24} color={C.textMuted} />
+                  </TouchableOpacity>
                 </View>
                 {!euSilenciado && (
                   <ItemMenu icone="arrow-undo-outline" texto={t('chatGeral.responder')} cor={C.text} onPress={() => responder(menuDe)} />
@@ -881,6 +913,14 @@ export default function ChatGeralModal({
             )}
           </Pressable>
         </Modal>
+
+        <EscolherEmoji
+          visivel={!!emojiPara}
+          isDark={isDark}
+          cor={COR}
+          onEscolher={e => { const m = emojiPara; setEmojiPara(null); if (m) reagir(m, e); }}
+          onFechar={() => setEmojiPara(null)}
+        />
 
         {/* ── Reações e visualizações ────────────────────────────────────── */}
         <InfoDaMensagem
@@ -1237,8 +1277,9 @@ function buildStyles(C: PaletaChat) { return StyleSheet.create({
   silenciadoTexto: { fontSize: 13, color: C.textMuted, marginLeft: 6, flexShrink: 1 },
   menuFundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   menu: { backgroundColor: C.sheetBg, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 14, paddingBottom: 34 },
-  menuReacoes: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 12, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.inputBarBorder, marginBottom: 4 },
+  menuReacoes: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingHorizontal: 8, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: C.inputBarBorder, marginBottom: 4 },
   menuReacao: { padding: 6 },
+  menuMaisEmoji: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.inputBg, alignSelf: 'center', padding: 0 },
   fotoFundo: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
   fotoCheia: { width: '100%', height: '100%' },
   fotoFechar: { position: 'absolute', right: 18 },

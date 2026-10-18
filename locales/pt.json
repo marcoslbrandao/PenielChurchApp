@@ -1676,7 +1676,8 @@
     "vistoPor": "Visto por",
     "vistoExplica": "Quem abriu o Chat da Igreja depois desta mensagem.",
     "ninguemReagiu": "Ninguém reagiu ainda.",
-    "ninguemViu": "Ninguém abriu ainda."
+    "ninguemViu": "Ninguém abriu ainda.",
+    "escolherEmoji": "Escolher emoji"
   },
   "compartilhar": {
     "enviarPara": "Enviar para",
@@ -1765,5 +1766,9 @@
     "resolucao_apagada": "mensagem apagada",
     "resolucao_mantida": "mantida",
     "resolucao_suspenso": "autor suspenso"
+  },
+  "chatFormato": {
+    "negrito": "Negrito",
+    "dica": "ou escreva *assim*"
   }
 }

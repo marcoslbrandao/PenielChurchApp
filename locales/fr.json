@@ -1676,7 +1676,8 @@
     "vistoPor": "Vu par",
     "vistoExplica": "Ceux qui ont ouvert le Chat de l’Église après ce message.",
     "ninguemReagiu": "Aucune réaction pour l’instant.",
-    "ninguemViu": "Personne ne l’a encore ouvert."
+    "ninguemViu": "Personne ne l’a encore ouvert.",
+    "escolherEmoji": "Choisir un emoji"
   },
   "compartilhar": {
     "enviarPara": "Envoyer à",
@@ -1765,5 +1766,9 @@
     "resolucao_apagada": "message supprimé",
     "resolucao_mantida": "gardé",
     "resolucao_suspenso": "auteur suspendu"
+  },
+  "chatFormato": {
+    "negrito": "Gras",
+    "dica": "ou écrivez *ainsi*"
   }
 }

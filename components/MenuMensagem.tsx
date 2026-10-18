@@ -23,6 +23,7 @@ export type AcaoMenu = 'apagar' | 'denunciar' | 'bloquear' | 'suspender';
 export default function MenuMensagem({
   visivel, autorNome, minha, podeApagar, ehAdmin, autorSuspenso,
   corFundo, corTexto, corBorda, onAcao, onFechar,
+  favoritos, onReagir, onMaisEmoji,
 }: {
   visivel: boolean;
   autorNome: string;
@@ -35,6 +36,10 @@ export default function MenuMensagem({
   corBorda: string;
   onAcao: (acao: AcaoMenu) => void;
   onFechar: () => void;
+  /** Reações (18/10/2026): as 6 mais usadas pela pessoa + o "+". */
+  favoritos?: string[];
+  onReagir?: (emoji: string) => void;
+  onMaisEmoji?: () => void;
 }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -60,6 +65,21 @@ export default function MenuMensagem({
     <Modal visible={visivel} transparent animationType="fade" onRequestClose={onFechar}>
       <Pressable style={st.fundo} onPress={onFechar}>
         <Pressable style={[st.folha, { backgroundColor: corFundo, paddingBottom: Math.max(insets.bottom, 12) }]} onPress={() => {}}>
+          {!!favoritos && !!onReagir && (
+            <View style={[st.reacoes, { borderBottomColor: corBorda }]}>
+              {favoritos.map(e => (
+                <TouchableOpacity key={e} onPress={() => { onFechar(); onReagir(e); }} style={st.reacao}>
+                  <Text style={{ fontSize: 28 }}>{e}</Text>
+                </TouchableOpacity>
+              ))}
+              {!!onMaisEmoji && (
+                <TouchableOpacity onPress={() => { onFechar(); onMaisEmoji(); }} style={[st.mais, { borderColor: corBorda }]}
+                  accessibilityLabel={t('chatGeral.escolherEmoji')}>
+                  <Ionicons name="add" size={24} color={corTexto} style={{ opacity: 0.6 }} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
           <Text style={[st.titulo, { color: corTexto }]} numberOfLines={1}>
             {minha ? t('moderacao.suaMensagem') : t('moderacao.mensagemDe', { nome: autorNome })}
           </Text>
@@ -86,6 +106,9 @@ export default function MenuMensagem({
 const st = StyleSheet.create({
   fundo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
   folha: { borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingTop: 14 },
+  reacoes: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingHorizontal: 8, paddingBottom: 10, marginBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth },
+  reacao: { padding: 6 },
+  mais: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   titulo: { fontSize: 13, fontWeight: '700', opacity: 0.7, paddingHorizontal: 20, paddingBottom: 10 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 15, borderTopWidth: StyleSheet.hairlineWidth, minHeight: 50 },
   itemTexto: { fontSize: 15, fontWeight: '600' },

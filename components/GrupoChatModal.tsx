@@ -23,6 +23,12 @@ import { registrarChatAberto } from '../lib/chatAberto';
 import { enviarCompartilhado } from '../lib/chatAnexos';
 import type { Compartilhado } from '../lib/chatGeral';
 import AnexoPendente from './AnexoPendente';
+import BotaoNegrito from './BotaoNegrito';
+import EscolherEmoji from './EscolherEmoji';
+import ChipsReacoes from './ChipsReacoes';
+import { useEmojisFavoritos } from '../lib/emojisFavoritos';
+import { useReacoesChat } from '../lib/reacoesChat';
+import { alternarNegrito, semFormatacao } from '../lib/negrito';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo, alternarSuspensao } from '../lib/moderacao';
 
 function paletaChat(isDark: boolean) {
@@ -106,6 +112,14 @@ export default function GrupoChatModal({
   // mensagem com Apagar, Denunciar, Bloquear e (admin) Suspender; Regras da
   // comunidade antes de entrar; filtro de palavras no envio.
   const [menuDe, setMenuDe] = useState<Mensagem | null>(null);
+  // Negrito (18/10/2026): selecionar um trecho mostra o botão "B Negrito".
+  const [selecao, setSelecao] = useState({ start: 0, end: 0 });
+  const temSelecao = selecao.end !== selecao.start;
+  const aplicarNegrito = () => {
+    const r = alternarNegrito(texto, selecao);
+    setTexto(r.texto);
+    setSelecao({ start: r.cursor, end: r.cursor });
+  };
   // Arquivo que chegou pelo Compartilhar com este chat aberto (18/10/2026).
   const [pendente, setPendente] = useState<Compartilhado['arquivo'] | null>(null);
   useEffect(() => {
@@ -119,6 +133,11 @@ export default function GrupoChatModal({
     });
   }, [visible, grupo]);
   const mod = useModeracaoChat(userId, visible);
+  // Reações com emoji, iguais às do Chat da Igreja (18/10/2026).
+  const { porMensagem, reagir } = useReacoesChat({ tabela: 'grupo_chat_reacoes', grupo }, userId, visible);
+  const { favoritos, registrarUso } = useEmojisFavoritos(userId);
+  const [emojiPara, setEmojiPara] = useState<Mensagem | null>(null);
+  const reagirEContar = async (m: Mensagem, e: string) => { if (await reagir(m.id, e)) registrarUso(e); };
   // O banco já esconde as mensagens de quem eu bloqueei; o filtro aqui só
   // faz sumir na hora, sem esperar recarregar.
   const visiveis = useMemo(() => mensagens.filter(m => !mod.bloqueados.has(m.autor_id)), [mensagens, mod.bloqueados]);
@@ -335,6 +354,7 @@ export default function GrupoChatModal({
               renderItem={({ item }) => {
                 const minha = item.autor_id === userId;
                 return (
+                  <View>
                   <TouchableOpacity
                     activeOpacity={0.6}
                     onLongPress={() => setMenuDe(item)}
@@ -388,6 +408,15 @@ export default function GrupoChatModal({
                       )}
                     </View>
                   </TouchableOpacity>
+                  <ChipsReacoes
+                    chips={porMensagem.get(item.id)}
+                    minha={minha}
+                    cor={cor}
+                    corFundo={C.bubbleOtherBg}
+                    corNumero={C.textMuted}
+                    onTocar={e => reagirEContar(item, e)}
+                  />
+                  </View>
                 );
               }}
             />
@@ -412,6 +441,9 @@ export default function GrupoChatModal({
               onRemover={() => setPendente(null)}
             />
           )}
+          {temSelecao && (
+            <BotaoNegrito cor={cor} corTexto={C.text} corSuave={C.textMuted} corFundo={C.inputBarBg} corBorda={C.inputBarBorder} onPress={aplicarNegrito} />
+          )}
           <View style={[cs.inputRow, { paddingBottom: 10 + padBottom }]}>
             {!gravando && (
               <TouchableOpacity onPress={anexar} style={cs.anexarBtn} disabled={enviandoAnexo || enviandoAudio} hitSlop={6}>
@@ -427,6 +459,7 @@ export default function GrupoChatModal({
               placeholderTextColor={C.placeholder}
               value={texto}
               onChangeText={setTexto}
+              onSelectionChange={e => setSelecao(e.nativeEvent.selection)}
               multiline
               maxLength={1000}
             />
@@ -471,6 +504,16 @@ export default function GrupoChatModal({
           corBorda={C.inputBarBorder}
           onAcao={acao => menuDe && acaoDoMenu(menuDe, acao)}
           onFechar={() => setMenuDe(null)}
+          favoritos={favoritos}
+          onReagir={e => { const m = menuDe; if (m) reagirEContar(m, e); }}
+          onMaisEmoji={() => { const m = menuDe; setTimeout(() => setEmojiPara(m), 350); }}
+        />
+        <EscolherEmoji
+          visivel={!!emojiPara}
+          isDark={isDark}
+          cor={cor}
+          onEscolher={e => { const m = emojiPara; setEmojiPara(null); if (m) reagirEContar(m, e); }}
+          onFechar={() => setEmojiPara(null)}
         />
         <RegrasDoChat
           visivel={visible && mod.regrasAceitas === false}

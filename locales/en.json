@@ -1676,7 +1676,8 @@
     "vistoPor": "Seen by",
     "vistoExplica": "People who opened the Church Chat after this message.",
     "ninguemReagiu": "No reactions yet.",
-    "ninguemViu": "No one has opened it yet."
+    "ninguemViu": "No one has opened it yet.",
+    "escolherEmoji": "Choose emoji"
   },
   "compartilhar": {
     "enviarPara": "Send to",
@@ -1765,5 +1766,9 @@
     "resolucao_apagada": "message deleted",
     "resolucao_mantida": "kept",
     "resolucao_suspenso": "author suspended"
+  },
+  "chatFormato": {
+    "negrito": "Bold",
+    "dica": "or type *like this*"
   }
 }

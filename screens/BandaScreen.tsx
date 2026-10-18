@@ -28,6 +28,12 @@ import { registrarChatAberto } from '../lib/chatAberto';
 import { enviarCompartilhado } from '../lib/chatAnexos';
 import type { Compartilhado } from '../lib/chatGeral';
 import AnexoPendente from '../components/AnexoPendente';
+import BotaoNegrito from '../components/BotaoNegrito';
+import EscolherEmoji from '../components/EscolherEmoji';
+import ChipsReacoes from '../components/ChipsReacoes';
+import { useEmojisFavoritos } from '../lib/emojisFavoritos';
+import { useReacoesChat } from '../lib/reacoesChat';
+import { alternarNegrito } from '../lib/negrito';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo, alternarSuspensao } from '../lib/moderacao';
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
@@ -3955,11 +3961,24 @@ function BandaMain() {
   const nomePronto = meuPerfil !== null || membros.length > 0;
 
   const mod = useModeracaoChat(user?.id, activeTab === 'chat');
+  // Reações com emoji, iguais às do Chat da Igreja (18/10/2026).
+  const { porMensagem: reacoesChat, reagir: reagirChat } = useReacoesChat({ tabela: 'banda_chat_reacoes' }, user?.id, activeTab === 'chat');
+  const { favoritos: emojisFavoritos, registrarUso: registrarEmoji } = useEmojisFavoritos(user?.id);
+  const [emojiParaChat, setEmojiParaChat] = useState<ChatMsg | null>(null);
+  const reagirEContar = async (m: ChatMsg, e: string) => { if (await reagirChat(m.id, e)) registrarEmoji(e); };
   // Android edge-to-edge: o teclado cobria a caixa de mensagem (17/10/2026).
   const folgaTeclado = useFolgaDoTeclado(chatKavRef, activeTab === 'chat');
   // Compartilhar › Peniel com o chat da Banda aberto: entra direto aqui
   // (18/10/2026, ver lib/chatAberto.ts).
   const [pendenteChat, setPendenteChat] = useState<Compartilhado['arquivo'] | null>(null);
+  // Negrito (18/10/2026): selecionar um trecho mostra o botão "B Negrito".
+  const [selecao, setSelecao] = useState({ start: 0, end: 0 });
+  const temSelecao = selecao.end !== selecao.start;
+  const aplicarNegrito = () => {
+    const r = alternarNegrito(chatMsg, selecao);
+    setChatMsg(r.texto);
+    setSelecao({ start: r.cursor, end: r.cursor });
+  };
   // A aba Banda continua montada quando a pessoa vai para outra aba do app:
   // só conta como "chat aberto" se a Banda estiver na tela de verdade.
   const bandaNaTela = useIsFocused();
@@ -5142,6 +5161,14 @@ function BandaMain() {
                       )}
                       <Text style={[s.bubbleTime, mine && s.bubbleTimeMine]}>{horaDaMensagem(m.created_at)}</Text>
                     </TouchableOpacity>
+                    <ChipsReacoes
+                      chips={reacoesChat.get(m.id)}
+                      minha={mine}
+                      cor={C.primary}
+                      corFundo={C.surfaceHigh}
+                      corNumero={C.textMuted}
+                      onTocar={e => reagirEContar(m, e)}
+                    />
                   </View>
                 );
               })}
@@ -5166,6 +5193,9 @@ function BandaMain() {
               onRemover={() => setPendenteChat(null)}
             />
           )}
+          {temSelecao && (
+            <BotaoNegrito cor={C.primary} corTexto={C.text} corSuave={C.textMuted} corFundo={C.surface} corBorda={C.border} onPress={aplicarNegrito} />
+          )}
           <View style={s.chatInput}>
             {!gravando && nomePronto && (
               <TouchableOpacity onPress={anexar} disabled={enviandoAnexo || enviandoAudio} hitSlop={6} style={{ height: 42, justifyContent: 'center' }}>
@@ -5175,7 +5205,7 @@ function BandaMain() {
               </TouchableOpacity>
             )}
             {!gravando && (
-              <TextInput style={s.chatField} placeholder={t('banda.mensagemPlaceholder')} placeholderTextColor={C.textDim} value={chatMsg} onChangeText={setChatMsg} returnKeyType="send" onSubmitEditing={sendMessage} maxLength={1000} />
+              <TextInput style={s.chatField} placeholder={t('banda.mensagemPlaceholder')} placeholderTextColor={C.textDim} value={chatMsg} onChangeText={setChatMsg} onSelectionChange={e => setSelecao(e.nativeEvent.selection)} returnKeyType="send" onSubmitEditing={sendMessage} maxLength={1000} />
             )}
             {enviandoAudio ? (
               <View style={[s.sendBtn, { opacity: 0.6 }]}>
@@ -5214,6 +5244,16 @@ function BandaMain() {
           corBorda={C.border}
           onAcao={acao => menuChatDe && acaoDoMenuChat(menuChatDe, acao)}
           onFechar={() => setMenuChatDe(null)}
+          favoritos={emojisFavoritos}
+          onReagir={e => { const m = menuChatDe; if (m) reagirEContar(m, e); }}
+          onMaisEmoji={() => { const m = menuChatDe; setTimeout(() => setEmojiParaChat(m), 350); }}
+        />
+        <EscolherEmoji
+          visivel={!!emojiParaChat}
+          isDark={chatEscuro}
+          cor={C.primary}
+          onEscolher={e => { const m = emojiParaChat; setEmojiParaChat(null); if (m) reagirEContar(m, e); }}
+          onFechar={() => setEmojiParaChat(null)}
         />
         <RegrasDoChat
           visivel={mod.regrasAceitas === false}

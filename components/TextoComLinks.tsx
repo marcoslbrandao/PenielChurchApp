@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Text, Linking, Alert, Image, Pressable, type StyleProp, type TextStyle } from 'react-native';
 import { separarLinks, soLinkDeImagem } from '../lib/links';
+import { separarNegrito } from '../lib/negrito';
 
 // Texto de mensagem com os links clicáveis (sublinhados, na cor pedida).
 // Instagram, YouTube, Spotify, WhatsApp etc. abrem direto no app da pessoa
@@ -26,7 +27,16 @@ export default function TextoComLinks({
   }
 
   const trechos = separarLinks(texto);
-  if (!trechos.some(t => t.tipo === 'link')) return <Text style={style}>{texto}</Text>;
+  // *negrito* no padrão do WhatsApp (18/10/2026, lib/negrito.ts). Só no texto
+  // comum: um link nunca é cortado ao meio por causa de um asterisco.
+  const comNegrito = (valor: string, chave: string | number) => {
+    const partes = separarNegrito(valor);
+    if (!partes.some(p => p.negrito)) return valor;
+    return partes.map((p, j) => (p.negrito
+      ? <Text key={`${chave}-${j}`} style={{ fontWeight: '700' }}>{p.texto}</Text>
+      : p.texto));
+  };
+  if (!trechos.some(t => t.tipo === 'link')) return <Text style={style}>{comNegrito(texto, 0)}</Text>;
 
   const abrir = async (url: string) => {
     try {
@@ -39,7 +49,7 @@ export default function TextoComLinks({
   return (
     <Text style={style}>
       {trechos.map((t, i) =>
-        t.tipo === 'texto' ? t.valor : (
+        t.tipo === 'texto' ? <React.Fragment key={i}>{comNegrito(t.valor, i)}</React.Fragment> : (
           <Text
             key={i}
             style={corLink ? { color: corLink, textDecorationLine: 'underline' } : { textDecorationLine: 'underline' }}

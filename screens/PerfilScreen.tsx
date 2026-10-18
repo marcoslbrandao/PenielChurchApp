@@ -98,6 +98,15 @@ function EditProfileModal({ visible, profile, userId, onClose, onSaved, mostrarA
     setAniversario(isoParaDataBR(profile?.data_nascimento));
   }, [profile, visible]);
 
+  // Quem tem ficha de membro: o nome vem do Meu Cadastro (18/10/2026). O
+  // banco mantém a conta igual à ficha, então aqui o campo fica só de leitura.
+  const [nomeDaFicha, setNomeDaFicha] = useState(false);
+  useEffect(() => {
+    if (!visible || !userId) return;
+    supabase.from('members').select('id').eq('profile_id', userId).is('responsavel_id', null).limit(1)
+      .then(({ data }) => setNomeDaFicha((data ?? []).length > 0));
+  }, [visible, userId]);
+
   const handleSave = async () => {
     if (!fullName.trim()) { Alert.alert(t('common.atencao'), t('perfil.nomeObrigatorio')); return; }
     const mudancas: Record<string, any> = { full_name: fullName.trim(), phone: phone.trim(), updated_at: new Date().toISOString() };
@@ -137,8 +146,12 @@ function EditProfileModal({ visible, profile, userId, onClose, onSaved, mostrarA
             <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" showsVerticalScrollIndicator={false}>
             <View style={em.field}>
               <Text style={em.label}>{t('auth.nomeCompleto')}</Text>
-              <TextInput style={em.input} value={fullName} onChangeText={setFullName}
+              <TextInput style={[em.input, nomeDaFicha && { opacity: 0.6 }]} value={fullName} onChangeText={setFullName}
+                editable={!nomeDaFicha}
                 placeholder={t('auth.seuNome')} placeholderTextColor={C.textDim} autoCapitalize="words" />
+              {nomeDaFicha && (
+                <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 6, lineHeight: 17 }}>{t('perfil.nomeVemDaFicha')}</Text>
+              )}
             </View>
             <View style={em.field}>
               <Text style={em.label}>{t('perfil.telefoneWhatsapp')}</Text>

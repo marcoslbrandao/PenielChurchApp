@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import ChatGeralModal from '../components/ChatGeralModal';
+import SeloNovas from '../components/SeloNovas';
 import { fonteBanda } from '../lib/chatFonte';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -3059,9 +3060,11 @@ function RoadmapItemModal({ visible, cultoId, onClose, onSalvo, proximoIndice }:
 // A conversa sobre o culto some no chat geral em dois dias. Aqui ela fica
 // presa ao culto, junto do setlist, e ainda está lá no domingo de manhã. O
 // histórico ao lado responde "quem me tirou da escala?" sem discussão.
-function ComentariosModal({ culto, onClose, meuId, meuNome, souAdmin, nomePronto }: {
+function ComentariosModal({ culto, onClose, meuId, meuNome, souAdmin, nomePronto, onLido }: {
   culto: Culto | null; onClose: () => void;
   meuId?: string; meuNome: string; souAdmin: boolean; nomePronto: boolean;
+  /** Avisado quando a conversa deste culto foi lida (some o selo âmbar). */
+  onLido?: (cultoId: string) => void;
 }) {
   const { C, ind, nm, rel, s } = useBandaTema();
   const { t, i18n } = useTranslation();
@@ -3090,6 +3093,17 @@ function ComentariosModal({ culto, onClose, meuId, meuNome, souAdmin, nomePronto
     setComentarios(((coments ?? []) as Comentario[]).reverse());
     setHistorico((logs ?? []) as EscalaLog[]);
     setCarregando(false);
+  }, [cultoId]);
+
+  // Abrir a conversa = ler (18/10/2026). Grava de novo ao fechar, para as
+  // mensagens que chegaram com ela aberta também não contarem como novas.
+  useEffect(() => {
+    if (!cultoId) return;
+    const marcar = () => {
+      supabase.rpc('culto_marcar_lido', { p_culto: cultoId }).then(() => onLido?.(cultoId), () => {});
+    };
+    marcar();
+    return marcar;
   }, [cultoId]);
 
   useEffect(() => {
@@ -3478,6 +3492,16 @@ function BandaMain() {
     { tipo: 'culto' | 'ensaio'; eventoId: string; label: string; entries: CultoSongEntry[] } | null
   >(null);
   const [comentariosCulto, setComentariosCulto] = useState<Culto | null>(null);
+  // Mensagens novas na "Conversa" de cada culto (18/10/2026): selo âmbar
+  // pulsando no cartão e no botão Conversa.
+  const [naoLidasCulto, setNaoLidasCulto] = useState<Record<string, number>>({});
+  const carregarNaoLidasCulto = useCallback(async () => {
+    const { data, error } = await supabase.rpc('culto_conversas_nao_lidas');
+    if (error) return;
+    const mapa: Record<string, number> = {};
+    for (const r of (data ?? []) as { culto_id: string; n: number }[]) mapa[r.culto_id] = r.n;
+    setNaoLidasCulto(mapa);
+  }, []);
   const [metronomo, setMetronomo] = useState<{ bpm: number | null; titulo: string } | null>(null);
   const [notaModal, setNotaModal] = useState<
     { tipo: 'culto' | 'ensaio'; eventoId: string; songId: string; titulo: string; nota: string } | null
@@ -3705,14 +3729,17 @@ function BandaMain() {
     Promise.all([
       supabase.from('profiles').select('full_name, role').eq('id', user.id).single(),
       supabase.from('banda_lideres').select('profile_id').eq('profile_id', user.id),
-    ]).then(([{ data }, { data: lider }]) => {
+      // Nome completo da ficha (18/10/2026): a conta pode ter só o primeiro nome.
+      supabase.rpc('nomes_completos', { p_ids: [user.id] }),
+    ]).then(([{ data }, { data: lider }, { data: nomes }]) => {
         if (!vivo) return;
+        const nomeFicha = ((nomes ?? []) as { nome: string }[])[0]?.nome;
         // Resolve mesmo sem nome cadastrado — o que importa é saber que a
         // consulta terminou, pra não travar o chat pra sempre.
         // `admin` aqui = poderes de liderança DENTRO da Banda: admin do app
         // ou líder da banda (banda_lideres) — rascunhos, moderação, apagar culto.
         setMeuPerfil({
-          nome: (data?.full_name ?? '').trim(),
+          nome: (nomeFicha && nomeFicha !== 'Sem nome' ? nomeFicha : (data?.full_name ?? '')).trim(),
           admin: data?.role === 'admin' || (lider ?? []).length > 0,
           adminIgreja: data?.role === 'admin',
         });
@@ -3827,11 +3854,23 @@ function BandaMain() {
   //  2. quando o app volta do segundo plano;
   //  3. em tempo real, quando alguém cria/publica/apaga culto ou ensaio.
   const primeiroFoco = useRef(true);
+  useEffect(() => {
+    carregarNaoLidasCulto();
+    // Mensagem nova em qualquer culto: recalcula (a função já ignora as minhas).
+    const canal = supabase
+      .channel('culto_comentarios_novas')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'culto_comentarios' }, () => { carregarNaoLidasCulto(); })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'culto_comentarios' }, () => { carregarNaoLidasCulto(); })
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [carregarNaoLidasCulto]);
+
   useFocusEffect(
     useCallback(() => {
+      carregarNaoLidasCulto();
       if (primeiroFoco.current) { primeiroFoco.current = false; return; }
       fetchCultos(); fetchEnsaios();
-    }, [fetchCultos, fetchEnsaios])
+    }, [fetchCultos, fetchEnsaios, carregarNaoLidasCulto])
   );
 
   useEffect(() => {
@@ -4496,6 +4535,7 @@ function BandaMain() {
                         <View>
                           <View style={s.cultoLabelRow}>
                             <Text style={s.cultoLabel}>{culto.label}</Text>
+                            <SeloNovas n={naoLidasCulto[culto.id] ?? 0} pequeno />
                             {!culto.publicado && (
                               <View style={s.rascunhoTag}><Text style={s.rascunhoTagText}>{t('banda.rascunho')}</Text></View>
                             )}
@@ -4564,8 +4604,9 @@ function BandaMain() {
                             <Text style={s.acaoTexto}>{t('banda.agenda')}</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={s.acaoBtn} onPress={() => setComentariosCulto(culto)} activeOpacity={0.8}>
-                            <Ionicons name="chatbubble-ellipses-outline" size={15} color={C.textMuted} />
-                            <Text style={s.acaoTexto}>{t('banda.conversa')}</Text>
+                            <Ionicons name="chatbubble-ellipses-outline" size={15} color={(naoLidasCulto[culto.id] ?? 0) > 0 ? '#F2A93B' : C.textMuted} />
+                            <Text style={[s.acaoTexto, (naoLidasCulto[culto.id] ?? 0) > 0 && { color: '#F2A93B', fontWeight: '700' }]}>{t('banda.conversa')}</Text>
+                            <SeloNovas n={naoLidasCulto[culto.id] ?? 0} pequeno />
                           </TouchableOpacity>
                           {/* Admin, ou o ministro deste culto — que é quem montou o
                               setlist (gatilho culto_define_ministro) e quem a banda
@@ -5133,6 +5174,7 @@ function BandaMain() {
         meuNome={meuNome}
         souAdmin={!!meuPerfil?.admin}
         nomePronto={nomePronto}
+        onLido={id => setNaoLidasCulto(prev => ({ ...prev, [id]: 0 }))}
       />
 
       {/* Montado só quando aberto: senão os dois players de áudio e o modo de

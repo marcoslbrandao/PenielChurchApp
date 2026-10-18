@@ -245,7 +245,8 @@
     "dataAniversarioInvalida": "Escribe una fecha válida en el formato DD/MM/AAAA.",
     "notificacoesBloqueadasTitulo": "Notificaciones desactivadas en el móvil",
     "notificacoesBloqueadasTexto": "Para recibir los avisos de Peniel, activa las notificaciones de la app en los Ajustes de tu móvil.",
-    "abrirAjustes": "Abrir Ajustes"
+    "abrirAjustes": "Abrir Ajustes",
+    "nomeVemDaFicha": "El nombre viene de tu registro de miembro. Para cambiarlo, ve a Mi Registro."
   },
   "grupos": {
     "titulo": "Grupos",

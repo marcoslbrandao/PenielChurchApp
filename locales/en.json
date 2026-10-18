@@ -245,7 +245,8 @@
     "dataAniversarioInvalida": "Enter a valid date as DD/MM/YYYY.",
     "notificacoesBloqueadasTitulo": "Notifications are off on your phone",
     "notificacoesBloqueadasTexto": "To get updates from Peniel, turn on notifications for the app in your phone's Settings.",
-    "abrirAjustes": "Open Settings"
+    "abrirAjustes": "Open Settings",
+    "nomeVemDaFicha": "Your name comes from your member registration. To change it, go to My Registration."
   },
   "grupos": {
     "titulo": "Groups",

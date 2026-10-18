@@ -245,7 +245,8 @@
     "dataAniversarioInvalida": "Saisissez une date valide au format JJ/MM/AAAA.",
     "notificacoesBloqueadasTitulo": "Notifications désactivées sur le téléphone",
     "notificacoesBloqueadasTexto": "Pour recevoir les annonces de Peniel, activez les notifications de l'app dans les Réglages de votre téléphone.",
-    "abrirAjustes": "Ouvrir les Réglages"
+    "abrirAjustes": "Ouvrir les Réglages",
+    "nomeVemDaFicha": "Votre nom vient de votre fiche de membre. Pour le modifier, allez dans Mon inscription."
   },
   "grupos": {
     "titulo": "Groupes",

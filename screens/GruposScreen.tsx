@@ -472,10 +472,15 @@ function GerenciarLideresModal({ visible, grupo, grupoNome, cor, onClose }: {
       .from('group_leaders')
       .select('id, profile_id, profiles(full_name)')
       .eq('grupo', grupo);
-    setLideres(((data ?? []) as any[]).map(row => ({
+    const linhas = (data ?? []) as any[];
+    // Nome completo da ficha de membro (18/10/2026): a conta pode ter só o
+    // primeiro nome ("Bruno" em vez de "Bruno Albuquerque").
+    const { data: nomes } = await supabase.rpc('nomes_completos', { p_ids: linhas.map(r => r.profile_id) });
+    const nomeDe = new Map(((nomes ?? []) as { id: string; nome: string }[]).map(n => [n.id, n.nome]));
+    setLideres(linhas.map(row => ({
       id: row.id,
       profile_id: row.profile_id,
-      nome: row.profiles?.full_name ?? '—',
+      nome: nomeDe.get(row.profile_id) ?? row.profiles?.full_name ?? '—',
     })).sort((a, b) => a.nome.localeCompare(b.nome)));
     setLoading(false);
   }, [grupo]);
@@ -488,12 +493,13 @@ function GerenciarLideresModal({ visible, grupo, grupoNome, cor, onClose }: {
     if (query.trim().length < 2) { setResultados([]); return; }
     setBuscando(true);
     const t = setTimeout(() => {
-      supabase.from('profiles').select('id, full_name')
-        .ilike('full_name', `%${query.trim()}%`)
-        .limit(10)
+      // Busca pelo nome da ficha E da conta, devolvendo o nome completo.
+      supabase.rpc('buscar_contas_por_nome', { p_busca: query.trim() })
         .then(({ data }) => {
           const jaLideres = new Set(lideres.map(l => l.profile_id));
-          setResultados(((data ?? []) as ProfileBusca[]).filter(p => !jaLideres.has(p.id)));
+          setResultados(((data ?? []) as { id: string; nome: string }[])
+            .map(p => ({ id: p.id, full_name: p.nome }))
+            .filter(p => !jaLideres.has(p.id)));
           setBuscando(false);
         });
     }, 300);
@@ -756,6 +762,11 @@ export default function GruposScreen() {
     ]);
     setIsAdmin(perfil?.role === 'admin');
     setUserNome(perfil?.full_name ?? 'Membro');
+    // Nome no chat: o completo da ficha, quando existe (18/10/2026).
+    supabase.rpc('nomes_completos', { p_ids: [user.id] }).then(({ data }) => {
+      const n = ((data ?? []) as { nome: string }[])[0]?.nome;
+      if (n && n !== 'Sem nome') setUserNome(n);
+    });
     setGruposLiderados(((liderados ?? []) as { grupo: Tab }[]).map(r => r.grupo));
     setMeusGrupos(((grupos ?? []) as Tab[]));
     setMeuMembroId((minhaFicha as any)?.id ?? null);

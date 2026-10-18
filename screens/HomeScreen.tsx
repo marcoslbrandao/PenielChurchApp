@@ -11,6 +11,7 @@ import { getUltimaVisita, marcarComoVistoAgora, getIdsDispensados, dispensarAvis
 import { linhaCompartilharApp } from '../lib/appLinks';
 import { liveSemCota, liveComApi, urlDoVideo, YOUTUBE_CANAL_URL, YOUTUBE_LIVES_URL, type LiveAtual } from '../lib/youtubeCanal';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
+import DevocionalCorpo from '../components/DevocionalCorpo';
 import BirthdayBanner from '../components/BirthdayBanner';
 import ChatGeralCard from '../components/ChatGeralCard';
 import CartaoNotificacoes from '../components/CartaoNotificacoes';
@@ -1118,8 +1119,12 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
             {devocionalAberto && (
               <View style={styles.devocionalBody}>
                 <Text style={styles.devocionalVersiculo}>"{devocionalVersiculoTraduzido}"</Text>
-                <Text style={styles.devocionalRef}>{devocionalReferenciaTraduzida}</Text>
-                <Text style={styles.devocionalTexto}>{devocionalTextoTraduzido}</Text>
+                <DevocionalCorpo
+                  referencia={devocionalReferenciaTraduzida}
+                  texto={devocionalTextoTraduzido}
+                  estiloReferencia={styles.devocionalRef}
+                  estiloTexto={styles.devocionalTexto}
+                />
                 <BotaoCompartilharDevocional
                   original={devocional}
                   traduzido={{

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
+import DevocionalCorpo from '../components/DevocionalCorpo';
 
 // Tela aberta como modal (presentation: 'modal'): no iOS ela ja comeca abaixo
 // da barra de status, mas a area segura continua informando a altura do
@@ -67,8 +68,7 @@ function DevocionalItem({ dev, aberto, onToggle }: { dev: Devocional; aberto: bo
       {aberto && (
         <View style={styles.body}>
           <Text style={styles.versiculo}>"{versiculo}"</Text>
-          <Text style={styles.referencia}>{referencia}</Text>
-          <Text style={styles.texto}>{texto}</Text>
+          <DevocionalCorpo referencia={referencia} texto={texto} estiloReferencia={styles.referencia} estiloTexto={styles.texto} />
           <BotaoCompartilharDevocional
             original={dev}
             traduzido={{ titulo, versiculo, referencia, texto }}

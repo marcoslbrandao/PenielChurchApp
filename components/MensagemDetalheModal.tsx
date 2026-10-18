@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity, Image, Share,
 } from 'react-native';
@@ -7,6 +7,19 @@ import { useTranslation } from 'react-i18next';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import { linhaCompartilharApp } from '../lib/appLinks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { segmentarReferencias, RefBiblica } from '../lib/referenciasBiblicas';
+import { livrosAT, livrosNT } from '../lib/bibliaLivros';
+import { LeitorModal, versaoPadraoDoIdioma } from '../screens/BibleScreen';
+
+const TODOS_LIVROS = [...livrosAT, ...livrosNT];
+
+// Subtitulo de mensagem (mesma regra do site): paragrafo de uma linha so,
+// curto, sem pontuacao no fim e sem referencia entre parenteses.
+function ehSubtitulo(p: string): boolean {
+  if (p.includes('\n') || p.length > 70 || p.includes('(')) return false;
+  const miolo = p.replace(/^["\u201C\u201D]+|["\u201C\u201D]+$/g, '');
+  return !/[.!?:;,]$/.test(miolo) && !/[.!?:;,)]$/.test(p);
+}
 
 export type Mensagem = {
   id: string;
@@ -31,6 +44,9 @@ export default function MensagemDetalheModal({ mensagem, onClose }: {
   // ordem dos hooks. `paddingTop` fixo em 55 sobrava em aparelho sem entalhe
   // e faltava nos iPhone mais novos.
   const insets = useSafeAreaInsets();
+  // Versiculo tocado no texto: abre a Biblia por cima da mensagem; ao fechar,
+  // a mensagem continua aberta no mesmo ponto da leitura.
+  const [refAberta, setRefAberta] = useState<RefBiblica | null>(null);
 
   if (!mensagem) return null;
 
@@ -39,7 +55,7 @@ export default function MensagemDetalheModal({ mensagem, onClose }: {
     day: '2-digit', month: 'long', year: 'numeric',
   });
 
-  const paragrafos = conteudo.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+  const paragrafos = conteudo.split(/\n{2,}/).map(p => p.trim().replace(/^\*\*(.+)\*\*$/, '$1')).filter(Boolean);
 
   return (
     <Modal visible={!!mensagem} animationType="slide" onRequestClose={onClose}>
@@ -63,12 +79,32 @@ export default function MensagemDetalheModal({ mensagem, onClose }: {
             <Text style={s.titulo}>{titulo}</Text>
             <Text style={s.meta}>{mensagem.autor} · {dataFormatada}</Text>
             {paragrafos.map((p, i) => (
-              <Text key={i} style={s.paragrafo}>{p}</Text>
+              <Text key={i} style={ehSubtitulo(p) ? s.subtitulo : s.paragrafo}>
+                {segmentarReferencias(p).map((pedaco, j) => pedaco.ref ? (
+                  <Text
+                    key={j}
+                    style={s.refLink}
+                    suppressHighlighting={false}
+                    onPress={() => setRefAberta(pedaco.ref!)}
+                  >
+                    {pedaco.texto}
+                  </Text>
+                ) : pedaco.texto)}
+              </Text>
             ))}
           </View>
           <View style={{ height: 40 }} />
         </ScrollView>
       </View>
+      {/* Dentro do Modal da mensagem: no iOS um Modal so aparece por cima de
+          outro se estiver dentro dele. */}
+      <LeitorModal
+        livro={refAberta ? TODOS_LIVROS[refAberta.livro] ?? null : null}
+        versao={versaoPadraoDoIdioma(i18n.language)}
+        capInicial={refAberta?.capitulo}
+        destaque={refAberta?.versos}
+        onClose={() => setRefAberta(null)}
+      />
     </Modal>
   );
 }
@@ -87,4 +123,11 @@ const s = StyleSheet.create({
   titulo: { fontSize: 22, fontWeight: '800', color: '#fff', lineHeight: 30 },
   meta: { fontSize: 12, color: '#F5C842', fontWeight: '600', marginTop: 8, marginBottom: 18 },
   paragrafo: { fontSize: 16, color: 'rgba(255,255,255,0.85)', lineHeight: 26, marginBottom: 16 },
+  subtitulo: { fontSize: 18, fontWeight: '800', color: '#fff', lineHeight: 26, marginTop: 8, marginBottom: 10 },
+  // Referencia biblica clicavel: dourado do app com fundo marca-texto suave.
+  refLink: {
+    color: '#F5C842', fontWeight: '700',
+    backgroundColor: 'rgba(245,200,66,0.14)',
+    textDecorationLine: 'underline', textDecorationColor: 'rgba(245,200,66,0.5)',
+  },
 });

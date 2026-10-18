@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Share, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,11 +39,11 @@ type PaletaBiblia = ReturnType<typeof paletaBiblia>;
 //  - 'bolls' = bolls.life (gratuito, sem contrato com as editoras). A NVI saiu
 //              de la em 08/10/2026 porque a Biblica proibiu o site de servi-la;
 //              por isso a NVI agora vem do YouVersion.
-type Versao = {
+export type Versao = {
   sigla: string; nome: string; idioma: string; apiId: string;
   fonte: 'yv' | 'bolls'; yvId?: number;
 };
-const versoes: Versao[] = [
+export const versoes: Versao[] = [
   { sigla: 'NVI', nome: 'Nova Versão Internacional',    idioma: '🇧🇷 Português', apiId: 'YV129',  fonte: 'yv', yvId: 129 },
   { sigla: 'NBV', nome: 'Nova Bíblia Viva',             idioma: '🇧🇷 Português', apiId: 'YV1966', fonte: 'yv', yvId: 1966 },
   { sigla: 'NAA', nome: 'Nova Almeida Atualizada',      idioma: '🇧🇷 Português', apiId: 'NAA',    fonte: 'bolls' },
@@ -139,9 +139,19 @@ function formatarReferenciaVersos(nums: number[]): string {
   return partes.join(',');
 }
 
+// Versao padrao para abrir um versiculo citado numa Mensagem, conforme o
+// idioma do app (as mensagens sao escritas na NVI).
+export function versaoPadraoDoIdioma(lang: string): Versao {
+  const sigla = lang === 'en' ? 'NIV' : lang === 'es' ? 'NVI-S' : lang === 'fr' ? 'LSG' : 'NVI';
+  return versoes.find(v => v.sigla === sigla) ?? versoes[0];
+}
+
 // ─── Leitor Modal ─────────────────────────────────────────────────────────────
-function LeitorModal({ livro, versao, capInicial, onClose }: {
-  livro: Livro | null; versao: Versao; capInicial?: number; onClose: () => void;
+// `destaque`: versiculos ja marcados ao abrir (ex.: tocou "Isaías 54:2" numa
+// Mensagem) — o leitor rola ate o primeiro e deixa os marcados em amarelo,
+// prontos para compartilhar so aquele trecho.
+export function LeitorModal({ livro, versao, capInicial, destaque, onClose }: {
+  livro: Livro | null; versao: Versao; capInicial?: number; destaque?: number[]; onClose: () => void;
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -156,6 +166,10 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
   // inteiro — toca no(s) versículo(s) desejado(s) pra marcar/desmarcar.
   // Vazio = comportamento antigo (compartilha o capítulo todo).
   const [versiculosSelecionados, setVersiculosSelecionados] = useState<number[]>([]);
+  // Posicao de cada versiculo na lista, para rolar ate o destacado.
+  const scrollRef = useRef<ScrollView>(null);
+  const posicoes = useRef<Record<number, number>>({});
+  const rolarPara = useRef<number | null>(null);
   const toggleVersiculo = (num: number) => {
     setVersiculosSelecionados(prev =>
       prev.includes(num) ? prev.filter(n => n !== num) : [...prev, num].sort((a, b) => a - b)
@@ -201,6 +215,8 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
     setVersos([]);
     setDoCache(false);
     setVersiculosSelecionados([]);
+    posicoes.current = {};
+    rolarPara.current = null;
     // Distingue "sem internet" (fetch nunca chega a responder) de "o serviço
     // externo (bolls.life) está fora do ar" (respondeu, mas com erro/HTTP
     // não-ok/corpo inválido) — os dois casos caindo no mesmo catch mostravam
@@ -295,6 +311,21 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
     }
   }, [livro?.slug, versao.apiId, capInicial]);
 
+  // Ao abrir pelo versiculo de uma Mensagem: marca os versiculos citados assim
+  // que o capitulo inicial carregar (so no capitulo de abertura).
+  useEffect(() => {
+    if (!destaque?.length || capitulo !== (capInicial ?? 1) || versos.length === 0) return;
+    const existentes = destaque.filter(n => versos.some(v => v.verse === n));
+    if (!existentes.length) return;
+    setVersiculosSelecionados(existentes);
+    const y = posicoes.current[existentes[0]];
+    if (y !== undefined) {
+      setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true }), 250);
+    } else {
+      rolarPara.current = existentes[0]; // rola quando a linha for desenhada
+    }
+  }, [versos]);
+
   const mudarCap = (cap: number) => {
     if (!livro || cap < 1 || cap > livro.caps) return;
     setCapitulo(cap);
@@ -372,7 +403,7 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
         </View>
 
         {/* Conteúdo */}
-        <ScrollView contentContainerStyle={lr.scroll}>
+        <ScrollView ref={scrollRef} contentContainerStyle={lr.scroll}>
           {loading && (
             <View style={lr.loadingWrap}>
               <ActivityIndicator color="#F5C842" size="large" />
@@ -402,6 +433,14 @@ function LeitorModal({ livro, versao, capInicial, onClose }: {
                 style={[lr.versoRow, selecionado && lr.versoRowSelecionado]}
                 activeOpacity={0.7}
                 onPress={() => toggleVersiculo(v.verse)}
+                onLayout={e => {
+                  posicoes.current[v.verse] = e.nativeEvent.layout.y;
+                  if (rolarPara.current === v.verse) {
+                    rolarPara.current = null;
+                    const y = Math.max(0, e.nativeEvent.layout.y - 12);
+                    setTimeout(() => scrollRef.current?.scrollTo({ y, animated: true }), 250);
+                  }
+                }}
               >
                 <Text style={[lr.versoNum, selecionado && lr.versoNumSelecionado]}>{v.verse}</Text>
                 <Text style={lr.versoText}>{v.text.trim()}</Text>

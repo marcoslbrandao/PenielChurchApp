@@ -5,6 +5,8 @@ import {
   Platform, StatusBar, Animated, Modal, ActivityIndicator, RefreshControl, Keyboard, AppState,
 } from 'react-native';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import ChatGeralModal from '../components/ChatGeralModal';
+import { fonteBanda } from '../lib/chatFonte';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -3960,14 +3962,17 @@ function BandaMain() {
   // diretório da banda chegou), pra não gravar um nome provisório no banco.
   const nomePronto = meuPerfil !== null || membros.length > 0;
 
-  const mod = useModeracaoChat(user?.id, activeTab === 'chat');
+  // O chat abre na tela única (ChatGeralModal); os ganchos antigos do chat
+  // embutido ficam desligados (18/10/2026).
+  const fonteDoChatBanda = useMemo(() => fonteBanda(t, C.primary), [t, C.primary]);
+  const mod = useModeracaoChat(user?.id, false);
   // Reações com emoji, iguais às do Chat da Igreja (18/10/2026).
-  const { porMensagem: reacoesChat, reagir: reagirChat } = useReacoesChat({ tabela: 'banda_chat_reacoes' }, user?.id, activeTab === 'chat');
+  const { porMensagem: reacoesChat, reagir: reagirChat } = useReacoesChat({ tabela: 'banda_chat_reacoes' }, user?.id, false);
   const { favoritos: emojisFavoritos, registrarUso: registrarEmoji } = useEmojisFavoritos(user?.id);
   const [emojiParaChat, setEmojiParaChat] = useState<ChatMsg | null>(null);
   const reagirEContar = async (m: ChatMsg, e: string) => { if (await reagirChat(m.id, e)) registrarEmoji(e); };
   // Android edge-to-edge: o teclado cobria a caixa de mensagem (17/10/2026).
-  const folgaTeclado = useFolgaDoTeclado(chatKavRef, activeTab === 'chat');
+  const folgaTeclado = useFolgaDoTeclado(chatKavRef, false);
   // Compartilhar › Peniel com o chat da Banda aberto: entra direto aqui
   // (18/10/2026, ver lib/chatAberto.ts).
   const [pendenteChat, setPendenteChat] = useState<Compartilhado['arquivo'] | null>(null);
@@ -3983,7 +3988,8 @@ function BandaMain() {
   // só conta como "chat aberto" se a Banda estiver na tela de verdade.
   const bandaNaTela = useIsFocused();
   useEffect(() => {
-    if (activeTab !== 'chat' || !bandaNaTela) return;
+    // Desligado: quem recebe o compartilhamento agora é o ChatGeralModal.
+    if (true || activeTab !== 'chat' || !bandaNaTela) return;
     return registrarChatAberto({
       destino: 'banda',
       receber: c => {
@@ -5081,188 +5087,18 @@ function BandaMain() {
         </View>
       )}
 
-      {/* ══ CHAT ══════════════════════════════════════════════════════════════ */}
-      {activeTab === 'chat' && (
-        <View ref={chatKavRef} collapsable={false} style={{ flex: 1, paddingBottom: folgaTeclado }} onLayout={medirChatKav}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={chatKavOffset}
-        >
-          {loadingChat ? (
-            <View style={s.loadingWrap}><ActivityIndicator color={C.primary} /></View>
-          ) : (
-            <ScrollView ref={scrollRef} contentContainerStyle={s.chatContent} onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
-              {mensagensVisiveis.length === 0 ? (
-                <View style={s.emptyState}>
-                  <Ionicons name="chatbubbles-outline" size={48} color={C.textDim} />
-                  <Text style={s.emptyTitle}>{t('banda.chatVazio')}</Text>
-                  <Text style={s.emptyDesc}>{t('banda.chatVazioDesc')}</Text>
-                </View>
-              ) : mensagensVisiveis.map((m, idx) => {
-                const mine = m.autor_id === user?.id;
-                // Divisor de data quando a mensagem cai num dia diferente da anterior.
-                const dia = diaDaMensagem(m.created_at);
-                const mostraDia = idx === 0 || diaDaMensagem(mensagensVisiveis[idx - 1].created_at) !== dia;
-                return (
-                  <View key={m.id}>
-                    {mostraDia && (
-                      <View style={s.chatDayWrap}>
-                        <Text style={s.chatDay}>{rotuloDoDia(dia, today, i18n.language, t)}</Text>
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      activeOpacity={0.7}
-                      onLongPress={() => setMenuChatDe(m)}
-                      style={[s.bubble, mine && s.bubbleMine]}
-                    >
-                      {!mine && <Text style={s.bubbleAuthor}>{m.autor_nome}</Text>}
-                      {m.midia_path ? (
-                        <>
-                          <AnexoMensagem
-                            m={m}
-                            id={m.id}
-                            minha={mine}
-                            corTexto={mine ? C.onPrimaryDim : C.text}
-                            corTrilho={C.border}
-                            corProgresso={C.primary}
-                            corCartao={C.surfaceHigh}
-                            audioAtivo={audioAtivo === m.id}
-                            onAtivarAudio={() => setAudioAtivo(m.id)}
-                            onTerminarAudio={() => setAudioAtivo(a => (a === m.id ? null : a))}
-                            onLongPress={() => setMenuChatDe(m)}
-                          />
-                          {!!legendaDoAnexo(m) && (
-                            <TextoComLinks
-                              texto={legendaDoAnexo(m)!}
-                              style={[s.bubbleText, { marginTop: 6 }, mine && s.bubbleTextMine]}
-                              onLongPress={() => setMenuChatDe(m)}
-                            />
-                          )}
-                        </>
-                      ) : m.audio_path ? (
-                        <AudioMensagem
-                          caminho={m.audio_path}
-                          duracaoMs={m.audio_duracao_ms ?? null}
-                          ativo={audioAtivo === m.id}
-                          onAtivar={() => setAudioAtivo(m.id)}
-                          onTerminar={() => setAudioAtivo(a => (a === m.id ? null : a))}
-                          corTexto={mine ? C.onPrimaryDim : C.text}
-                          corTrilho={C.border}
-                          corProgresso={C.primary}
-                          onLongPress={() => setMenuChatDe(m)}
-                        />
-                      ) : (
-                        <TextoComLinks
-                          texto={m.texto}
-                          style={[s.bubbleText, mine && s.bubbleTextMine]}
-                          onLongPress={() => setMenuChatDe(m)}
-                        />
-                      )}
-                      <Text style={[s.bubbleTime, mine && s.bubbleTimeMine]}>{horaDaMensagem(m.created_at)}</Text>
-                    </TouchableOpacity>
-                    <ChipsReacoes
-                      chips={reacoesChat.get(m.id)}
-                      minha={mine}
-                      cor={C.primary}
-                      corFundo={C.surfaceHigh}
-                      corNumero={C.textMuted}
-                      onTocar={e => reagirEContar(m, e)}
-                    />
-                  </View>
-                );
-              })}
-            </ScrollView>
-          )}
-          {mod.souSuspenso ? (
-            <View style={[s.chatInput, { justifyContent: 'center', alignItems: 'center' }]}>
-              <Ionicons name="volume-mute-outline" size={16} color={C.textMuted} />
-              <Text style={{ fontSize: 13, color: C.textMuted, marginLeft: 6, flexShrink: 1 }}>{t('moderacao.suspensoAviso')}</Text>
-            </View>
-          ) : (
-          <>
-          {pendenteChat && (
-            <AnexoPendente
-              arquivo={pendenteChat}
-              cor={C.primary}
-              corTexto={C.text}
-              corSuave={C.textMuted}
-              corFundo={C.surface}
-              corBorda={C.border}
-              desativado={enviandoChat}
-              onRemover={() => setPendenteChat(null)}
-            />
-          )}
-          {temSelecao && (
-            <BotaoNegrito cor={C.primary} corTexto={C.text} corSuave={C.textMuted} corFundo={C.surface} corBorda={C.border} onPress={aplicarNegrito} />
-          )}
-          <View style={s.chatInput}>
-            {!gravando && nomePronto && (
-              <TouchableOpacity onPress={anexar} disabled={enviandoAnexo || enviandoAudio} hitSlop={6} style={{ height: 42, justifyContent: 'center' }}>
-                {enviandoAnexo
-                  ? <ActivityIndicator size="small" color={C.primary} />
-                  : <Ionicons name="add-circle-outline" size={28} color={C.primary} />}
-              </TouchableOpacity>
-            )}
-            {!gravando && (
-              <TextInput style={s.chatField} placeholder={t('banda.mensagemPlaceholder')} placeholderTextColor={C.textDim} value={chatMsg} onChangeText={setChatMsg} onSelectionChange={e => setSelecao(e.nativeEvent.selection)} returnKeyType="send" onSubmitEditing={sendMessage} maxLength={1000} />
-            )}
-            {enviandoAudio ? (
-              <View style={[s.sendBtn, { opacity: 0.6 }]}>
-                <ActivityIndicator color={C.onPrimary} size="small" />
-              </View>
-            ) : podeGravar && nomePronto && !pendenteChat && (gravando || !chatMsg.trim()) ? (
-              // Campo vazio: o botão vira microfone, como no chat dos grupos.
-              <GravadorAudio
-                cor={C.primary}
-                corIcone={C.onPrimary}
-                corTexto={C.text}
-                corFundo={C.surfaceHigh}
-                tamanho={42}
-                onComecar={() => { setAudioAtivo(null); Keyboard.dismiss(); }}
-                onGravado={enviarGravacao}
-                onGravandoMudou={setGravando}
-              />
-            ) : (
-              <TouchableOpacity style={[s.sendBtn, ((!pendenteChat && !chatMsg.trim()) || enviandoChat || !nomePronto) && { opacity: 0.45 }]} onPress={sendMessage} disabled={(!pendenteChat && !chatMsg.trim()) || enviandoChat || !nomePronto}>
-                {enviandoChat ? <ActivityIndicator color={C.onPrimary} size="small" /> : <Ionicons name="send" size={18} color={C.onPrimary} />}
-              </TouchableOpacity>
-            )}
-          </View>
-          </>
-          )}
-        </KeyboardAvoidingView>
-        <MenuMensagem
-          visivel={!!menuChatDe}
-          autorNome={menuChatDe?.autor_nome ?? ''}
-          minha={menuChatDe?.autor_id === user?.id}
-          podeApagar={!!menuChatDe && (menuChatDe.autor_id === user?.id || !!meuPerfil?.adminIgreja)}
+      {/* ══ CHAT ══════════════════════════════════════════════════════════════
+          Desde 18/10/2026 é a MESMA tela do Chat da Igreja e dos grupos
+          (ChatGeralModal com a fonte da Banda): tudo igual nos três chats. */}
+      {activeTab === 'chat' && !!user?.id && (
+        <ChatGeralModal
+          visible={activeTab === 'chat'}
+          userId={user.id}
           ehAdmin={!!meuPerfil?.adminIgreja}
-          autorSuspenso={!!menuChatDe && mod.suspensos.has(menuChatDe.autor_id)}
-          corFundo={C.surface}
-          corTexto={C.text}
-          corBorda={C.border}
-          onAcao={acao => menuChatDe && acaoDoMenuChat(menuChatDe, acao)}
-          onFechar={() => setMenuChatDe(null)}
-          favoritos={emojisFavoritos}
-          onReagir={e => { const m = menuChatDe; if (m) reagirEContar(m, e); }}
-          onMaisEmoji={() => { const m = menuChatDe; setTimeout(() => setEmojiParaChat(m), 350); }}
+          onClose={() => setActiveTab('hoje')}
+          fonte={fonteDoChatBanda}
+          autorNome={meuNome}
         />
-        <EscolherEmoji
-          visivel={!!emojiParaChat}
-          isDark={chatEscuro}
-          cor={C.primary}
-          onEscolher={e => { const m = emojiParaChat; setEmojiParaChat(null); if (m) reagirEContar(m, e); }}
-          onFechar={() => setEmojiParaChat(null)}
-        />
-        <RegrasDoChat
-          visivel={mod.regrasAceitas === false}
-          cor={C.primary}
-          isDark={chatEscuro}
-          onAceitar={mod.aceitarRegras}
-          onRecusar={() => setActiveTab('hoje')}
-        />
-        </View>
       )}
 
       <IndisponibilidadeModal

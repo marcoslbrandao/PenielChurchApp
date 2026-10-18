@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Image, Pressable,
   KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert, StatusBar, Keyboard, Linking, ScrollView,
@@ -33,6 +33,8 @@ import EscolherEmoji from './EscolherEmoji';
 import { useEmojisFavoritos } from '../lib/emojisFavoritos';
 import { alternarNegrito, semFormatacao } from '../lib/negrito';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/moderacao';
+import { BUCKET_CHAT_GERAL } from '../lib/chatGeral';
+import { type FonteChat, fonteIgreja, chaveDaFonte, deLinha, paraLinha, marcarLido, infoDaMensagem, type LinhaInfo } from '../lib/chatFonte';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
 // O chat geral dos membros, aberto pelo card da Home. Funciona como o WhatsApp:
@@ -45,6 +47,10 @@ import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/mo
 // uma, vê denúncias e silencia. Esta tela só reflete isso.
 
 const COR = '#6A55E0';
+
+// Cor e bucket do chat aberto, para as peças lá de baixo (foto, vídeo,
+// arquivo, "Reações e visualizações") — 18/10/2026, tela única dos chats.
+const ChatCtx = createContext<{ cor: string; bucket: string }>({ cor: COR, bucket: BUCKET_CHAT_GERAL });
 
 function paletaChat(isDark: boolean) {
   return isDark ? {
@@ -76,13 +82,22 @@ type MidiaLocal = {
   fileSize?: number | null;
 };
 
+// ─── UMA tela para os três chats (18/10/2026) ───────────────────────────────
+// Sem `fonte`, é o Chat da Igreja. Com `fonte` (lib/chatFonte.ts), a mesma
+// tela abre o chat de um grupo ou o da Banda, com tudo igual: reações,
+// responder, quem viu, prévia de links, anexos, áudio, negrito, moderação.
 export default function ChatGeralModal({
   visible, userId, ehAdmin, onClose, compartilhado, onCompartilhadoUsado,
+  fonte: fonteProp, autorNome = '',
 }: {
   visible: boolean;
   userId: string;
   ehAdmin: boolean;
   onClose: () => void;
+  /** De qual chat se trata (padrão: Chat da Igreja). */
+  fonte?: FonteChat;
+  /** Nome gravado na mensagem (grupos e Banda; o da Igreja vem do banco). */
+  autorNome?: string;
   /** Veio de outro app pelo menu Compartilhar: fica pronto para enviar. */
   compartilhado?: Compartilhado | null;
   /** Avisado quando o conteúdo compartilhado já foi aplicado à tela. */
@@ -90,8 +105,14 @@ export default function ChatGeralModal({
 }) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
+  const fonte = useMemo(() => fonteProp ?? fonteIgreja(t), [fonteProp, t]);
+  // A cor do chat (roxo na Igreja, a cor do grupo, a da Banda).
+  const COR = fonte.cor;
+  const ctx = useMemo(() => ({ cor: fonte.cor, bucket: fonte.bucket }), [fonte.cor, fonte.bucket]);
+  const destinoUpload = fonte.prefixo ? { bucket: fonte.bucket, prefixo: fonte.prefixo } : undefined;
+  const obterUrl = useCallback((c: string) => urlDaMidia(c, fonte.bucket), [fonte.bucket]);
   const C = useMemo(() => paletaChat(isDark), [isDark]);
-  const cs = useMemo(() => buildStyles(C), [C]);
+  const cs = useMemo(() => buildStyles(C, COR), [C, COR]);
 
   const [mensagens, setMensagens] = useState<MensagemGeral[]>([]);
   const [reacoes, setReacoes] = useState<Reacao[]>([]);
@@ -147,13 +168,13 @@ export default function ChatGeralModal({
   useEffect(() => {
     if (!visible) return;
     return registrarChatAberto({
-      destino: 'igreja',
+      destino: fonte.destino,
       receber: c => {
         if (c.texto) setTexto(tx => (tx.trim() ? `${tx} ${c.texto}` : c.texto!));
         if (c.arquivo) setPendente(c.arquivo);
       },
     });
-  }, [visible]);
+  }, [visible, fonte.destino]);
 
   useEffect(() => {
     if (!visible || !compartilhado) return;
@@ -186,66 +207,79 @@ export default function ChatGeralModal({
   // ── Carregar ──────────────────────────────────────────────────────────────
   const carregar = useCallback(async () => {
     setLoading(true);
+    let qMsgs = supabase.from(fonte.tabela).select('*');
+    if (fonte.grupo) qMsgs = qMsgs.eq('grupo', fonte.grupo);
+    // Reações do grupo: só as das mensagens DESTE grupo (join pela mensagem).
+    const qReac = fonte.grupo
+      ? supabase.from(fonte.tabelaReacoes)
+        .select('mensagem_id, user_id, emoji, grupo_chat_mensagens!inner(grupo)')
+        .eq('grupo_chat_mensagens.grupo', fonte.grupo)
+      : supabase.from(fonte.tabelaReacoes).select('mensagem_id, user_id, emoji');
     const [msgs, reac, sil] = await Promise.all([
-      supabase.from('chat_geral_mensagens').select('*')
-        // DESC + reverse: `limit` corta pelo começo da ordenação.
-        .order('created_at', { ascending: false }).limit(500),
-      supabase.from('chat_geral_reacoes').select('mensagem_id, user_id, emoji').limit(5000),
+      // DESC + reverse: `limit` corta pelo começo da ordenação.
+      qMsgs.order('created_at', { ascending: false }).limit(500),
+      qReac.limit(5000),
       supabase.from('chat_geral_silenciados').select('user_id'),
     ]);
-    const lista = ((msgs.data ?? []) as MensagemGeral[]).reverse();
+    const lista = ((msgs.data ?? []) as any[]).map(r => deLinha(fonte, r)).reverse();
     setMensagens(lista);
-    setReacoes((reac.data ?? []) as Reacao[]);
+    setReacoes(((reac.data ?? []) as any[]).map(r => ({ mensagem_id: r.mensagem_id, user_id: r.user_id, emoji: r.emoji })));
     setSilenciados(new Set(((sil.data ?? []) as { user_id: string }[]).map(r => r.user_id)));
     if (ehAdmin) {
-      const { data } = await supabase.from('chat_denuncias').select('mensagem_id').eq('chat', 'geral').eq('status', 'aberta');
+      let qDen = supabase.from('chat_denuncias').select('mensagem_id').eq('chat', fonte.tipo).eq('status', 'aberta');
+      if (fonte.grupo) qDen = qDen.eq('grupo', fonte.grupo);
+      const { data } = await qDen;
       const cont: Record<string, number> = {};
       for (const d of (data ?? []) as { mensagem_id: string }[]) cont[d.mensagem_id] = (cont[d.mensagem_id] ?? 0) + 1;
       setDenuncias(cont);
     }
     // As fotos da conversa pedem as URLs de uma vez, não uma por bolha.
     const fotos = lista.filter(m => m.tipo === 'imagem' && m.midia_path).map(m => m.midia_path as string);
-    await preCarregarUrls(fotos.slice(-60)).catch(() => {});
+    await preCarregarUrls(fotos.slice(-60), fonte.bucket).catch(() => {});
     setLoading(false);
-    marcarComoLido();
-  }, [ehAdmin]);
+    marcarLido(fonte);
+  }, [ehAdmin, fonte]);
 
   useEffect(() => {
     if (!visible) return;
     carregar();
 
+    const filtro = fonte.grupo ? { filter: `grupo=eq.${fonte.grupo}` } : {};
     const canal = supabase
-      .channel('chat_geral')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_geral_mensagens' }, (payload) => {
-        const nova = payload.new as MensagemGeral;
+      .channel(`chat_${chaveDaFonte(fonte)}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: fonte.tabela, ...filtro }, (payload) => {
+        const nova = deLinha(fonte, payload.new);
         setMensagens(prev => (prev.some(m => m.id === nova.id) ? prev : [...prev, nova]));
-        marcarComoLido();
+        marcarLido(fonte);
       })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'chat_geral_mensagens' }, (payload) => {
+      // DELETE não aceita filtro no Supabase Realtime: com filtro, apagar num
+      // grupo não chegava às outras telas. O id é único, então basta ele.
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: fonte.tabela }, (payload) => {
         const id = (payload.old as { id: string }).id;
         setMensagens(prev => prev.filter(m => m.id !== id));
         setReacoes(prev => prev.filter(r => r.mensagem_id !== id));
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_geral_reacoes' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: fonte.tabelaReacoes }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const old = payload.old as Partial<Reacao>;
           setReacoes(prev => prev.filter(r => !(r.mensagem_id === old.mensagem_id && r.user_id === old.user_id)));
         } else {
-          const r = payload.new as Reacao;
+          const n = payload.new as Reacao;
+          const r = { mensagem_id: n.mensagem_id, user_id: n.user_id, emoji: n.emoji };
           setReacoes(prev => [...prev.filter(x => !(x.mensagem_id === r.mensagem_id && x.user_id === r.user_id)), r]);
         }
       })
       .subscribe();
 
     return () => { supabase.removeChannel(canal); };
-  }, [visible, carregar]);
+  }, [visible, carregar, fonte]);
 
   const fechar = () => {
     setAudioAtivo(null);
     setPendente(null);
     setRespondendo(null);
     setMenuDe(null);
-    marcarComoLido().finally(onClose);
+    marcarLido(fonte).finally(onClose);
   };
 
   // ── Linhas da lista (invertida: a mais nova fica embaixo) ─────────────────
@@ -285,12 +319,12 @@ export default function ChatGeralModal({
   // ── Enviar ────────────────────────────────────────────────────────────────
   const inserir = async (linha: Partial<MensagemGeral>) => {
     const { data, error } = await supabase
-      .from('chat_geral_mensagens')
-      .insert({ ...linha, resposta_a: respondendo?.id ?? null })
+      .from(fonte.tabela)
+      .insert(paraLinha(fonte, { ...linha, resposta_a: respondendo?.id ?? null }, userId, autorNome))
       .select('*')
       .single();
     if (error) throw error;
-    const nova = data as MensagemGeral;
+    const nova = deLinha(fonte, data);
     setMensagens(prev => (prev.some(m => m.id === nova.id) ? prev : [...prev, nova]));
     setRespondendo(null);
   };
@@ -317,7 +351,7 @@ export default function ChatGeralModal({
       // HEIC do iPhone vira JPEG (o Android não mostra HEIC).
       const img = await prepararImagem(asset.uri, asset.mimeType);
       const { ext, contentType } = formatoDaImagem(img.mimeType, img.uri);
-      caminho = await enviarArquivo(img.uri, userId, ext, contentType);
+      caminho = await enviarArquivo(img.uri, userId, ext, contentType, false, destinoUpload);
       // O que estiver escrito no campo vai junto, como legenda.
       const legenda = texto.trim();
       await inserir({
@@ -327,7 +361,7 @@ export default function ChatGeralModal({
       if (legenda) setTexto('');
       return true;
     } catch (e: any) {
-      if (caminho) apagarMidia(caminho);
+      if (caminho) apagarMidia(caminho, fonte.bucket);
       Alert.alert(t('chatGeral.erroEnviar'), e?.message ?? t('chatGeral.erroEnviarTexto'));
       return false;
     } finally {
@@ -357,7 +391,7 @@ export default function ChatGeralModal({
     setEnviando(true);
     let caminho: string | null = null;
     try {
-      caminho = await enviarArquivo(asset.uri, userId, ehMov ? 'mov' : 'mp4', ehMov ? 'video/quicktime' : 'video/mp4');
+      caminho = await enviarArquivo(asset.uri, userId, ehMov ? 'mov' : 'mp4', ehMov ? 'video/quicktime' : 'video/mp4', false, destinoUpload);
       const legenda = texto.trim();
       await inserir({
         tipo: 'video', texto: legenda, midia_path: caminho,
@@ -367,7 +401,7 @@ export default function ChatGeralModal({
       if (legenda) setTexto('');
       return true;
     } catch (e: any) {
-      if (caminho) apagarMidia(caminho);
+      if (caminho) apagarMidia(caminho, fonte.bucket);
       erroDeEnvio(e);
       return false;
     } finally {
@@ -393,7 +427,7 @@ export default function ChatGeralModal({
     try {
       // Áudio: mede antes de subir (o arquivo local pode ser apagado no envio).
       const duracao = formato.contentType.startsWith('audio/') ? await duracaoDoAudio(arq.uri) : null;
-      caminho = await enviarArquivo(arq.uri, userId, formato.ext, formato.contentType, apagarLocal);
+      caminho = await enviarArquivo(arq.uri, userId, formato.ext, formato.contentType, apagarLocal, destinoUpload);
       const legenda = texto.trim();
       await inserir({
         tipo: 'arquivo', texto: legenda, midia_path: caminho,
@@ -403,7 +437,7 @@ export default function ChatGeralModal({
       if (legenda) setTexto('');
       return true;
     } catch (e: any) {
-      if (caminho) apagarMidia(caminho);
+      if (caminho) apagarMidia(caminho, fonte.bucket);
       erroDeEnvio(e);
       return false;
     } finally {
@@ -468,7 +502,7 @@ export default function ChatGeralModal({
   const anexar = () => {
     Keyboard.dismiss();
     if (barrarSeOfensivo(texto, t)) return;
-    Alert.alert(t('chatGeral.titulo'), undefined, [
+    Alert.alert(fonte.titulo, undefined, [
       { text: t('chatGeral.galeria'), onPress: escolherDaGaleria },
       { text: t('chatGeral.camera'), onPress: tirarFoto },
       // Só nos binários com o seletor de arquivos (1.5.0+).
@@ -481,10 +515,10 @@ export default function ChatGeralModal({
     setEnviando(true);
     let caminho: string | null = null;
     try {
-      caminho = await enviarArquivo(uri, userId, 'm4a', 'audio/mp4', true);
+      caminho = await enviarArquivo(uri, userId, 'm4a', 'audio/mp4', true, destinoUpload);
       await inserir({ tipo: 'audio', texto: '', midia_path: caminho, duracao_ms: Math.max(1, Math.round(duracaoMs)) });
     } catch (e: any) {
-      if (caminho) apagarMidia(caminho);
+      if (caminho) apagarMidia(caminho, fonte.bucket);
       Alert.alert(t('chatGeral.erroEnviar'), e?.message ?? t('chatGeral.erroEnviarTexto'));
     } finally {
       setEnviando(false);
@@ -497,11 +531,11 @@ export default function ChatGeralModal({
     const minha = reacoes.find(r => r.mensagem_id === msg.id && r.user_id === userId);
     if (minha?.emoji === emoji) {
       setReacoes(prev => prev.filter(r => !(r.mensagem_id === msg.id && r.user_id === userId)));
-      await supabase.from('chat_geral_reacoes').delete().eq('mensagem_id', msg.id).eq('user_id', userId);
+      await supabase.from(fonte.tabelaReacoes).delete().eq('mensagem_id', msg.id).eq('user_id', userId);
     } else {
       registrarUso(emoji);
       setReacoes(prev => [...prev.filter(r => !(r.mensagem_id === msg.id && r.user_id === userId)), { mensagem_id: msg.id, user_id: userId, emoji }]);
-      await supabase.from('chat_geral_reacoes').upsert({ mensagem_id: msg.id, user_id: userId, emoji }, { onConflict: 'mensagem_id,user_id' });
+      await supabase.from(fonte.tabelaReacoes).upsert({ mensagem_id: msg.id, user_id: userId, emoji }, { onConflict: 'mensagem_id,user_id' });
     }
   };
 
@@ -517,10 +551,10 @@ export default function ChatGeralModal({
       { text: t('common.cancelar'), style: 'cancel' },
       {
         text: t('chatGeral.apagar'), style: 'destructive', onPress: async () => {
-          const ok = await apagarLinha('chat_geral_mensagens', msg.id);
+          const ok = await apagarLinha(fonte.tabela, msg.id);
           if (!ok) return;
           setMensagens(prev => prev.filter(m => m.id !== msg.id));
-          if (msg.midia_path) apagarMidia(msg.midia_path);
+          if (msg.midia_path) apagarMidia(msg.midia_path, fonte.bucket);
         },
       },
     ]);
@@ -529,7 +563,7 @@ export default function ChatGeralModal({
   const denunciar = (msg: MensagemGeral) => {
     setMenuDe(null);
     // Espera o menu fechar: Alert junto com o fechamento do Modal some no iPhone.
-    setTimeout(() => denunciarMensagem('geral', msg.id, t), 350);
+    setTimeout(() => denunciarMensagem(fonte.tipo, msg.id, t), 350);
   };
 
   const bloquear = (msg: MensagemGeral) => {
@@ -624,7 +658,7 @@ export default function ChatGeralModal({
                 corTrilho={minha ? 'rgba(255,255,255,0.35)' : C.bubbleOtherBorder}
                 corProgresso={minha ? '#fff' : COR}
                 onLongPress={() => setMenuDe(m)}
-                obterUrl={urlDaMidia}
+                obterUrl={obterUrl}
               />
             ) : m.tipo === 'video' && m.midia_path ? (
               <VideoDaMensagem
@@ -651,7 +685,7 @@ export default function ChatGeralModal({
                   corTrilho={minha ? 'rgba(255,255,255,0.35)' : C.bubbleOtherBorder}
                   corProgresso={minha ? '#fff' : COR}
                   onLongPress={() => setMenuDe(m)}
-                  obterUrl={urlDaMidia}
+                  obterUrl={obterUrl}
                 />
               </View>
             ) : m.tipo === 'arquivo' && m.midia_path ? (
@@ -715,6 +749,7 @@ export default function ChatGeralModal({
   const podeApagar = (m: MensagemGeral) => m.autor_id === userId || ehAdmin;
 
   return (
+    <ChatCtx.Provider value={ctx}>
     <Modal visible={visible} animationType="slide" onRequestClose={fechar}>
       {/* ref e folga na RAIZ, não num View em volta do KeyboardAvoidingView:
           o KAV do iPhone calcula a posição relativa ao pai. Com um View novo
@@ -727,10 +762,10 @@ export default function ChatGeralModal({
             <Ionicons name="chevron-back" size={24} color="#fff" />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={cs.headerTitle} numberOfLines={1}>{t('chatGeral.titulo')}</Text>
-            <Text style={cs.headerSub} numberOfLines={1}>{t('chatGeral.subtitulo')}</Text>
+            <Text style={cs.headerTitle} numberOfLines={1}>{fonte.titulo}</Text>
+            <Text style={cs.headerSub} numberOfLines={1}>{fonte.subtitulo}</Text>
           </View>
-          <TouchableOpacity onPress={() => Alert.alert(t('chatGeral.titulo'), t('chatGeral.aviso15dias'))} hitSlop={10} style={cs.headerBtn}>
+          <TouchableOpacity onPress={() => Alert.alert(fonte.titulo, t('chatGeral.aviso15dias'))} hitSlop={10} style={cs.headerBtn}>
             <Ionicons name="information-circle-outline" size={22} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
         </View>
@@ -924,6 +959,7 @@ export default function ChatGeralModal({
 
         {/* ── Reações e visualizações ────────────────────────────────────── */}
         <InfoDaMensagem
+          fonte={fonte}
           mensagem={infoDe}
           verVistos={!!infoDe && (infoDe.autor_id === userId || ehAdmin)}
           C={C}
@@ -950,17 +986,17 @@ export default function ChatGeralModal({
         </Modal>
       </View>
     </Modal>
+    </ChatCtx.Provider>
   );
 }
 
 // ─── Peças ───────────────────────────────────────────────────────────────────
-type LinhaInfo = { tipo: 'reacao' | 'visto'; user_id: string; nome: string; emoji: string | null };
 
 // Quem reagiu (todo membro vê) e quem viu (só o autor e o Admin; o banco
 // confere de novo em chat_geral_info_mensagem). "Viu" = abriu o Chat da
 // Igreja depois que a mensagem foi enviada.
-function InfoDaMensagem({ mensagem, verVistos, C, cs, onFechar }: {
-  mensagem: MensagemGeral | null; verVistos: boolean;
+function InfoDaMensagem({ fonte, mensagem, verVistos, C, cs, onFechar }: {
+  fonte: FonteChat; mensagem: MensagemGeral | null; verVistos: boolean;
   C: ReturnType<typeof paletaChat>; cs: ReturnType<typeof buildStyles>; onFechar: () => void;
 }) {
   const { t } = useTranslation();
@@ -970,11 +1006,10 @@ function InfoDaMensagem({ mensagem, verVistos, C, cs, onFechar }: {
     if (!mensagem) return;
     let vivo = true;
     setLinhas(null);
-    supabase.rpc('chat_geral_info_mensagem', { p_mensagem: mensagem.id }).then(({ data, error }) => {
-      if (vivo) setLinhas(error ? [] : ((data ?? []) as LinhaInfo[]));
-    });
+    infoDaMensagem(fonte, mensagem.id).then(l => { if (vivo) setLinhas(l); });
     return () => { vivo = false; };
   }, [mensagem?.id]);
+  const { cor: COR } = useContext(ChatCtx);
 
   const reacoes = (linhas ?? []).filter(l => l.tipo === 'reacao');
   const vistos = (linhas ?? []).filter(l => l.tipo === 'visto');
@@ -1038,12 +1073,13 @@ function FotoDaMensagem({
   caminho: string; largura: number | null; altura: number | null;
   onAbrir: (url: string) => void; onLongPress: () => void;
 }) {
-  const [url, setUrl] = useState<string | null>(() => urlGuardada(caminho));
+  const { bucket } = useContext(ChatCtx);
+  const [url, setUrl] = useState<string | null>(() => urlGuardada(caminho, bucket));
   const [erro, setErro] = useState(false);
   useEffect(() => {
     if (url) return;
     let vivo = true;
-    urlDaMidia(caminho).then(u => { if (vivo) setUrl(u); }, () => { if (vivo) setErro(true); });
+    urlDaMidia(caminho, bucket).then(u => { if (vivo) setUrl(u); }, () => { if (vivo) setErro(true); });
     return () => { vivo = false; };
   }, [caminho, url]);
 
@@ -1069,9 +1105,9 @@ function FotoDaMensagem({
 // Vídeo: um quadro escuro com play e a duração. O toque abre o vídeo no
 // player do próprio celular (link assinado de 1 hora) — não precisa de módulo
 // nativo novo, então funciona também nos binários antigos via OTA.
-async function abrirMidia(caminho: string, erroTexto: string) {
+async function abrirMidia(caminho: string, erroTexto: string, bucket: string) {
   try {
-    const url = await urlDaMidia(caminho);
+    const url = await urlDaMidia(caminho, bucket);
     await Linking.openURL(url);
   } catch {
     Alert.alert(erroTexto);
@@ -1084,6 +1120,7 @@ function VideoDaMensagem({
   caminho: string; largura: number | null; altura: number | null; duracaoMs: number | null;
   onLongPress: () => void; erroTexto: string;
 }) {
+  const { bucket } = useContext(ChatCtx);
   const [abrindo, setAbrindo] = useState(false);
   const W = 230;
   const proporcao = largura && altura ? altura / largura : 0.5625;
@@ -1091,7 +1128,7 @@ function VideoDaMensagem({
   const abrir = async () => {
     if (abrindo) return;
     setAbrindo(true);
-    await abrirMidia(caminho, erroTexto);
+    await abrirMidia(caminho, erroTexto, bucket);
     setAbrindo(false);
   };
   return (
@@ -1119,6 +1156,7 @@ function ArquivoDaMensagem({
   caminho: string; nome: string; tamanho: number | null; minha: boolean; C: PaletaChat;
   onLongPress: () => void; erroTexto: string;
 }) {
+  const { bucket } = useContext(ChatCtx);
   const [abrindo, setAbrindo] = useState(false);
   const ext = (caminho.split('.').pop() ?? '').toLowerCase();
   const icone: { nome: keyof typeof Ionicons.glyphMap; cor: string } =
@@ -1134,7 +1172,7 @@ function ArquivoDaMensagem({
   const abrir = async () => {
     if (abrindo) return;
     setAbrindo(true);
-    await abrirMidia(caminho, erroTexto);
+    await abrirMidia(caminho, erroTexto, bucket);
     setAbrindo(false);
   };
   return (
@@ -1234,7 +1272,7 @@ const st = StyleSheet.create({
   anexoAudioTexto: { fontSize: 12.5, fontWeight: '600', flexShrink: 1 },
 });
 
-function buildStyles(C: PaletaChat) { return StyleSheet.create({
+function buildStyles(C: PaletaChat, COR: string) { return StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingBottom: 14, backgroundColor: COR },
   headerBtn: { padding: 8, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -8 },

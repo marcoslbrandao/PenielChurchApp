@@ -1677,7 +1677,10 @@
     "vistoExplica": "People who opened the Church Chat after this message.",
     "ninguemReagiu": "No reactions yet.",
     "ninguemViu": "No one has opened it yet.",
-    "escolherEmoji": "Choose emoji"
+    "escolherEmoji": "Choose emoji",
+    "subtituloGrupo": "Group members only · disappear after 15 days",
+    "tituloBanda": "Band chat",
+    "subtituloBanda": "Band team only · disappear after 15 days"
   },
   "compartilhar": {
     "enviarPara": "Send to",

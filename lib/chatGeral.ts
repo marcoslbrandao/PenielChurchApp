@@ -191,8 +191,12 @@ export async function tamanhoLocal(uri: string): Promise<number | null> {
 /** Sobe o arquivo e devolve o caminho no bucket. Apaga o arquivo local se `apagarLocal`. */
 export async function enviarArquivo(
   uri: string, autorId: string, ext: string, contentType: string, apagarLocal = false,
+  /** Chats dos grupos e da Banda (18/10/2026): outro bucket e uma pasta antes
+   *  do autor (`<grupo>/<autor>/...` ou `banda/<autor>/...`). */
+  destino?: { bucket: string; prefixo: string },
 ): Promise<string> {
-  const caminho = `${autorId}/${uuid()}.${ext}`;
+  const bucket = destino?.bucket ?? BUCKET_CHAT_GERAL;
+  const caminho = destino ? `${destino.prefixo}/${autorId}/${uuid()}.${ext}` : `${autorId}/${uuid()}.${ext}`;
   if (uri.startsWith('file://')) {
     // Envio direto do arquivo (streaming). Ler em base64 colocava o arquivo
     // INTEIRO na memória do JS (+33%): um vídeo de 50 MB virava 67 MB de
@@ -200,7 +204,7 @@ export async function enviarArquivo(
     const { data: sessao } = await supabase.auth.getSession();
     const token = sessao.session?.access_token;
     if (!token) throw new Error('Sessão expirada. Entre de novo.');
-    const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/${BUCKET_CHAT_GERAL}/${caminho}`;
+    const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/${bucket}/${caminho}`;
     const r = await FileSystem.uploadAsync(url, uri, {
       httpMethod: 'POST',
       uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
@@ -221,7 +225,7 @@ export async function enviarArquivo(
     // lê esse tipo de endereço, então vai pelo caminho antigo.
     const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
     const { error } = await supabase.storage
-      .from(BUCKET_CHAT_GERAL)
+      .from(bucket)
       .upload(caminho, decode(base64), { contentType, upsert: false });
     if (error) throw error;
   }
@@ -231,39 +235,42 @@ export async function enviarArquivo(
 
 const urlsAssinadas = new Map<string, { url: string; expira: number }>();
 
-export async function urlDaMidia(caminho: string): Promise<string> {
-  const guardada = urlsAssinadas.get(caminho);
+// A chave do cache leva o bucket: o mesmo caminho em buckets diferentes é
+// outro arquivo.
+export async function urlDaMidia(caminho: string, bucket: string = BUCKET_CHAT_GERAL): Promise<string> {
+  const k = `${bucket}:${caminho}`;
+  const guardada = urlsAssinadas.get(k);
   if (guardada && guardada.expira > Date.now() + 60_000) return guardada.url;
-  const { data, error } = await supabase.storage.from(BUCKET_CHAT_GERAL).createSignedUrl(caminho, 3600);
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(caminho, 3600);
   if (error || !data?.signedUrl) throw error ?? new Error('Arquivo indisponível');
-  urlsAssinadas.set(caminho, { url: data.signedUrl, expira: Date.now() + 3600_000 });
+  urlsAssinadas.set(k, { url: data.signedUrl, expira: Date.now() + 3600_000 });
   return data.signedUrl;
 }
 
 /** Pede de uma vez as URLs das fotos que vão aparecer na tela. */
-export async function preCarregarUrls(caminhos: string[]): Promise<void> {
+export async function preCarregarUrls(caminhos: string[], bucket: string = BUCKET_CHAT_GERAL): Promise<void> {
   const faltam = caminhos.filter(c => {
-    const g = urlsAssinadas.get(c);
+    const g = urlsAssinadas.get(`${bucket}:${c}`);
     return !g || g.expira <= Date.now() + 60_000;
   });
   if (faltam.length === 0) return;
-  const { data } = await supabase.storage.from(BUCKET_CHAT_GERAL).createSignedUrls(faltam, 3600);
+  const { data } = await supabase.storage.from(bucket).createSignedUrls(faltam, 3600);
   for (const item of data ?? []) {
     if (item.path && item.signedUrl) {
-      urlsAssinadas.set(item.path, { url: item.signedUrl, expira: Date.now() + 3600_000 });
+      urlsAssinadas.set(`${bucket}:${item.path}`, { url: item.signedUrl, expira: Date.now() + 3600_000 });
     }
   }
 }
 
-export function urlGuardada(caminho: string): string | null {
-  const g = urlsAssinadas.get(caminho);
+export function urlGuardada(caminho: string, bucket: string = BUCKET_CHAT_GERAL): string | null {
+  const g = urlsAssinadas.get(`${bucket}:${caminho}`);
   return g && g.expira > Date.now() + 60_000 ? g.url : null;
 }
 
 /** Melhor esforço: se falhar, a limpeza diária remove o órfão. */
-export async function apagarMidia(caminho: string) {
-  urlsAssinadas.delete(caminho);
-  await supabase.storage.from(BUCKET_CHAT_GERAL).remove([caminho]).then(() => {}, () => {});
+export async function apagarMidia(caminho: string, bucket: string = BUCKET_CHAT_GERAL) {
+  urlsAssinadas.delete(`${bucket}:${caminho}`);
+  await supabase.storage.from(bucket).remove([caminho]).then(() => {}, () => {});
 }
 
 export async function buscarResumo(): Promise<ResumoChat | null> {

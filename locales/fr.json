@@ -1677,7 +1677,10 @@
     "vistoExplica": "Ceux qui ont ouvert le Chat de l’Église après ce message.",
     "ninguemReagiu": "Aucune réaction pour l’instant.",
     "ninguemViu": "Personne ne l’a encore ouvert.",
-    "escolherEmoji": "Choisir un emoji"
+    "escolherEmoji": "Choisir un emoji",
+    "subtituloGrupo": "Membres du groupe uniquement · effacés après 15 jours",
+    "tituloBanda": "Chat du groupe de louange",
+    "subtituloBanda": "Équipe de louange uniquement · effacés après 15 jours"
   },
   "compartilhar": {
     "enviarPara": "Envoyer à",

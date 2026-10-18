@@ -1677,7 +1677,10 @@
     "vistoExplica": "Quem abriu o Chat da Igreja depois desta mensagem.",
     "ninguemReagiu": "Ninguém reagiu ainda.",
     "ninguemViu": "Ninguém abriu ainda.",
-    "escolherEmoji": "Escolher emoji"
+    "escolherEmoji": "Escolher emoji",
+    "subtituloGrupo": "Só participantes do grupo · somem em 15 dias",
+    "tituloBanda": "Chat da Banda",
+    "subtituloBanda": "Só a equipe da Banda · somem em 15 dias"
   },
   "compartilhar": {
     "enviarPara": "Enviar para",

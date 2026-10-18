@@ -17,6 +17,7 @@ import { primeiroLinkDeImagem } from '../lib/links';
 import { baixarImagemDoLink } from '../lib/imagemDoLink';
 import ChatGeralModal from './ChatGeralModal';
 import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
+import { chatAberto } from '../lib/chatAberto';
 
 // ─── "Compartilhar → Peniel" (13/10/2026; destino escolhido desde 14/10) ─────
 // No app da RTM (ou em Arquivos, Fotos, Safari, WhatsApp...), o membro toca em
@@ -25,6 +26,8 @@ import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 //   • Chat da Igreja → abre o chat com o arquivo "pronto para enviar".
 //   • Grupo / Banda → uma folha com a prévia e a legenda; o envio é direto
 //     (lib/chatAnexos.ts › enviarCompartilhado), sem abrir a tela do grupo.
+// Se JÁ houver um chat aberto, nada disso: o conteúdo entra direto nele
+// (lib/chatAberto.ts, 18/10/2026).
 // Só aparecem os destinos que a pessoa pode usar: grupos em que participa ou
 // lidera (admin vê todos) e a Banda para quem tem acesso a ela.
 //
@@ -150,6 +153,11 @@ export default function RecebeCompartilhamento({ irParaLogin }: { irParaLogin: (
   }, [hasShareIntent, carregando, carregandoSessao, user, ehMembro]);
 
   const abrirDestinos = (uid: string, novo: Compartilhado) => {
+    // Já tem um chat aberto (Igreja, grupo ou Banda)? O conteúdo entra direto
+    // nele, pronto para enviar — sem a folha "Enviar para", que no iPhone nem
+    // aparecia por cima do chat aberto (18/10/2026).
+    const aberto = chatAberto();
+    if (aberto) { aberto.receber(novo); return; }
     setConteudo(novo);
     setEscolhido(null);
     setLegenda('');

@@ -19,6 +19,10 @@ import { abrirMenuDeAnexo, apagarAnexo, legendaDoAnexo, type CamposAnexo, type T
 import MenuMensagem, { type AcaoMenu } from './MenuMensagem';
 import RegrasDoChat from './RegrasDoChat';
 import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
+import { registrarChatAberto } from '../lib/chatAberto';
+import { enviarCompartilhado } from '../lib/chatAnexos';
+import type { Compartilhado } from '../lib/chatGeral';
+import AnexoPendente from './AnexoPendente';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo, alternarSuspensao } from '../lib/moderacao';
 
 function paletaChat(isDark: boolean) {
@@ -102,6 +106,18 @@ export default function GrupoChatModal({
   // mensagem com Apagar, Denunciar, Bloquear e (admin) Suspender; Regras da
   // comunidade antes de entrar; filtro de palavras no envio.
   const [menuDe, setMenuDe] = useState<Mensagem | null>(null);
+  // Arquivo que chegou pelo Compartilhar com este chat aberto (18/10/2026).
+  const [pendente, setPendente] = useState<Compartilhado['arquivo'] | null>(null);
+  useEffect(() => {
+    if (!visible) { setPendente(null); return; }
+    return registrarChatAberto({
+      destino: grupo,
+      receber: c => {
+        if (c.texto) setTexto(tx => (tx.trim() ? `${tx} ${c.texto}` : c.texto!));
+        if (c.arquivo) setPendente(c.arquivo);
+      },
+    });
+  }, [visible, grupo]);
   const mod = useModeracaoChat(userId, visible);
   // O banco já esconde as mensagens de quem eu bloqueei; o filtro aqui só
   // faz sumir na hora, sem esperar recarregar.
@@ -185,7 +201,32 @@ export default function GrupoChatModal({
     return () => { supabase.removeChannel(channel); };
   }, [visible, grupo, fetchMensagens]);
 
+  const enviarPendente = async () => {
+    if (!pendente || enviando) return;
+    if (barrarSeOfensivo(texto, t)) return;
+    setEnviando(true);
+    try {
+      await enviarCompartilhado({
+        t, prefixo: grupo, autorId: userId, arquivo: pendente, texto,
+        inserir: async (campos) => {
+          const { data, error } = await supabase.from('grupo_chat_mensagens')
+            .insert({ grupo, autor_id: userId, autor_nome: userNome, ...campos })
+            .select().single();
+          if (error) throw error;
+          if (data) setMensagens(prev => (prev.some(m => m.id === (data as Mensagem).id) ? prev : [...prev, data as Mensagem]));
+        },
+      });
+      setPendente(null);
+      setTexto('');
+    } catch (e: any) {
+      Alert.alert(t('chatGeral.erroEnviar'), e?.message ?? t('chatGeral.erroEnviarTexto'));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const enviar = async () => {
+    if (pendente) { enviarPendente(); return; }
     const texto_ = texto.trim();
     if (!texto_ || enviando) return;
     if (barrarSeOfensivo(texto_, t)) return;
@@ -358,6 +399,19 @@ export default function GrupoChatModal({
               <Text style={{ fontSize: 13, color: C.textMuted, marginLeft: 6, flexShrink: 1 }}>{t('moderacao.suspensoAviso')}</Text>
             </View>
           ) : (
+          <>
+          {pendente && (
+            <AnexoPendente
+              arquivo={pendente}
+              cor={cor}
+              corTexto={C.text}
+              corSuave={C.textMuted}
+              corFundo={C.inputBarBg}
+              corBorda={C.inputBarBorder}
+              desativado={enviando}
+              onRemover={() => setPendente(null)}
+            />
+          )}
           <View style={[cs.inputRow, { paddingBottom: 10 + padBottom }]}>
             {!gravando && (
               <TouchableOpacity onPress={anexar} style={cs.anexarBtn} disabled={enviandoAnexo || enviandoAudio} hitSlop={6}>
@@ -381,7 +435,7 @@ export default function GrupoChatModal({
               <View style={[cs.sendBtn, { backgroundColor: cor, opacity: 0.6 }]}>
                 <ActivityIndicator size="small" color="#fff" />
               </View>
-            ) : podeGravar && (gravando || !texto.trim()) ? (
+            ) : podeGravar && !pendente && (gravando || !texto.trim()) ? (
               // Campo vazio: o botão vira microfone, como no WhatsApp.
               <GravadorAudio
                 cor={cor}
@@ -393,14 +447,15 @@ export default function GrupoChatModal({
               />
             ) : (
               <TouchableOpacity
-                style={[cs.sendBtn, { backgroundColor: cor, opacity: texto.trim() && !enviando ? 1 : 0.5 }]}
+                style={[cs.sendBtn, { backgroundColor: cor, opacity: (pendente || texto.trim()) && !enviando ? 1 : 0.5 }]}
                 onPress={enviar}
-                disabled={!texto.trim() || enviando}
+                disabled={(!pendente && !texto.trim()) || enviando}
               >
                 {enviando ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="send" size={17} color="#fff" />}
               </TouchableOpacity>
             )}
           </View>
+          </>
           )}
         </KeyboardAvoidingView>
 

@@ -4,7 +4,7 @@ import {
   TextInput, FlatList, Linking, Alert, KeyboardAvoidingView, Image,
   Platform, StatusBar, Animated, Modal, ActivityIndicator, RefreshControl, Keyboard, AppState,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +24,10 @@ import MetronomoModal from '../components/MetronomoModal';
 import MenuMensagem, { type AcaoMenu } from '../components/MenuMensagem';
 import RegrasDoChat from '../components/RegrasDoChat';
 import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
+import { registrarChatAberto } from '../lib/chatAberto';
+import { enviarCompartilhado } from '../lib/chatAnexos';
+import type { Compartilhado } from '../lib/chatGeral';
+import AnexoPendente from '../components/AnexoPendente';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo, alternarSuspensao } from '../lib/moderacao';
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
@@ -3953,6 +3957,46 @@ function BandaMain() {
   const mod = useModeracaoChat(user?.id, activeTab === 'chat');
   // Android edge-to-edge: o teclado cobria a caixa de mensagem (17/10/2026).
   const folgaTeclado = useFolgaDoTeclado(chatKavRef, activeTab === 'chat');
+  // Compartilhar › Peniel com o chat da Banda aberto: entra direto aqui
+  // (18/10/2026, ver lib/chatAberto.ts).
+  const [pendenteChat, setPendenteChat] = useState<Compartilhado['arquivo'] | null>(null);
+  // A aba Banda continua montada quando a pessoa vai para outra aba do app:
+  // só conta como "chat aberto" se a Banda estiver na tela de verdade.
+  const bandaNaTela = useIsFocused();
+  useEffect(() => {
+    if (activeTab !== 'chat' || !bandaNaTela) return;
+    return registrarChatAberto({
+      destino: 'banda',
+      receber: c => {
+        if (c.texto) setChatMsg(tx => (tx.trim() ? `${tx} ${c.texto}` : c.texto!));
+        if (c.arquivo) setPendenteChat(c.arquivo);
+      },
+    });
+  }, [activeTab, bandaNaTela]);
+  useEffect(() => { if (activeTab !== 'chat') setPendenteChat(null); }, [activeTab]);
+  const enviarPendenteChat = async () => {
+    if (!pendenteChat || enviandoChat || !user?.id) return;
+    if (barrarSeOfensivo(chatMsg, t)) return;
+    setEnviandoChat(true);
+    try {
+      await enviarCompartilhado({
+        t, prefixo: 'banda', autorId: user.id, arquivo: pendenteChat, texto: chatMsg,
+        inserir: async (campos) => {
+          const { data, error } = await supabase.from('banda_chat_mensagens')
+            .insert({ autor_id: user.id, autor_nome: meuNome, ...campos }).select().single();
+          if (error) throw error;
+          if (data) setMessages(prev => (prev.some(m => m.id === (data as ChatMsg).id) ? prev : [...prev, data as ChatMsg]));
+        },
+      });
+      setPendenteChat(null);
+      setChatMsg('');
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (e: any) {
+      Alert.alert(t('chatGeral.erroEnviar'), e?.message ?? t('chatGeral.erroEnviarTexto'));
+    } finally {
+      setEnviandoChat(false);
+    }
+  };
   const mensagensVisiveis = useMemo(() => messages.filter(m => !mod.bloqueados.has(m.autor_id)), [messages, mod.bloqueados]);
   const acaoDoMenuChat = (msg: ChatMsg, acao: AcaoMenu) => {
     if (acao === 'apagar') apagarMensagem(msg);
@@ -3962,6 +4006,7 @@ function BandaMain() {
   };
 
   const sendMessage = async () => {
+    if (pendenteChat) { enviarPendenteChat(); return; }
     const texto = chatMsg.trim();
     if (!texto || enviandoChat) return;
     if (barrarSeOfensivo(texto, t)) return;
@@ -5108,6 +5153,19 @@ function BandaMain() {
               <Text style={{ fontSize: 13, color: C.textMuted, marginLeft: 6, flexShrink: 1 }}>{t('moderacao.suspensoAviso')}</Text>
             </View>
           ) : (
+          <>
+          {pendenteChat && (
+            <AnexoPendente
+              arquivo={pendenteChat}
+              cor={C.primary}
+              corTexto={C.text}
+              corSuave={C.textMuted}
+              corFundo={C.surface}
+              corBorda={C.border}
+              desativado={enviandoChat}
+              onRemover={() => setPendenteChat(null)}
+            />
+          )}
           <View style={s.chatInput}>
             {!gravando && nomePronto && (
               <TouchableOpacity onPress={anexar} disabled={enviandoAnexo || enviandoAudio} hitSlop={6} style={{ height: 42, justifyContent: 'center' }}>
@@ -5123,7 +5181,7 @@ function BandaMain() {
               <View style={[s.sendBtn, { opacity: 0.6 }]}>
                 <ActivityIndicator color={C.onPrimary} size="small" />
               </View>
-            ) : podeGravar && nomePronto && (gravando || !chatMsg.trim()) ? (
+            ) : podeGravar && nomePronto && !pendenteChat && (gravando || !chatMsg.trim()) ? (
               // Campo vazio: o botão vira microfone, como no chat dos grupos.
               <GravadorAudio
                 cor={C.primary}
@@ -5136,11 +5194,12 @@ function BandaMain() {
                 onGravandoMudou={setGravando}
               />
             ) : (
-              <TouchableOpacity style={[s.sendBtn, (!chatMsg.trim() || enviandoChat || !nomePronto) && { opacity: 0.45 }]} onPress={sendMessage} disabled={!chatMsg.trim() || enviandoChat || !nomePronto}>
+              <TouchableOpacity style={[s.sendBtn, ((!pendenteChat && !chatMsg.trim()) || enviandoChat || !nomePronto) && { opacity: 0.45 }]} onPress={sendMessage} disabled={(!pendenteChat && !chatMsg.trim()) || enviandoChat || !nomePronto}>
                 {enviandoChat ? <ActivityIndicator color={C.onPrimary} size="small" /> : <Ionicons name="send" size={18} color={C.onPrimary} />}
               </TouchableOpacity>
             )}
           </View>
+          </>
           )}
         </KeyboardAvoidingView>
         <MenuMensagem

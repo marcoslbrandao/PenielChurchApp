@@ -27,6 +27,7 @@ import {
 import { formatarTempo, duracaoDoAudio } from '../lib/chatAudio';
 import RegrasDoChat from './RegrasDoChat';
 import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
+import { registrarChatAberto } from '../lib/chatAberto';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/moderacao';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
@@ -119,6 +120,19 @@ export default function ChatGeralModal({
   // Arquivo recebido pelo menu Compartilhar, esperando o toque em Enviar.
   const [pendente, setPendente] = useState<Compartilhado['arquivo'] | null>(null);
   const mostrarMic = podeGravar && !pendente && (gravando || !texto.trim());
+
+  // Compartilhar › Peniel com este chat JÁ aberto: entra direto aqui, sem a
+  // folha "Enviar para" (que não aparece por cima do chat). 18/10/2026.
+  useEffect(() => {
+    if (!visible) return;
+    return registrarChatAberto({
+      destino: 'igreja',
+      receber: c => {
+        if (c.texto) setTexto(tx => (tx.trim() ? `${tx} ${c.texto}` : c.texto!));
+        if (c.arquivo) setPendente(c.arquivo);
+      },
+    });
+  }, [visible]);
 
   useEffect(() => {
     if (!visible || !compartilhado) return;

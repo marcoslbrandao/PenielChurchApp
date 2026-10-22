@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 LOG=".vscode/publicar.log"
 exec > >(tee "$LOG") 2>&1
 echo "== inicio $(date)"
-MSG="fix(culto): fotos dos pregadores na pasta pregadores (minusculo)
+MSG="fix(culto): fotos dos pregadores na pasta pregadores (minusculo) + fotos novas do Marcos
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01Rk3HJb9GTViy1kqrnfnm2k"
@@ -13,10 +13,7 @@ limpar_locks() { for f in .git/index.lock .git/HEAD.lock .git/objects/maintenanc
 
 echo "== 1/2 git do app"
 limpar_locks
-git add components/CultoDaSemanaAdmin.tsx .vscode/publicar-ajustes.sh \
-  store-assets/pregadores/marcos-5-terno-microfone.png store-assets/pregadores/marcos-6-camisa-azul.png \
-  store-assets/pregadores/marcos-7-camisa-branca.png store-assets/pregadores/marcos-8-terno-pregando.png \
-  store-assets/pregadores/marcos-9-camisa-azul-pregando.png
+git add components/CultoDaSemanaAdmin.tsx .vscode/publicar-ajustes.sh store-assets/pregadores/marcos-0*.png
 git commit -m "$MSG" || echo "(nada novo para commitar)"
 git push origin main || { echo "FALHOU: git push do app"; exit 1; }
 

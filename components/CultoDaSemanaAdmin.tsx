@@ -10,7 +10,7 @@
 // mexe no mesmo live. No domingo, no OBS: "Selecionar transmissão existente".
 //
 // Fotos dos pregadores: PNG já recortado (sem fundo) em
-// `culto-semana/Pregadores/`. Pregador visitante: pedir a foto e recortar.
+// `culto-semana/pregadores/`. Pregador visitante: pedir a foto e recortar.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -30,7 +30,7 @@ import ThumbCultoView, { ThumbCultoRef } from './ThumbCultoView';
 const BUCKET = 'culto-semana';
 const PREGADOR_PADRAO = 'Pr. Marcos Brandão';
 // Pasta criada pelo Marcos no Storage com P maiúsculo (o Storage diferencia).
-const PASTA_FOTOS = 'Pregadores';
+const PASTA_FOTOS = 'pregadores';
 
 type Culto = {
   id: string; data: string; hora: string; tipo: TipoCulto; tema: string;

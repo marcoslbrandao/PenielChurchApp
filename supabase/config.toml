@@ -449,3 +449,10 @@ entrypoint = "./functions/limpar-audios-chat/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/materiais-drive/index.ts"
+
+# Culto da semana (21/10/2026): o app manda o JWT do Admin; a funcao confere
+# is_admin() por dentro.
+[functions.youtube-culto]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/youtube-culto/index.ts"

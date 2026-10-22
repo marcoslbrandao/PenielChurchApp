@@ -87,6 +87,10 @@ export function destinoDaNotificacao(
       // painel Admin já na aba certa.
       if (!acesso.logado || !acesso.ehAdmin) return SININHO;
       return abaMembros('Admin', { aba: type === 'admin_contato' ? 'contato' : type === 'admin_denuncia' ? 'denuncias' : 'oracao' });
+    case 'chat_igreja':
+      // Push do Chat da Igreja (19/10/2026): abre a Home e já abre a janela
+      // do chat. Só membro tem o cartão; quem perdeu o acesso cai no sininho.
+      return podeMembros ? abaPrincipal('Inicio', { abrirChatIgreja: Date.now() }) : SININHO;
     case 'aniversario_visitante':
       // Parabéns do próprio visitante: o cartão está na Home.
       return abaPrincipal('Inicio');

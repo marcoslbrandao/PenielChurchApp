@@ -171,11 +171,24 @@ Deno.serve(async (req) => {
       excluir = (r.autor_id as string) ?? null;
       const autor = String(r.autor_nome ?? 'Alguém').split(' ')[0];
       titulo = `💬 ${autor} no chat da Banda`;
-      // Texto genérico, igual ao chat dos grupos desde 20260909010000: o
-      // conteúdo da conversa não vai para a tela de bloqueio de ninguém.
-      // Quem quiser ler abre o app — é um toque a mais e uma indiscrição a
-      // menos.
-      texto = 'Há mensagens novas no chat da Banda.';
+      // Prévia da mensagem (19/10/2026, pedido do Marcos): texto cortado em
+      // 100 caracteres, sem os asteriscos do negrito; anexos viram um rótulo.
+      const bruto = String(r.texto ?? '').replace(/\*/g, '').trim();
+      const mime = String(r.midia_mime ?? '');
+      const mtipo = String(r.midia_tipo ?? '').toLowerCase();
+      if (bruto) {
+        texto = bruto.length > 100 ? bruto.slice(0, 100) + '…' : bruto;
+      } else if (r.audio_path || mtipo.includes('audio') || mime.startsWith('audio/')) {
+        texto = '🎤 Mensagem de voz';
+      } else if (mtipo.includes('video') || mime.startsWith('video/')) {
+        texto = '🎥 Vídeo';
+      } else if (mtipo.includes('imag') || mtipo.includes('foto') || mime.startsWith('image/')) {
+        texto = '📷 Foto';
+      } else if (r.midia_path) {
+        texto = `📄 ${String(r.midia_nome ?? 'Arquivo')}`;
+      } else {
+        texto = 'Nova mensagem';
+      }
       dados = { type: 'banda', origem: 'chat' };
 
     } else {

@@ -1,0 +1,12 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Peniel: publicar ajustes",
+      "type": "shell",
+      "command": "bash .vscode/publicar-ajustes.sh",
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "new" }
+    }
+  ]
+}

@@ -892,6 +892,15 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     abrirNotificacoes();
   }, [route?.params?.abrirSininho]);
 
+    // Toque no push do Chat da Igreja: abre a janela do chat no cartão.
+  const [abrirChatIgreja, setAbrirChatIgreja] = useState(0);
+  useEffect(() => {
+    const pedido = route?.params?.abrirChatIgreja;
+    if (!pedido) return;
+    navigation?.setParams?.({ abrirChatIgreja: undefined });
+    setAbrirChatIgreja(pedido);
+  }, [route?.params?.abrirChatIgreja]);
+
   // dispensarAviso salva no Supabase (por conta, permanente entre
   // reinstalações) quando a pessoa está logada, além de local — ver
   // lib/notificacoesLidas.ts.
@@ -1022,7 +1031,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
 
         {/* ── Chat da Igreja (só membros) ──────────────────────────────────── */}
         {isLoggedIn && ehMembro && !!user?.id && (
-          <ChatGeralCard userId={user.id} ehAdmin={ehAdmin} cores={C} />
+          <ChatGeralCard userId={user.id} ehAdmin={ehAdmin} cores={C} abrirAgora={abrirChatIgreja} />
         )}
 
         {/* ── Versículo do dia ─────────────────────────────────────────────── */}

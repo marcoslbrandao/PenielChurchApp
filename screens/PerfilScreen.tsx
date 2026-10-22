@@ -738,6 +738,21 @@ export default function ProfileScreen() {
       .then(({ data }) => { setProfile(data); setLoadingProfile(false); });
   };
 
+    // Chave "Chat da Igreja" (19/10/2026): silencia só o push do chat, sem
+  // desligar os lembretes de culto e oração. Fica no perfil, no banco.
+  const [chatIgrejaPush, setChatIgrejaPush] = useState(true);
+  useEffect(() => {
+    if (profile) setChatIgrejaPush(profile.push_chat_igreja !== false);
+  }, [profile]);
+  const alternarChatIgreja = async (ativo: boolean) => {
+    setChatIgrejaPush(ativo);
+    const { error } = await supabase.from('profiles').update({ push_chat_igreja: ativo }).eq('id', user?.id);
+    if (error) {
+      setChatIgrejaPush(!ativo);
+      Alert.alert(t('common.erro'), t('perfil.notificacoesFalha'));
+    }
+  };
+
   // Sem o `else` daqui, sair da conta (ou excluí-la) deixava o perfil antigo
   // na memória: a tela continuava mostrando nome, telefone e foto de uma
   // conta que já não existia — só o rótulo mudava para "Visitante".
@@ -923,6 +938,15 @@ export default function ProfileScreen() {
               thumbColor={notificationsEnabled ? C.accent : '#fff'} />
           ),
         },
+                ...(profile && profile.role !== 'visitante' && notificationsEnabled ? [{
+          icon: 'chatbubbles-outline',
+          label: t('perfil.notificacoesChatIgreja', 'Notificações do Chat da Igreja'),
+          rightElement: (
+            <Switch value={chatIgrejaPush} onValueChange={alternarChatIgreja}
+              trackColor={{ false: C.border, true: C.primaryLight }}
+              thumbColor={chatIgrejaPush ? C.accent : '#fff'} />
+          ),
+        } as MenuItem] : []),
         {
           icon: 'moon-outline', label: t('perfil.modoEscuro'),
           onPress: () => setThemeModalVisible(true),

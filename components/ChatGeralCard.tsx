@@ -11,15 +11,18 @@ import ChatGeralModal from './ChatGeralModal';
 // lidas. Só é montado para MEMBROS (a Home decide); mesmo que fosse montado
 // para um visitante, a RLS devolveria vazio.
 export default function ChatGeralCard({
-  userId, ehAdmin, cores,
+  userId, ehAdmin, cores, abrirAgora,
 }: {
   userId: string;
   ehAdmin: boolean;
   cores: { cardBg: string; cardBorder: string; textPrimary: string; textMuted: string };
+  abrirAgora?: number;
 }) {
   const { t } = useTranslation();
   const [resumo, setResumo] = useState<ResumoChat | null>(null);
   const [aberto, setAberto] = useState(false);
+  // Veio do toque no push do Chat da Igreja: abre a janela sozinho.
+  useEffect(() => { if (abrirAgora) setAberto(true); }, [abrirAgora]);
 
   const atualizar = useCallback(() => { buscarResumo().then(r => { if (r) setResumo(r); }); }, []);
 

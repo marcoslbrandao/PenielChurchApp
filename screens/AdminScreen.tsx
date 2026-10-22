@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { APP_LINK_URL } from '../lib/appLinks';
 import { versaoDoBinario } from '../lib/recursosNativos';
 import DenunciasAdmin from '../components/DenunciasAdmin';
+import CultoDaSemanaAdmin from '../components/CultoDaSemanaAdmin';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -2685,7 +2686,7 @@ export default function AdminScreen() {
   const [areaGerenciarVisible, setAreaGerenciarVisible] = useState<EscalaArea | null>(null);
   const [gerarEscalaModalVisible, setGerarEscalaModalVisible] = useState(false);
   const [editarEscalaVisible, setEditarEscalaVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao' | 'textos' | 'denuncias'>('avisos');
+  const [activeTab, setActiveTab] = useState<'convites' | 'stats' | 'ofertas' | 'avisos' | 'culto' | 'devocionais' | 'agenda' | 'shorts' | 'mensagens' | 'escalas' | 'contato' | 'oracao' | 'textos' | 'denuncias'>('avisos');
   // São 9 abas e só ~3 cabem na tela por vez — sem esse indicador, dava a
   // impressão de que a lista de abas estava cortada/quebrada (só aparecia
   // uma lasquinha do ícone da 4ª aba na borda). A setinha "→" avisa que dá
@@ -2974,7 +2975,7 @@ export default function AdminScreen() {
   const ehAdmin = role === 'admin';
   // Quem só lidera área de escala começa (e fica) na aba Escalas.
   const abasVisiveis = ehAdmin
-    ? (['avisos', 'denuncias', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'textos', 'stats'] as const)
+    ? (['avisos', 'culto', 'denuncias', 'devocionais', 'mensagens', 'contato', 'oracao', 'agenda', 'shorts', 'ofertas', 'escalas', 'textos', 'stats'] as const)
     : (['escalas'] as const);
   const abaAtual = abasVisiveis.includes(activeTab as any) ? activeTab : 'escalas';
 
@@ -3004,7 +3005,7 @@ export default function AdminScreen() {
           <Text style={s.headerTitle}>{t('admin.painelAdmin')}</Text>
           <Text style={s.headerSub}>{ehAdmin ? t('admin.administrador') : t('admin.liderDeEscala')}</Text>
         </View>
-        {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && abaAtual !== 'textos' && abaAtual !== 'stats' && abaAtual !== 'denuncias' && (
+        {!(abaAtual === 'escalas' && !ehAdmin) && abaAtual !== 'contato' && abaAtual !== 'oracao' && abaAtual !== 'textos' && abaAtual !== 'stats' && abaAtual !== 'denuncias' && abaAtual !== 'culto' && (
           <TouchableOpacity
             style={s.newBtn}
             onPress={() => {
@@ -3046,7 +3047,7 @@ export default function AdminScreen() {
               onPress={() => setActiveTab(tab)}
             >
               <Ionicons
-                name={tab === 'avisos' ? 'megaphone-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : tab === 'textos' ? 'create-outline' : tab === 'denuncias' ? 'flag-outline' : 'bar-chart-outline'}
+                name={tab === 'avisos' ? 'megaphone-outline' : tab === 'culto' ? 'videocam-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : tab === 'textos' ? 'create-outline' : tab === 'denuncias' ? 'flag-outline' : 'bar-chart-outline'}
                 size={14}
                 color={abaAtual === tab ? C.purple : C.textMuted}
               />
@@ -3363,6 +3364,9 @@ export default function AdminScreen() {
               )}
             </>
           )}
+
+          {/* ══ CULTO DA SEMANA ══════════════════════════════════════════════ */}
+          {abaAtual === 'culto' && <CultoDaSemanaAdmin C={C} />}
 
           {/* ══ TEXTOS ═══════════════════════════════════════════════════════ */}
           {abaAtual === 'textos' && <TextosAppEditor />}

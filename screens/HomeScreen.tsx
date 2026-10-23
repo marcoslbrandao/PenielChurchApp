@@ -9,6 +9,7 @@ import { useNotifications } from '../lib/useNotifications';
 import { useAniversarioHoje } from '../lib/useAniversarioHoje';
 import { getUltimaVisita, marcarComoVistoAgora, getIdsDispensados, dispensarAviso } from '../lib/notificacoesLidas';
 import { linhaCompartilharApp } from '../lib/appLinks';
+import { compartilharEvento } from '../lib/compartilharEvento';
 import { liveSemCota, liveComApi, urlDoVideo, YOUTUBE_CANAL_URL, YOUTUBE_LIVES_URL, type LiveAtual } from '../lib/youtubeCanal';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import DevocionalCorpo from '../components/DevocionalCorpo';
@@ -519,7 +520,7 @@ type DestaqueHome = {
   id: string; nome: string; descricao: string | null; cor: string | null;
   data: string | null; recorrente: boolean; dia_semana: number | null;
   horario: string; cta_texto: string | null; cta_url: string | null;
-  imagem_url: string | null;
+  imagem_url: string | null; local?: string | null;
 };
 
 function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onAbrirAgenda: () => void }) {
@@ -548,8 +549,18 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
     dataLabel = `${prox.dia} ${prox.mes} · ${evento.horario}`;
   }
 
-  // Sem link cadastrado, tocar no card leva pra Agenda em vez de não fazer nada.
-  const abrir = () => { if (evento.cta_url) Linking.openURL(evento.cta_url); else onAbrirAgenda(); };
+  // Tocar no card (23/10): abre as opcoes — compartilhar como convite e,
+  // depois, o link do evento (ou a Agenda, se nao tiver link).
+  const convidar = () => compartilharEvento({
+    nome, quando: dataLabel, local: evento.local, descricao,
+    link: evento.cta_url, imagemUrl: evento.imagem_url,
+  });
+  const abrirLink = () => { if (evento.cta_url) Linking.openURL(evento.cta_url); else onAbrirAgenda(); };
+  const abrir = () => Alert.alert(nome, undefined, [
+    { text: t('convite.compartilhar'), onPress: convidar },
+    { text: evento.cta_url ? (ctaTexto || t('convite.saibaMais')) : t('convite.verNaAgenda'), onPress: abrirLink },
+    { text: t('common.cancelar'), style: 'cancel' },
+  ]);
 
   return (
     <TouchableOpacity style={evento.imagem_url ? styles.especialCardComImagem : styles.especialCard} activeOpacity={0.85} onPress={abrir}>
@@ -571,7 +582,9 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
           </View>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={C.textMuted} style={{ marginRight: 12 }} />
+      <TouchableOpacity onPress={convidar} hitSlop={10} style={{ marginRight: 12, alignItems: 'center' }} accessibilityLabel={t('convite.compartilhar')}>
+        <Ionicons name="share-social-outline" size={22} color={cor} />
+      </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -816,7 +829,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     useCallback(() => {
       supabase
         .from('agenda_eventos')
-        .select('id, nome, descricao, cor, data, recorrente, dia_semana, horario, cta_texto, cta_url, imagem_url')
+        .select('id, nome, descricao, cor, data, recorrente, dia_semana, horario, cta_texto, cta_url, imagem_url, local')
         .eq('destaque_home', true)
         .limit(1)
         .maybeSingle()
@@ -1171,7 +1184,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
                   com o card (o app não tem expo-linear-gradient). */}
               <View pointerEvents="none" style={styles.devocionalImagemFade}>
                 {[0.08, 0.18, 0.3, 0.45, 0.62, 0.8].map(o => (
-                  <View key={o} style={{ flex: 1, backgroundColor: `rgba(36,29,92,${o})` }} />
+                  <View key={o} style={{ flex: 1, backgroundColor: `rgba(15,74,71,${o})` }} />
                 ))}
               </View>
               {devocionalNovo && (
@@ -1408,7 +1421,10 @@ function buildStyles(C: PaletaHome) { return StyleSheet.create({
   versiculoBtnTexto: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
   versiculoBtnDourado: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(245,200,66,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   versiculoBtnDouradoTexto: { fontSize: 12, color: '#F5C842' },
-  mensagemCard: { backgroundColor: '#1A1740', borderRadius: 16, marginBottom: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(245,200,66,0.25)' },
+  // Cores dos 3 cards de leitura (23/10): Versiculo = azul-marinho da marca,
+  // Mensagem = vinho, Devocional = verde-petroleo. Todos escuros, com o
+  // dourado da marca nos rotulos (contraste acima de 6:1 nos tres).
+  mensagemCard: { backgroundColor: '#5A1A33', borderRadius: 16, marginBottom: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(245,200,66,0.25)' },
   mensagemImagem: { width: '100%', height: 150 },
   mensagemCorpo: { padding: 16 },
   mensagemLabel: { fontSize: 10, fontWeight: '700', color: '#F5C842', textTransform: 'uppercase', letterSpacing: 1 },
@@ -1416,9 +1432,9 @@ function buildStyles(C: PaletaHome) { return StyleSheet.create({
   mensagemResumo: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 19, marginTop: 6 },
   mensagemLerMais: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
   mensagemLerMaisTexto: { fontSize: 12, fontWeight: '700', color: '#F5C842' },
-  devocionalCard: { backgroundColor: '#241D5C', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,200,66,0.2)', overflow: 'hidden' },
+  devocionalCard: { backgroundColor: '#0F4A47', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,200,66,0.2)', overflow: 'hidden' },
   devocionalImagemWrap: { marginTop: -16, marginHorizontal: -16, marginBottom: 4 },
-  devocionalImagem: { width: '100%', aspectRatio: 2, backgroundColor: '#1A1740' },
+  devocionalImagem: { width: '100%', aspectRatio: 2, backgroundColor: '#0B3835' },
   devocionalImagemFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '35%' },
   devocionalNovoPill: { position: 'absolute', top: 12, left: 12, backgroundColor: '#F5C842', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   devocionalNovoTexto: { fontSize: 10, fontWeight: '800', color: '#1A1740', letterSpacing: 0.8, textTransform: 'uppercase' },

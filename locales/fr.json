@@ -1803,5 +1803,12 @@
     "texto": "Une nouvelle amélioration de l'app a été téléchargée. Touchez « Mettre à jour » et l'app redémarre en quelques secondes, déjà à jour.",
     "atualizar": "Mettre à jour",
     "depois": "Plus tard"
+  },
+  "convite": {
+    "titulo": "Invitation — Peniel Church",
+    "compartilhar": "Partager l'invitation",
+    "saibaMais": "En savoir plus",
+    "verNaAgenda": "Voir dans l'agenda",
+    "voceEConvidado": "Vous êtes notre invité ! Venez avec votre famille et vos amis."
   }
 }

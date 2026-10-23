@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { compartilharEvento } from '../lib/compartilharEvento';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import { useTheme } from '../lib/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -57,7 +58,7 @@ type EventoDB = {
   data: string | null; horario: string; local: string; descricao: string | null;
   link_zoom: string | null; meeting_id: string | null; passcode: string | null;
   map_url: string | null; especial: boolean; cor: string | null;
-  imagem_url?: string | null;
+  imagem_url?: string | null; cta_url?: string | null;
 };
 
 type EventoUI = {
@@ -208,7 +209,7 @@ type EspecialUI = {
   id: string; nome: string; descricao: string; cor: string; data: string;
   horario: string; local: string; tipo: string;
   linkZoom: string | null; mapUrl: string | null;
-  imagemUrl: string | null;
+  imagemUrl: string | null; ctaUrl: string | null;
 };
 
 function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbrirLink: (url: string, tipo: 'zoom' | 'mapa') => void }) {
@@ -219,7 +220,8 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
   const C = useMemo(() => paletaAgenda(isDark), [isDark]);
   const styles = useMemo(() => buildStyles(C), [C]);
   const [aberto, setAberto] = useState(false);
-  const temMais = !!descricao || !!evento.linkZoom || !!evento.mapUrl;
+  // Sempre abre: no minimo tem o "Compartilhar convite" (23/10).
+  const temMais = true;
   const quando = [evento.data, evento.horario].filter(Boolean).join(' · ');
   return (
     <TouchableOpacity
@@ -264,6 +266,17 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
                 <Text style={styles.eventoBtnTexto}>{t('agenda.comoChegar')}</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity
+              style={[styles.eventoBtn, { marginTop: 8, borderColor: evento.cor }]}
+              onPress={() => compartilharEvento({
+                nome, quando: [evento.data, evento.horario].filter(Boolean).join(' · '),
+                local: evento.local, descricao,
+                link: evento.ctaUrl ?? evento.linkZoom ?? evento.mapUrl, imagemUrl: evento.imagemUrl,
+              })}
+            >
+              <Ionicons name="share-social-outline" size={14} color={evento.cor} />
+              <Text style={[styles.eventoBtnTexto, { color: evento.cor }]}>{t('convite.compartilhar')}</Text>
+            </TouchableOpacity>
           </>
         )}
       </View>
@@ -358,7 +371,7 @@ export default function AgendaScreen() {
         id: e.id, nome: e.nome, descricao: e.descricao ?? '', cor: e.cor ?? '#E84B1A', data,
         horario: e.horario ?? '', local: e.local ?? '', tipo: e.tipo,
         linkZoom: e.link_zoom, mapUrl: e.map_url,
-        imagemUrl: e.imagem_url ?? null,
+        imagemUrl: e.imagem_url ?? null, ctaUrl: e.cta_url ?? null,
       };
     });
 

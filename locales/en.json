@@ -1856,5 +1856,12 @@
     "texto": "A new improvement to the app has been downloaded. Tap \"Update now\" and the app restarts in a few seconds, already updated.",
     "atualizar": "Update now",
     "depois": "Later"
+  },
+  "convite": {
+    "titulo": "Invitation — Peniel Church",
+    "compartilhar": "Share invitation",
+    "saibaMais": "Learn more",
+    "verNaAgenda": "See in Calendar",
+    "voceEConvidado": "You are our guest! Come and bring your family and friends."
   }
 }

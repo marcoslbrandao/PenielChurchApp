@@ -1856,5 +1856,12 @@
     "texto": "Uma melhoria nova do app já foi baixada. Toque em \"Atualizar agora\" e o app reinicia em poucos segundos, já atualizado.",
     "atualizar": "Atualizar agora",
     "depois": "Depois"
+  },
+  "convite": {
+    "titulo": "Convite — Peniel Church",
+    "compartilhar": "Compartilhar convite",
+    "saibaMais": "Saiba mais",
+    "verNaAgenda": "Ver na Agenda",
+    "voceEConvidado": "Você é nosso convidado! Venha e traga sua família e amigos."
   }
 }

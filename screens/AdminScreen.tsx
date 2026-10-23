@@ -1609,6 +1609,11 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
             </View>
+            {/* A tela inteira rola (23/10): antes so a lista do time rolava,
+                numa caixa de 320px espremida embaixo de lider, busca e
+                chaves — no celular sobrava quase nada e nao dava para ver
+                todo o time. */}
+            <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
 
             <View style={{ backgroundColor: C.accent + '14', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{t('admin.liderAreaTitulo')}</Text>
@@ -1776,7 +1781,7 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
             <Text style={[s.sectionLabel, { marginTop: 16 }]}>
               {t('admin.timeAtual', { n: voluntarios.length })}
             </Text>
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 320, flexShrink: 1 }}>
+            <View>
               {loading ? (
                 <ActivityIndicator color={C.purple} style={{ marginVertical: 20 }} />
               ) : voluntarios.length === 0 ? (
@@ -1835,6 +1840,7 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
                 </TouchableOpacity>
               )}
               <View style={{ height: 10 }} />
+            </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>

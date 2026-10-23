@@ -17,7 +17,7 @@ git commit -m "$MSG" || echo "(nada novo para commitar)"
 git push origin main || { echo "FALHOU: git push do app"; exit 1; }
 
 echo "== 2/3 git do site (logo com o P maior)"
-( cd ../peniel-site && limpar_locks && git add public/img/logo.png public/favicon.png public/conecte/index.html && { git commit -m "style: logo da Peniel com o P maior no circulo (logo, favicon e /conecte)" || echo "(nada novo no site)"; } && git push origin main ) || { echo "FALHOU: git do site"; exit 1; }
+( cd ../peniel-site && { limpar_locks; true; } && git add public/img/logo.png public/favicon.png public/conecte/index.html && { git commit -m "style: logo da Peniel com o P maior no circulo (logo, favicon e /conecte)" || echo "(nada novo no site)"; } && git push origin main ) || { echo "FALHOU: git do site"; exit 1; }
 
 echo "== 3/3 eas update"
 npx eas update --branch production --environment production --message "Convite na Agenda e botao menor; cores padrao; logo com P maior" --non-interactive || { echo "FALHOU: eas update"; exit 1; }

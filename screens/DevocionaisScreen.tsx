@@ -153,9 +153,10 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0E0B22' },
+  // Padrao Devocional = verde-petroleo (23/10), igual ao card da Home.
+  container: { flex: 1, backgroundColor: '#072B29' },
   header: {
-    backgroundColor: '#1A1740', paddingBottom: 16, paddingHorizontal: 18,
+    backgroundColor: '#0B3835', paddingBottom: 16, paddingHorizontal: 18,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   headerTitulo: { fontSize: 18, fontWeight: '700', color: '#fff' },
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 12 },
   emptyTexto: { color: 'rgba(255,255,255,0.5)', fontSize: 14, textAlign: 'center' },
   card: {
-    backgroundColor: '#241D5C', borderRadius: 16, padding: 16, marginBottom: 14,
+    backgroundColor: '#0F4A47', borderRadius: 16, padding: 16, marginBottom: 14,
     borderWidth: 1, borderColor: 'rgba(245,200,66,0.2)',
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },

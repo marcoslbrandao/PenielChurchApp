@@ -505,12 +505,14 @@ const s = StyleSheet.create({
   videoMetaText: { fontSize: 11, color: C.textMuted },
   // Avisos
   // Mensagens (blog)
-  mensagemCard: { flexDirection: 'row', backgroundColor: C.surface, borderRadius: 14, marginBottom: 12, overflow: 'hidden', borderWidth: 1, borderColor: C.border },
+  // Padrao Mensagem = vinho (23/10), igual ao card da Home e a mensagem aberta;
+  // data em dourado (antes ficava apagada no modo escuro).
+  mensagemCard: { flexDirection: 'row', backgroundColor: '#5A1A33', borderRadius: 14, marginBottom: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(245,200,66,0.25)' },
   mensagemThumb: { width: 96, height: '100%', minHeight: 96 },
   mensagemInfo: { flex: 1, padding: 12, gap: 3 },
-  mensagemData: { fontSize: 10, color: C.textDim, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  mensagemTitulo: { fontSize: 14, fontWeight: '700', color: C.text, marginTop: 2 },
-  mensagemResumo: { fontSize: 12, color: C.textMuted, lineHeight: 17, marginTop: 2 },
+  mensagemData: { fontSize: 10, color: '#F5C842', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  mensagemTitulo: { fontSize: 14, fontWeight: '700', color: '#fff', marginTop: 2 },
+  mensagemResumo: { fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 17, marginTop: 2 },
   avisoCard: { borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1 },
   avisoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   avisoTipo: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },

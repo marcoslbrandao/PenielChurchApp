@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 LOG=".vscode/publicar.log"
 exec > >(tee "$LOG") 2>&1
 echo "== inicio $(date)"
-MSG="fix(home): botao Compartilhar convite abaixo da imagem; Mensagem aberta na cor vinho do card
+MSG="style: Mensagem em vinho (inclusive a lista da aba Midia) e Devocionais em verde-petroleo em todas as telas; botao Compartilhar convite abaixo da imagem
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01D93i4EeD1iC3MLvm9AJMV4"
@@ -12,10 +12,10 @@ limpar_locks() { for f in .git/index.lock .git/HEAD.lock .git/objects/maintenanc
 
 echo "== 1/2 git do app"
 limpar_locks
-git add components/MensagemDetalheModal.tsx screens/HomeScreen.tsx .vscode/publicar-ajustes.sh
+git add screens/MidiaScreen.tsx components/MensagemDetalheModal.tsx screens/DevocionaisScreen.tsx screens/HomeScreen.tsx .vscode/publicar-ajustes.sh
 git commit -m "$MSG" || echo "(nada novo para commitar)"
 git push origin main || { echo "FALHOU: git push do app"; exit 1; }
 
 echo "== 2/2 eas update"
-npx eas update --branch production --environment production --message "Home: botao do convite e Mensagem na cor do card" --non-interactive || { echo "FALHOU: eas update"; exit 1; }
+npx eas update --branch production --environment production --message "Cores padrao de Mensagem e Devocional; botao do convite" --non-interactive || { echo "FALHOU: eas update"; exit 1; }
 echo "== TUDO PUBLICADO $(date)"

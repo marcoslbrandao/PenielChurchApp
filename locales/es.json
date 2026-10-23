@@ -1796,5 +1796,11 @@
   "chatFormato": {
     "negrito": "Negrita",
     "dica": "o escribe *así*"
+  },
+  "atualizacaoRapida": {
+    "titulo": "Actualización lista",
+    "texto": "Ya se descargó una mejora nueva de la app. Toca \"Actualizar ahora\" y la app se reinicia en pocos segundos, ya actualizada.",
+    "atualizar": "Actualizar ahora",
+    "depois": "Después"
   }
 }

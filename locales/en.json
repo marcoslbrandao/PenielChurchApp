@@ -1849,5 +1849,11 @@
     "excluirTexto": "The draft and thumbnail will be deleted.",
     "fotoSemRecorte": "This photo isn't a PNG — it probably has a background. It works, but the thumbnail looks better with a cut-out photo.",
     "fotoNaoCarregou": "The preacher photo didn't load. Check the connection or pick another photo."
+  },
+  "atualizacaoRapida": {
+    "titulo": "Update ready",
+    "texto": "A new improvement to the app has been downloaded. Tap \"Update now\" and the app restarts in a few seconds, already updated.",
+    "atualizar": "Update now",
+    "depois": "Later"
   }
 }

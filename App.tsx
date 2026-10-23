@@ -35,6 +35,7 @@ import * as Notifications from 'expo-notifications';
 import { useAuth } from './lib/useAuth';
 import { destinoDaNotificacao } from './lib/destinoNotificacao';
 import AvisoDeAtualizacao from './components/AvisoDeAtualizacao';
+import AtualizacaoRapida from './components/AtualizacaoRapida';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -274,6 +275,7 @@ export default function App() {
           <AcessoProvider>
           <RoteadorDeNotificacoes navPronta={navPronta} />
           <AvisoDeAtualizacao />
+          <AtualizacaoRapida />
           {RecebeCompartilhamento && (
             <RecebeCompartilhamento
               irParaLogin={() => { if (navigationRef.isReady()) navigationRef.navigate('Auth' as never); }}

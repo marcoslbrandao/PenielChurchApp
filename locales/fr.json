@@ -1796,5 +1796,11 @@
   "chatFormato": {
     "negrito": "Gras",
     "dica": "ou écrivez *ainsi*"
+  },
+  "atualizacaoRapida": {
+    "titulo": "Mise à jour prête",
+    "texto": "Une nouvelle amélioration de l'app a été téléchargée. Touchez « Mettre à jour » et l'app redémarre en quelques secondes, déjà à jour.",
+    "atualizar": "Mettre à jour",
+    "depois": "Plus tard"
   }
 }

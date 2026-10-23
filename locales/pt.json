@@ -1849,5 +1849,11 @@
     "excluirTexto": "O rascunho e a thumb serão apagados.",
     "fotoSemRecorte": "Essa foto não é PNG — provavelmente tem fundo. Funciona, mas a thumb fica melhor com a foto recortada.",
     "fotoNaoCarregou": "A foto do pregador não carregou. Confira a internet ou escolha outra foto."
+  },
+  "atualizacaoRapida": {
+    "titulo": "Atualização pronta",
+    "texto": "Uma melhoria nova do app já foi baixada. Toque em \"Atualizar agora\" e o app reinicia em poucos segundos, já atualizado.",
+    "atualizar": "Atualizar agora",
+    "depois": "Depois"
   }
 }

@@ -110,11 +110,11 @@ export default function MensagemDetalheModal({ mensagem, onClose }: {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1A1740' },
+  container: { flex: 1, backgroundColor: '#5A1A33' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingBottom: 12, paddingHorizontal: 16,
-    backgroundColor: '#1A1740', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#5A1A33', borderBottomWidth: 0.5, borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   closeBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingBottom: 20 },

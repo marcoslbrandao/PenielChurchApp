@@ -570,7 +570,20 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
       <View style={evento.imagem_url ? styles.especialLinha : { flex: 1, flexDirection: 'row', alignItems: 'center' }}>
       <View style={[styles.especialCorFaixa, { backgroundColor: cor }]} />
       <View style={styles.especialCorpo}>
-        <Text style={styles.especialNome}>{nome}</Text>
+        {/* Nome a esquerda e "Compartilhar convite" na mesma linha, encostado
+            na borda direita, logo abaixo da imagem (pedido do Marcos, 23/10). */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={[styles.especialNome, { flex: 1 }]}>{nome}</Text>
+          <TouchableOpacity
+            onPress={convidar}
+            hitSlop={8}
+            accessibilityRole="button"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: cor + '1A' }}
+          >
+            <Ionicons name="share-social-outline" size={15} color={cor} />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: cor }}>{t('convite.compartilhar')}</Text>
+          </TouchableOpacity>
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
           <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
           <Text style={styles.eventoMetaTexto}>{dataLabel}</Text>
@@ -582,9 +595,6 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
           </View>
         )}
       </View>
-      <TouchableOpacity onPress={convidar} hitSlop={10} style={{ marginRight: 12, alignItems: 'center' }} accessibilityLabel={t('convite.compartilhar')}>
-        <Ionicons name="share-social-outline" size={22} color={cor} />
-      </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );

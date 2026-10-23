@@ -165,9 +165,12 @@ export function useNotifications(userId: string | undefined) {
   useEffect(() => {
     if (!userId) return;
 
-    // Não pergunta nada aqui: só registra se o celular já permite. Quem
-    // pergunta é o lembrete pós-cadastro, o cartão da Home e o Perfil.
-    sincronizarPush(userId);
+    // Notificacao ligada por padrao (pedido do Marcos, 23/10): na primeira
+    // vez que alguem logado abre o app e o celular ainda nunca perguntou, o
+    // app mostra a pergunta do sistema ("Permitir notificacoes?") uma unica
+    // vez. Quem ja respondeu (sim ou nao) nao e perguntado de novo — o
+    // cartao da Home e o Perfil continuam para quem disse nao.
+    sincronizarPush(userId).then(() => perguntarNaPrimeiraVez(userId));
 
     const appState = AppState.addEventListener('change', estado => {
       if (estado === 'active') sincronizarPush(userId);
@@ -190,6 +193,18 @@ export function useNotifications(userId: string | undefined) {
       responseListener.current = null;
     };
   }, [userId]);
+}
+
+const CHAVE_PERGUNTA_AUTOMATICA = '@peniel:push_pergunta_automatica';
+async function perguntarNaPrimeiraVez(userId: string): Promise<void> {
+  try {
+    if (!Device.isDevice) return;
+    if (!(await preferenciaLigada())) return;
+    if ((await permissaoDoSistema()) !== 'pode_perguntar') return;
+    if (await AsyncStorage.getItem(CHAVE_PERGUNTA_AUTOMATICA)) return;
+    await AsyncStorage.setItem(CHAVE_PERGUNTA_AUTOMATICA, String(Date.now()));
+    await definirPush(true, userId);
+  } catch {}
 }
 
 // ─── Internos ─────────────────────────────────────────────────────────────────
@@ -217,10 +232,20 @@ async function salvarToken(userId: string): Promise<void> {
     // duplicado quando o mesmo aparelho troca de conta. Ver migração
     // 20260823120000_push_tokens_unico_por_token.sql. O idioma vai junto para
     // o versículo do dia sair na língua de cada aparelho.
-    await supabase.from('push_tokens').upsert(
-      { user_id: userId, token, idioma: i18n.language?.slice(0, 2) ?? 'pt' },
-      { onConflict: 'token' }
-    );
+    const idioma = i18n.language?.slice(0, 2) ?? 'pt';
+    // RPC (23/10): o upsert direto falhava calado quando o token deste
+    // aparelho ainda estava em OUTRA conta (perfil duplicado, troca de conta)
+    // — a RLS nao deixa ver a linha alheia. A funcao grava sempre na conta
+    // logada. O upsert fica de reserva para o caso da funcao nao existir.
+    const { error } = await supabase.rpc('registrar_push_token', { p_token: token, p_idioma: idioma });
+    if (error) {
+      console.log('registrar_push_token falhou, tentando upsert:', error.message);
+      const r = await supabase.from('push_tokens').upsert(
+        { user_id: userId, token, idioma },
+        { onConflict: 'token' }
+      );
+      if (r.error) console.log('Erro ao salvar push token:', r.error.message);
+    }
   } catch (err) {
     console.log('Erro ao obter push token:', err);
   }

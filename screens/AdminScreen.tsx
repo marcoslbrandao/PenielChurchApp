@@ -1498,6 +1498,52 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
     return () => clearTimeout(t);
   }, [query, area?.id, voluntarios.length]);
 
+  // ── Lider da area (quem edita a escala dela) ── pedido do Marcos, 23/10.
+  // Nao confundir com `lider_de_turno` (lider obrigatorio no culto). So o
+  // admin troca (RLS de `escala_area_lideres`); a pessoa precisa de conta no
+  // app, porque a lideranca e por `profile_id`. Vira voluntaria sozinha (trigger).
+  const [lideres, setLideres] = useState<{ id: string; profile_id: string; nome: string }[]>([]);
+  const [perfilDoMembro, setPerfilDoMembro] = useState<Record<string, string | null>>({});
+  const [escolhendoLider, setEscolhendoLider] = useState(false);
+  const carregarLideres = useCallback(async () => {
+    if (!area) return;
+    const { data } = await supabase.from('escala_area_lideres')
+      .select('id, profile_id, profiles(full_name)').eq('area_id', area.id);
+    setLideres(((data ?? []) as any[]).map(l => ({ id: l.id, profile_id: l.profile_id, nome: l.profiles?.full_name ?? '—' })));
+  }, [area?.id]);
+  useEffect(() => { if (visible && area) { setEscolhendoLider(false); carregarLideres(); } }, [visible, carregarLideres]);
+  useEffect(() => {
+    if (!visible || !podeMudarVagas || voluntarios.length === 0) { setPerfilDoMembro({}); return; }
+    supabase.from('members').select('id, profile_id').in('id', voluntarios.map(v => v.membro_id))
+      .then(({ data }) => {
+        const mapa: Record<string, string | null> = {};
+        ((data ?? []) as any[]).forEach(m => { mapa[m.id] = m.profile_id ?? null; });
+        setPerfilDoMembro(mapa);
+      });
+  }, [visible, podeMudarVagas, voluntarios]);
+  const tornarLider = async (v: AreaVoluntario) => {
+    if (!area) return;
+    const profileId = perfilDoMembro[v.membro_id];
+    if (!profileId) { Alert.alert(t('admin.liderAreaSemContaTitulo'), t('admin.liderAreaSemContaMsg', { nome: `${v.nome} ${v.sobrenome}`.trim() })); return; }
+    const { error } = await supabase.from('escala_area_lideres').insert({ area_id: area.id, profile_id: profileId });
+    if (error) { Alert.alert(t('common.erro'), error.message); return; }
+    setEscolhendoLider(false);
+    carregarLideres();
+    onChanged();
+  };
+  const tirarLider = (l: { id: string; nome: string }) => {
+    if (!area) return;
+    Alert.alert(t('admin.liderAreaTirarTitulo'), t('admin.liderAreaTirarMsg', { nome: l.nome, area: area.nome }), [
+      { text: t('common.cancelar'), style: 'cancel' },
+      { text: t('admin.liderAreaTirar'), style: 'destructive', onPress: async () => {
+        const ok = await apagarLinha('escala_area_lideres', l.id);
+        if (!ok) return;
+        carregarLideres();
+        onChanged();
+      }},
+    ]);
+  };
+
   const adicionar = async (membro: MembroDiretorio) => {
     if (!area) return;
     const { error } = await supabase.from('escala_area_voluntarios').insert({ area_id: area.id, membro_id: membro.id });
@@ -1549,6 +1595,53 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
+            </View>
+
+            <View style={{ backgroundColor: C.accent + '14', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{t('admin.liderAreaTitulo')}</Text>
+              <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>{t('admin.liderAreaDesc')}</Text>
+              {lideres.length === 0 ? (
+                <Text style={{ fontSize: 13, color: C.textDim, marginTop: 8 }}>{t('admin.liderAreaNenhum')}</Text>
+              ) : lideres.map(l => (
+                <View key={l.id} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                  <Ionicons name="shield-checkmark" size={16} color={C.accent} style={{ marginRight: 6 }} />
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: C.text }}>{l.nome}</Text>
+                  {podeMudarVagas && (
+                    <TouchableOpacity onPress={() => tirarLider(l)} hitSlop={8}>
+                      <Ionicons name="close-circle" size={20} color={C.danger} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+              {podeMudarVagas && (
+                <TouchableOpacity onPress={() => setEscolhendoLider(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                  <Ionicons name={escolhendoLider ? 'chevron-up' : 'swap-horizontal'} size={16} color={C.purple} style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: C.purple }}>
+                    {escolhendoLider ? t('admin.liderAreaFecharLista') : lideres.length > 0 ? t('admin.liderAreaTrocar') : t('admin.liderAreaEscolher')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {podeMudarVagas && escolhendoLider && (
+                <View style={{ marginTop: 6 }}>
+                  <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>{t('admin.liderAreaEscolherDica')}</Text>
+                  {voluntarios.length === 0 ? (
+                    <Text style={{ fontSize: 12, color: C.textDim }}>{t('admin.liderAreaTimeVazio')}</Text>
+                  ) : voluntarios
+                    .filter(v => !lideres.some(l => l.profile_id && l.profile_id === perfilDoMembro[v.membro_id]))
+                    .map(v => {
+                      const temConta = !!perfilDoMembro[v.membro_id];
+                      return (
+                        <TouchableOpacity key={v.id} onPress={() => tornarLider(v)}
+                          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: C.border }}>
+                          <Text style={{ flex: 1, fontSize: 14, color: temConta ? C.text : C.textDim }}>
+                            {v.nome} {v.sobrenome}{temConta ? '' : ` · ${t('admin.liderAreaSemConta')}`}
+                          </Text>
+                          <Ionicons name="add-circle-outline" size={20} color={temConta ? C.purple : C.textDim} />
+                        </TouchableOpacity>
+                      );
+                    })}
+                </View>
+              )}
             </View>
 
             <View style={mo.fieldRow}>
@@ -2681,6 +2774,7 @@ export default function AdminScreen() {
   const [mensagemModalVisible, setMensagemModalVisible] = useState(false);
   const [escalaAreas, setEscalaAreas] = useState<EscalaArea[]>([]);
   const [areaVoluntarios, setAreaVoluntarios] = useState<AreaVoluntario[]>([]);
+  const [lideresPorArea, setLideresPorArea] = useState<Record<string, string[]>>({});
   const [areasLideradas, setAreasLideradas] = useState<string[]>([]);
   const [areaModalVisible, setAreaModalVisible] = useState(false);
   const [areaGerenciarVisible, setAreaGerenciarVisible] = useState<EscalaArea | null>(null);
@@ -2764,6 +2858,13 @@ export default function AdminScreen() {
     // Escalas — áreas, time de cada uma, e quais áreas o usuário logado lidera
     const { data: areasData } = await supabase.from('escala_areas').select('*').order('nome');
     if (areasData) setEscalaAreas(areasData as EscalaArea[]);
+    const { data: lidData } = await supabase.from('escala_area_lideres').select('area_id, profiles(full_name)');
+    const porArea: Record<string, string[]> = {};
+    ((lidData ?? []) as any[]).forEach(l => {
+      const nome = l.profiles?.full_name;
+      if (nome) (porArea[l.area_id] ??= []).push(nome);
+    });
+    setLideresPorArea(porArea);
     const { data: volData } = await supabase
       .from('escala_area_voluntarios')
       .select('id, area_id, membro_id, lider_de_turno, members(nome, sobrenome)');
@@ -3589,6 +3690,11 @@ export default function AdminScreen() {
                               </Text>
                             </View>
                           </View>
+                          <Text style={[s.inviteEmail, { marginTop: 6 }]}>
+                            {(lideresPorArea[area.id] ?? []).length > 0
+                              ? t('admin.liderAreaCartao', { nomes: lideresPorArea[area.id].join(', ') })
+                              : t('admin.liderAreaCartaoNenhum')}
+                          </Text>
                         </View>
                         <Ionicons name="chevron-forward" size={20} color={C.textMuted} />
                       </TouchableOpacity>

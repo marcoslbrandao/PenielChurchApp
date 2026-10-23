@@ -325,7 +325,7 @@ export default function EscalasScreen() {
           datasOrdenadas.map(data => (
             <View key={data} style={s.dataGroup}>
               <Text style={s.dataGroupTitle}>{formatDataLonga(data)}</Text>
-              <View style={s.card}>
+              <View style={[s.card, s.cardLista]}>
                 {porData[data].map((d, idx) => (
                   <View key={d.id} style={[s.areaRow, idx > 0 && s.areaRowBorder]}>
                     <Text style={s.areaRowNome}>{d.escala_areas?.nome ?? ''}</Text>
@@ -395,6 +395,8 @@ const s = StyleSheet.create({
   cardIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', margin: 12 },
   cardData: { fontSize: 15, fontWeight: '700', color: C.text, textTransform: 'capitalize' },
   cardArea: { fontSize: 13, color: C.accent, fontWeight: '600', marginTop: 2 },
+  // Escala Geral: as areas do dia ficam uma embaixo da outra (o `card` e em linha).
+  cardLista: { flexDirection: 'column', alignItems: 'stretch' },
   dataGroup: { marginBottom: 16 },
   dataGroupTitle: { fontSize: 13, fontWeight: '700', color: C.text, textTransform: 'capitalize', marginBottom: 8, marginLeft: 4 },
   areaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 },

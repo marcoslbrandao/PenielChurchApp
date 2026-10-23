@@ -220,8 +220,12 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
   const C = useMemo(() => paletaAgenda(isDark), [isDark]);
   const styles = useMemo(() => buildStyles(C), [C]);
   const [aberto, setAberto] = useState(false);
-  // Sempre abre: no minimo tem o "Compartilhar convite" (23/10).
-  const temMais = true;
+  const temMais = !!descricao || !!evento.linkZoom || !!evento.mapUrl;
+  const convidar = () => compartilharEvento({
+    nome, quando: [evento.data, evento.horario].filter(Boolean).join(' · '),
+    local: evento.local, descricao,
+    link: evento.ctaUrl ?? evento.linkZoom ?? evento.mapUrl, imagemUrl: evento.imagemUrl,
+  });
   const quando = [evento.data, evento.horario].filter(Boolean).join(' · ');
   return (
     <TouchableOpacity
@@ -236,7 +240,20 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
       <View style={styles.especialLinha}>
       <View style={[styles.especialCorFaixa, { backgroundColor: evento.cor }]} />
       <View style={styles.especialCorpo}>
-        <Text style={styles.especialNome}>{nome}</Text>
+        {/* "Compartilhar convite" na linha do nome, logo abaixo da imagem,
+            sem precisar abrir o evento (23/10) — igual ao card da Home. */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <Text style={[styles.especialNome, { flex: 1, marginBottom: 0 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{nome}</Text>
+          <TouchableOpacity
+            onPress={convidar}
+            hitSlop={8}
+            accessibilityRole="button"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14, backgroundColor: evento.cor + '1A' }}
+          >
+            <Ionicons name="share-social-outline" size={13} color={evento.cor} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: evento.cor }}>{t('convite.botaoCurto')}</Text>
+          </TouchableOpacity>
+        </View>
         {!!quando && (
           <View style={styles.eventoInfoRow}>
             <Ionicons name="calendar-outline" size={13} color={C.textMuted} />
@@ -266,17 +283,7 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
                 <Text style={styles.eventoBtnTexto}>{t('agenda.comoChegar')}</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              style={[styles.eventoBtn, { marginTop: 8, borderColor: evento.cor }]}
-              onPress={() => compartilharEvento({
-                nome, quando: [evento.data, evento.horario].filter(Boolean).join(' · '),
-                local: evento.local, descricao,
-                link: evento.ctaUrl ?? evento.linkZoom ?? evento.mapUrl, imagemUrl: evento.imagemUrl,
-              })}
-            >
-              <Ionicons name="share-social-outline" size={14} color={evento.cor} />
-              <Text style={[styles.eventoBtnTexto, { color: evento.cor }]}>{t('convite.compartilhar')}</Text>
-            </TouchableOpacity>
+
           </>
         )}
       </View>

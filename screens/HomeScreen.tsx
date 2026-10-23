@@ -573,15 +573,15 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
         {/* Nome a esquerda e "Compartilhar convite" na mesma linha, encostado
             na borda direita, logo abaixo da imagem (pedido do Marcos, 23/10). */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={[styles.especialNome, { flex: 1 }]}>{nome}</Text>
+          <Text style={[styles.especialNome, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{nome}</Text>
           <TouchableOpacity
             onPress={convidar}
             hitSlop={8}
             accessibilityRole="button"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: cor + '1A' }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14, backgroundColor: cor + '1A' }}
           >
-            <Ionicons name="share-social-outline" size={15} color={cor} />
-            <Text style={{ fontSize: 12, fontWeight: '700', color: cor }}>{t('convite.compartilhar')}</Text>
+            <Ionicons name="share-social-outline" size={13} color={cor} />
+            <Text style={{ fontSize: 11, fontWeight: '700', color: cor }}>{t('convite.botaoCurto')}</Text>
           </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>

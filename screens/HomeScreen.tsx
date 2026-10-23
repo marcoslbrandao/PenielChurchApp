@@ -978,6 +978,57 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   // e faltava nos iPhone mais novos.
   const insets = useSafeAreaInsets();
 
+  // Bloco Ao vivo + Traducao: vai para o topo da Home so durante o ao vivo.
+  const blocoAoVivo = (
+    <>
+        {/* ── Tradução ao vivo (só aparece com sessão ativa) ─────────────────── */}
+        {/* Texto fixo em inglês de propósito (não usa t()): quem procura esse botão é
+            justamente quem não fala português, então precisa ler em inglês mesmo
+            que o app esteja em pt-BR. */}
+        {traducaoAtiva && (
+          <TouchableOpacity
+            style={styles.verTraducaoAoVivo}
+            activeOpacity={0.85}
+            onPress={() => navigation?.navigate('TraducaoAoVivo')}
+          >
+            <Ionicons name="headset" size={16} color="#fff" />
+            <Text style={styles.verTraducaoAoVivoTexto}>Live translation available</Text>
+            <Ionicons name="arrow-forward" size={14} color="#fff" />
+          </TouchableOpacity>
+        )}
+
+        {/* ── Ao vivo ──────────────────────────────────────────────────────── */}
+        <View style={styles.secaoHeader}>
+          <Text style={styles.secaoTitulo}>{t('home.aoVivoAgora')}</Text>
+          {isLive ? (
+            <Animated.View style={[styles.liveBadge, { opacity: blink }]}>
+              <View style={styles.livePonto} />
+              <Text style={styles.liveTexto}>{t('home.live')}</Text>
+            </Animated.View>
+          ) : (
+            <View style={[styles.liveBadge, { backgroundColor: '#555' }]}>
+              <Text style={[styles.liveTexto, { color: '#ccc' }]}>OFF</Text>
+            </View>
+          )}
+        </View>
+
+        <TouchableOpacity style={[styles.liveCard, isLive && styles.liveCardAtivo]} onPress={openYouTube} activeOpacity={0.8}>
+          <View style={[styles.liveThumb, isLive && { backgroundColor: '#C0392B' }]}>
+            <Ionicons name="logo-youtube" size={28} color={isLive ? '#fff' : '#E84B1A'} />
+          </View>
+          <View style={styles.liveInfo}>
+            <Text style={styles.liveNome}>
+              {isLive ? `🔴 ${liveTitle}` : 'Peniel Church — YouTube'}
+            </Text>
+            <Text style={styles.liveMeta}>
+              {isLive ? t('home.tocarParaAssistir') : t('home.tocarParaVerCanal')}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+    </>
+  );
+
   return (
     <View style={styles.container}>
 
@@ -1012,6 +1063,11 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           <AvisoDestaqueCard aviso={avisoDestaque} onDispensar={dispensarAvisoDestaque} />
         )}
 
+        {/* ── Ao vivo no topo durante o culto (pedido do Marcos, 23/10): quem
+            abre o app no domingo ve a transmissao e a traducao logo de cara.
+            Fora do ao vivo o bloco volta ao lugar de sempre, mais abaixo. ── */}
+        {isLive && blocoAoVivo}
+
         {/* ── Banner aniversário ───────────────────────────────────────────── */}
         {isLoggedIn && todayBirthdays.length > 0 && (
           <BirthdayBanner birthdays={todayBirthdays} mensagem={mensagemIgreja} />
@@ -1032,6 +1088,16 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
         {/* ── Chat da Igreja (só membros) ──────────────────────────────────── */}
         {isLoggedIn && ehMembro && !!user?.id && (
           <ChatGeralCard userId={user.id} ehAdmin={ehAdmin} cores={C} abrirAgora={abrirChatIgreja} />
+        )}
+
+        {/* ── Evento em destaque (marcado no Admin, some quando desmarcado) ─
+            Logo abaixo do chat (pedido do Marcos, 23/10): no fim da Home quase
+            ninguem via o evento sem rolar a tela. */}
+        {destaque && (
+          <DestaqueHomeCard
+            evento={destaque}
+            onAbrirAgenda={() => navigation?.navigate('Agenda')}
+          />
         )}
 
         {/* ── Versículo do dia ─────────────────────────────────────────────── */}
@@ -1159,51 +1225,8 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           <Ionicons name="arrow-forward" size={14} color="#1A1740" />
         </TouchableOpacity>
 
-        {/* ── Tradução ao vivo (só aparece com sessão ativa) ─────────────────── */}
-        {/* Texto fixo em inglês de propósito (não usa t()): quem procura esse botão é
-            justamente quem não fala português, então precisa ler em inglês mesmo
-            que o app esteja em pt-BR. */}
-        {traducaoAtiva && (
-          <TouchableOpacity
-            style={styles.verTraducaoAoVivo}
-            activeOpacity={0.85}
-            onPress={() => navigation?.navigate('TraducaoAoVivo')}
-          >
-            <Ionicons name="headset" size={16} color="#fff" />
-            <Text style={styles.verTraducaoAoVivoTexto}>Live translation available</Text>
-            <Ionicons name="arrow-forward" size={14} color="#fff" />
-          </TouchableOpacity>
-        )}
-
-        {/* ── Ao vivo ──────────────────────────────────────────────────────── */}
-        <View style={styles.secaoHeader}>
-          <Text style={styles.secaoTitulo}>{t('home.aoVivoAgora')}</Text>
-          {isLive ? (
-            <Animated.View style={[styles.liveBadge, { opacity: blink }]}>
-              <View style={styles.livePonto} />
-              <Text style={styles.liveTexto}>{t('home.live')}</Text>
-            </Animated.View>
-          ) : (
-            <View style={[styles.liveBadge, { backgroundColor: '#555' }]}>
-              <Text style={[styles.liveTexto, { color: '#ccc' }]}>OFF</Text>
-            </View>
-          )}
-        </View>
-
-        <TouchableOpacity style={[styles.liveCard, isLive && styles.liveCardAtivo]} onPress={openYouTube} activeOpacity={0.8}>
-          <View style={[styles.liveThumb, isLive && { backgroundColor: '#C0392B' }]}>
-            <Ionicons name="logo-youtube" size={28} color={isLive ? '#fff' : '#E84B1A'} />
-          </View>
-          <View style={styles.liveInfo}>
-            <Text style={styles.liveNome}>
-              {isLive ? `🔴 ${liveTitle}` : 'Peniel Church — YouTube'}
-            </Text>
-            <Text style={styles.liveMeta}>
-              {isLive ? t('home.tocarParaAssistir') : t('home.tocarParaVerCanal')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
-        </TouchableOpacity>
+        {/* ── Ao vivo + Tradução: aqui quando NAO esta ao vivo ─────────────── */}
+        {!isLive && blocoAoVivo}
 
         {/* ── Short em destaque (marcado no Admin) ─────────────────────────── */}
         {shortDestaque && <ShortDestaqueCard short={shortDestaque} />}
@@ -1304,13 +1327,6 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           })}
         </View>
 
-        {/* ── Evento em destaque (marcado no Admin, some quando desmarcado) ─ */}
-        {destaque && (
-          <DestaqueHomeCard
-            evento={destaque}
-            onAbrirAgenda={() => navigation?.navigate('Agenda')}
-          />
-        )}
 
         <View style={{ height: 24 }} />
       </ScrollView>

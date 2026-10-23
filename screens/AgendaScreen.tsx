@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, ActivityIndicator, RefreshControl, Image, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -36,6 +36,12 @@ function proximaData(diaSemana: number, meses: string[]): { dia: number; mes: st
   };
 }
 
+// "AAAA-MM-DD" no fuso do aparelho (o dataISO vem em UTC e, no horario de
+// verao, a meia-noite cairia no dia anterior).
+function chaveDoDia(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-CA');
+}
+
 function formatDataEspecifica(dataStr: string, meses: string[], mesesLongos: string[], dataDe: string): { dia: number; mes: string; dataISO: string; label: string } {
   const d = new Date(`${dataStr}T00:00:00`);
   return {
@@ -51,6 +57,7 @@ type EventoDB = {
   data: string | null; horario: string; local: string; descricao: string | null;
   link_zoom: string | null; meeting_id: string | null; passcode: string | null;
   map_url: string | null; especial: boolean; cor: string | null;
+  imagem_url?: string | null;
 };
 
 type EventoUI = {
@@ -201,6 +208,7 @@ type EspecialUI = {
   id: string; nome: string; descricao: string; cor: string; data: string;
   horario: string; local: string; tipo: string;
   linkZoom: string | null; mapUrl: string | null;
+  imagemUrl: string | null;
 };
 
 function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbrirLink: (url: string, tipo: 'zoom' | 'mapa') => void }) {
@@ -215,10 +223,15 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
   const quando = [evento.data, evento.horario].filter(Boolean).join(' · ');
   return (
     <TouchableOpacity
-      style={styles.especialCard}
+      style={[styles.especialCard, !!evento.imagemUrl && { flexDirection: 'column', alignItems: 'stretch' }]}
       activeOpacity={temMais ? 0.75 : 1}
       onPress={() => temMais && setAberto(a => !a)}
     >
+      {/* Capa do evento (a mesma do destaque da Home) — pedido do Marcos, 23/10. */}
+      {!!evento.imagemUrl && (
+        <Image source={{ uri: evento.imagemUrl }} style={styles.especialImagem} resizeMode="cover" />
+      )}
+      <View style={styles.especialLinha}>
       <View style={[styles.especialCorFaixa, { backgroundColor: evento.cor }]} />
       <View style={styles.especialCorpo}>
         <Text style={styles.especialNome}>{nome}</Text>
@@ -257,6 +270,7 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
       {temMais && (
         <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color={C.textMuted} style={{ marginRight: 12 }} />
       )}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -287,6 +301,23 @@ export default function AgendaScreen() {
 
   useEffect(() => { fetchEventos(); }, [fetchEventos]);
 
+  // Virada do dia (pedido do Marcos, 23/10): a lista se reordena sozinha
+  // depois da meia-noite — o evento de hoje fica em primeiro ate 00:00, e
+  // depois vai para o fim (proxima semana). Recalcula num timer marcado para
+  // a meia-noite e quando o app volta para a frente.
+  const [, setDiaAtual] = useState(() => new Date().toDateString());
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const agendar = () => {
+      const agora = new Date();
+      const meiaNoite = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + 1, 0, 0, 5);
+      timer = setTimeout(() => { setDiaAtual(new Date().toDateString()); agendar(); }, meiaNoite.getTime() - agora.getTime());
+    };
+    agendar();
+    const sub = AppState.addEventListener('change', e => { if (e === 'active') setDiaAtual(new Date().toDateString()); });
+    return () => { clearTimeout(timer); sub.remove(); };
+  }, []);
+
   const eventosNormais = eventosDB.filter(e => !e.especial);
   const eventosEspeciaisDB = eventosDB.filter(e => e.especial);
 
@@ -302,7 +333,14 @@ export default function AgendaScreen() {
       diaSemanaLabel: e.recorrente && e.dia_semana !== null ? DIAS_SEMANA[e.dia_semana] : '',
       dia: dt.dia, mes: dt.mes, dataISO: dt.dataISO,
     };
-  });
+  })
+    // Ordem pela proxima data a partir de HOJE (antes seguia a ordem de
+    // cadastro); no mesmo dia, pelo horario. Evento com data fixa que ja
+    // passou sai da lista; sem data nenhuma vai para o fim.
+    .filter(e => !e.dataISO || chaveDoDia(e.dataISO) >= chaveDoDia(new Date().toISOString()))
+    .sort((a, b) =>
+      (a.dataISO ? chaveDoDia(a.dataISO) : '9999').localeCompare(b.dataISO ? chaveDoDia(b.dataISO) : '9999')
+      || (a.horario ?? '').localeCompare(b.horario ?? ''));
 
   // Especial com data já passada sai da lista (ficava para sempre). O
   // recorrente mostra o dia da semana e a próxima data.
@@ -320,6 +358,7 @@ export default function AgendaScreen() {
         id: e.id, nome: e.nome, descricao: e.descricao ?? '', cor: e.cor ?? '#E84B1A', data,
         horario: e.horario ?? '', local: e.local ?? '', tipo: e.tipo,
         linkZoom: e.link_zoom, mapUrl: e.map_url,
+        imagemUrl: e.imagem_url ?? null,
       };
     });
 
@@ -495,6 +534,8 @@ function buildStyles(C: PaletaAgenda) { return StyleSheet.create({
   eventoBtnTexto: { fontSize: 12, fontWeight: '500', color: C.accentText },
   especialCard: { backgroundColor: C.cardBg, borderRadius: 16, borderWidth: 0.5, borderColor: C.cardBorder, marginBottom: 12, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   especialCorFaixa: { width: 4, alignSelf: 'stretch' },
+  especialImagem: { width: '100%', aspectRatio: 2, backgroundColor: C.cardBorder },
+  especialLinha: { flexDirection: 'row', alignItems: 'center', flexGrow: 1 },
   especialCorpo: { flex: 1, padding: 14 },
   especialNome: { fontSize: 14, fontWeight: '500', color: C.textPrimary, marginBottom: 6 },
 }); }

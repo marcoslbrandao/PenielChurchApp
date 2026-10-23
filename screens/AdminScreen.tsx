@@ -24,6 +24,13 @@ import DenunciasAdmin from '../components/DenunciasAdmin';
 import CultoDaSemanaAdmin from '../components/CultoDaSemanaAdmin';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
+// Cor de cada aba do Admin (pedido do Marcos, 23/10: botoes maiores e coloridos).
+const COR_ABA: Record<string, string> = {
+  agenda: '#2563EB', avisos: '#EA580C', contato: '#0891B2', culto: '#DC2626',
+  denuncias: '#B91C1C', devocionais: '#059669', escalas: '#7C4DFF', mensagens: '#4F46E5',
+  ofertas: '#C8960A', oracao: '#DB2777', shorts: '#9333EA', stats: '#475569', textos: '#65A30D',
+};
+
 const C = {
   bg: '#F7F4EE', surface: '#FFFFFF', surfaceAlt: '#F0EDE8',
   border: '#E5E0D8', primary: '#1A1740', accent: '#F5C842',
@@ -2819,7 +2826,7 @@ function TextosAppEditor() {
 }
 
 export default function AdminScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { todayBirthdays, monthBirthdays } = useBirthdays();
   const [role, setRole] = useState<string | null>(null);
@@ -3220,16 +3227,22 @@ export default function AdminScreen() {
             setTabsScrollFim(contentOffset.x + layoutMeasurement.width >= contentSize.width - 12);
           }}
         >
-          {abasVisiveis.map(tab => (
+          {[...abasVisiveis]
+            // Ordem alfabetica do nome no idioma do app (pedido do Marcos, 23/10).
+            .sort((a, b) => t(`admin.aba_${a}`).localeCompare(t(`admin.aba_${b}`), i18n.language))
+            .map(tab => {
+            const cor = COR_ABA[tab] ?? C.purple;
+            const ativa = abaAtual === tab;
+            return (
             <TouchableOpacity
               key={tab}
-              style={[s.tabBtn, abaAtual === tab && s.tabBtnActive]}
+              style={[s.tabBtn, { backgroundColor: ativa ? cor : cor + '14', borderColor: ativa ? cor : cor + '55' }]}
               onPress={() => setActiveTab(tab)}
             >
               <Ionicons
                 name={tab === 'avisos' ? 'megaphone-outline' : tab === 'culto' ? 'videocam-outline' : tab === 'devocionais' ? 'book-outline' : tab === 'mensagens' ? 'newspaper-outline' : tab === 'contato' ? 'chatbubble-ellipses-outline' : tab === 'oracao' ? 'heart-outline' : tab === 'agenda' ? 'calendar-outline' : tab === 'shorts' ? 'film-outline' : tab === 'ofertas' ? 'gift-outline' : tab === 'escalas' ? 'people-circle-outline' : tab === 'textos' ? 'create-outline' : tab === 'denuncias' ? 'flag-outline' : 'bar-chart-outline'}
-                size={14}
-                color={abaAtual === tab ? C.purple : C.textMuted}
+                size={17}
+                color={ativa ? '#fff' : cor}
               />
               {tab === 'contato' && contatoMensagens.some(m => m.status === 'novo') && (
                 <View style={s.tabDot} />
@@ -3240,11 +3253,12 @@ export default function AdminScreen() {
               {tab === 'oracao' && pedidosOracao.some(p => p.status === 'aberto') && (
                 <View style={s.tabDot} />
               )}
-              <Text style={[s.tabBtnText, abaAtual === tab && { color: C.purple, fontWeight: '700' }]}>
+              <Text style={[s.tabBtnText, { color: ativa ? '#fff' : cor }]}>
                 {t(`admin.aba_${tab}`)}
               </Text>
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </ScrollView>
         {!tabsScrollFim && (
           <View pointerEvents="none" style={s.tabsFade}>
@@ -3931,15 +3945,14 @@ const s = StyleSheet.create({
   newBtnText: { fontSize: 13, fontWeight: '700', color: C.primary },
   tabRowWrap: { position: 'relative' },
   tabRowScroll: { backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.border },
-  tabRow: { flexDirection: 'row' },
+  tabRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingVertical: 10, paddingRight: 36 },
   // Sinaliza que dá pra arrastar pra ver mais abas (some quando chega no fim).
   tabsFade: { position: 'absolute', right: 0, top: 0, bottom: 1, width: 30, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', opacity: 0.94 },
   // Mais compacto que antes de propósito: com 9 abas, dava pra ver só
   // 3 de cada vez (parecia que a barra tava "cortada pela metade"). Com
   // menos padding/fonte, cabem ~5-6 na tela sem precisar arrastar tanto.
-  tabBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 12, paddingHorizontal: 10 },
-  tabBtnActive: { borderBottomWidth: 2, borderBottomColor: C.purple },
-  tabBtnText: { fontSize: 12.5, color: C.textMuted, fontWeight: '500' },
+  tabBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1 },
+  tabBtnText: { fontSize: 14, fontWeight: '700' },
   tabDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.danger },
   scroll: { padding: 16, paddingBottom: 40 },
   sectionLabel: { fontSize: 11, color: C.textMuted, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 },

@@ -1280,7 +1280,8 @@
     "semConflitoLigado": "On: people in this area can also be on another area's rota at the same service (e.g. Canteen).",
     "semConflitoDesligado": "Off: people rostered here are not put in another area at the same service.",
     "escalaAreasParaGerar": "Areas to generate ({{n}})",
-    "escalaNenhumaArea": "Select at least one area to generate."
+    "escalaNenhumaArea": "Select at least one area to generate.",
+    "aba_stats": "Stats"
   },
   "membros": {
     "buscarPeloNome": "Search by name...",

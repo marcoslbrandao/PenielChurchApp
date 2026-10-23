@@ -1280,7 +1280,8 @@
     "semConflitoLigado": "Activé : les personnes de ce service peuvent aussi être dans un autre service au même culte (ex. : Cantine).",
     "semConflitoDesligado": "Désactivé : les personnes planifiées ici ne sont pas mises dans un autre service au même culte.",
     "escalaAreasParaGerar": "Services à générer ({{n}})",
-    "escalaNenhumaArea": "Cochez au moins un service à générer."
+    "escalaNenhumaArea": "Cochez au moins un service à générer.",
+    "aba_stats": "Stats"
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",

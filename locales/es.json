@@ -1280,7 +1280,8 @@
     "semConflitoLigado": "Activado: quien está en esta área también puede estar en otra área en el mismo culto (ej.: Cantina).",
     "semConflitoDesligado": "Desactivado: quien está aquí no entra en otra área en el mismo culto.",
     "escalaAreasParaGerar": "Áreas a generar ({{n}})",
-    "escalaNenhumaArea": "Marca al menos un área para generar."
+    "escalaNenhumaArea": "Marca al menos un área para generar.",
+    "aba_stats": "Estadísticas"
   },
   "membros": {
     "buscarPeloNome": "Buscar por nombre...",

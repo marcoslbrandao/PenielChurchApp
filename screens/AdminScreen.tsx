@@ -13,6 +13,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
+import { nomeCurto } from '../lib/nomeCurto';
 import { mascaraDataBR, dataBRparaISO, isoParaDataBR } from '../lib/datas';
 import { useAuth } from '../lib/useAuth';
 import { useBirthdays } from '../lib/useBirthdays';
@@ -107,7 +108,7 @@ const GRUPO_DEVOCIONAL_OPCOES: { valor: string | null; chave: string }[] = [
   { valor: 'infantil', chave: 'membros.penielKids' },
 ];
 
-type EscalaArea = { id: string; nome: string; vagas_padrao: number; em_duplas?: boolean; exige_lider?: boolean };
+type EscalaArea = { id: string; nome: string; vagas_padrao: number; em_duplas?: boolean; exige_lider?: boolean; sem_conflito?: boolean };
 type EscalaDupla = { id: string; area_id: string; membro_a: string; membro_b: string };
 type AreaVoluntario = { id: string; area_id: string; membro_id: string; nome: string; sobrenome: string; lider_de_turno?: boolean };
 // Sem telefone: quem lidera uma área de escala monta o time da área, mas não
@@ -1416,6 +1417,18 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
     onChanged();
   };
 
+  // ── Sem conflito (ex.: Cantina) ── pedido do Marcos, 23/10. Quem esta
+  // nesta area pode estar escalado no mesmo culto em outra area.
+  const [semConflito, setSemConflito] = useState(false);
+  useEffect(() => { setSemConflito(!!area?.sem_conflito); }, [area?.id, area?.sem_conflito]);
+  const alternarSemConflito = async (valor: boolean) => {
+    if (!area) return;
+    setSemConflito(valor);
+    const { error } = await supabase.from('escala_areas').update({ sem_conflito: valor }).eq('id', area.id);
+    if (error) { setSemConflito(!valor); Alert.alert(t('common.erro'), error.message); return; }
+    onChanged();
+  };
+
   const tocarParaDupla = async (membroId: string) => {
     if (!area || duplaDe(membroId)) return;
     if (!primeiro) { setPrimeiro(membroId); return; }
@@ -1709,6 +1722,16 @@ function AreaVoluntariosModal({ visible, area, podeMudarVagas, onClose, onChange
               <Switch value={emDuplas} onValueChange={alternarEmDuplas} disabled={!podeMudarVagas} trackColor={{ true: C.purple }} />
             </View>
 
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: C.purple + '10', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginTop: 10 }}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{t('admin.semConflitoTitulo')}</Text>
+                <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                  {semConflito ? t('admin.semConflitoLigado') : t('admin.semConflitoDesligado')}
+                </Text>
+              </View>
+              <Switch value={semConflito} onValueChange={alternarSemConflito} disabled={!podeMudarVagas} trackColor={{ true: C.purple }} />
+            </View>
+
             {emDuplas && (
               <View style={{ marginTop: 12 }}>
                 <Text style={s.sectionLabel}>{t('admin.duplasTitulo', { n: duplas.length })}</Text>
@@ -1917,7 +1940,7 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
   const remover = (d: DesignacaoEdit, area: EscalaArea) => {
     Alert.alert(
       t('admin.escalaRemoverTitulo'),
-      t('admin.escalaRemoverMsg', { nome: `${d.nome} ${d.sobrenome}`.trim(), area: area.nome, data: dataEscalaLonga(d.data, i18n.language) }),
+      t('admin.escalaRemoverMsg', { nome: nomeCurto(d.nome, d.sobrenome), area: area.nome, data: dataEscalaLonga(d.data, i18n.language) }),
       [
         { text: t('common.cancelar'), style: 'cancel' },
         { text: t('common.remover'), style: 'destructive', onPress: async () => {
@@ -1931,9 +1954,13 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
 
   const areasOrdenadas = [...areas].sort((a, b) => a.nome.localeCompare(b.nome));
   const datas = [...new Set(designacoes.map(d => d.data))].sort();
-  // Quem já serve em cada data (em qualquer área visível) — pra não oferecer
-  // a mesma pessoa duas vezes no mesmo dia. O banco também barra (unique).
-  const ocupadosNoDia = (data: string) => new Set(designacoes.filter(d => d.data === data).map(d => d.membro_id));
+  // Quem já serve em cada data — pra não oferecer a mesma pessoa duas vezes
+  // no mesmo dia. Área "sem conflito" (Cantina) só olha ela mesma; as outras
+  // ignoram quem está só na Cantina. O banco também barra (trigger + unique).
+  const semConflitoIds = new Set(areas.filter(a => a.sem_conflito).map(a => a.id));
+  const ocupadosNoDia = (data: string, area: EscalaArea) => new Set(designacoes
+    .filter(d => d.data === data && (area.sem_conflito ? d.area_id === area.id : (d.area_id === area.id || !semConflitoIds.has(d.area_id))))
+    .map(d => d.membro_id));
 
   const naoPode = (membroId: string, data: string) => indisponiveis.has(`${membroId}|${data}`);
   const linhaPessoa = (m: MembroDiretorio, ocupado: boolean) => (
@@ -1944,7 +1971,7 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: C.border, opacity: ocupado ? 0.45 : 1 }}
     >
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 14, color: C.text }}>{m.nome} {m.sobrenome}</Text>
+        <Text style={{ fontSize: 14, color: C.text }}>{nomeCurto(m.nome, m.sobrenome)}</Text>
         {!!alvo && naoPode(m.id, alvo.data) && (
           <Text style={{ fontSize: 11, color: C.danger, marginTop: 2 }}>{t('admin.escalaMarcouIndisponivel')}</Text>
         )}
@@ -1986,7 +2013,7 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
                   ) : time.length === 0 ? (
                     <Text style={s.emptyText}>{t('admin.ninguemAdicionadoAinda')}</Text>
                   ) : (() => {
-                    const ocupados = ocupadosNoDia(alvo.data);
+                    const ocupados = ocupadosNoDia(alvo.data, alvo.area);
                     return time.map(m => linhaPessoa(m, ocupados.has(m.id)));
                   })()}
 
@@ -2002,7 +2029,7 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
                     />
                   </View>
                   {(() => {
-                    const ocupados = ocupadosNoDia(alvo.data);
+                    const ocupados = ocupadosNoDia(alvo.data, alvo.area);
                     return resultados.map(m => linhaPessoa(m, ocupados.has(m.id)));
                   })()}
                   <View style={{ height: 12 }} />
@@ -2034,7 +2061,7 @@ function EditarEscalaModal({ visible, areas, userId, onClose }: {
                             {pessoas.map(d => (
                               <View key={d.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 14 }}>
                                 <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 14, color: C.text }}>{d.nome} {d.sobrenome}</Text>
+                                  <Text style={{ fontSize: 14, color: C.text }}>{nomeCurto(d.nome, d.sobrenome)}</Text>
                                   {naoPode(d.membro_id, data) && (
                                     <Text style={{ fontSize: 11, color: C.danger, fontWeight: '700', marginTop: 2 }}>{t('admin.escalaMarcouIndisponivelTrocar')}</Text>
                                   )}
@@ -2159,9 +2186,13 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
   const [datas, setDatas] = useState<DataDeCulto[]>([]);
   const [extra, setExtra] = useState('');
   const [gerando, setGerando] = useState(false);
+  // Areas que entram nesta geracao (pedido do Marcos, 23/10: refazer so a
+  // Cantina sem mexer nas outras). Comeca com todas marcadas.
+  const [areasSel, setAreasSel] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (visible) {
+      setAreasSel(new Set(areas.map(a => a.id)));
       setDataInicio(formatarDataBR(toISODate(proximoDomingo())));
       setDataFim(formatarDataBR(fimPadraoDaEscala()));
       setExtra('');
@@ -2194,6 +2225,8 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
     if (fim < ini) { Alert.alert(t('common.atencao'), t('admin.escalaFimAntesDoInicio')); return; }
     if (ativas.length === 0) { Alert.alert(t('common.atencao'), t('admin.escalaNenhumaData')); return; }
     if (areas.length === 0) { Alert.alert(t('common.atencao'), t('admin.cadastreAoMenosUmaArea')); return; }
+    const areasGerar = areas.filter(a => areasSel.has(a.id));
+    if (areasGerar.length === 0) { Alert.alert(t('common.atencao'), t('admin.escalaNenhumaArea')); return; }
 
     setGerando(true);
     const primeira = ativas[0];
@@ -2208,14 +2241,26 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
     const erro = existentesError ?? indError;
     if (erro) { setGerando(false); Alert.alert(t('common.erro'), erro.message); return; }
 
-    const usadoNoDia: Record<string, Set<string>> = {};
+    // Area "sem conflito" (Cantina): nao ocupa a pessoa pras outras areas e
+    // nao e barrada por elas; a contagem de vezes dela e separada.
+    const semConflito = new Set(areas.filter(a => a.sem_conflito).map(a => a.id));
+    const usadoNoDia: Record<string, Set<string>> = {};        // ocupados nas areas normais
+    const usadoNaAreaDia: Record<string, Set<string>> = {};    // "area|data" -> pessoas
     const existentesPorAreaData: Record<string, number> = {};
-    const vezes: Record<string, number> = {};       // quantas vezes cada pessoa serve no periodo (todas as areas)
-    const ultimaVez: Record<string, string> = {};   // ultima data em que serviu
+    const vezes: Record<string, number> = {};       // vezes nas areas normais (todas juntas)
+    const ultimaVez: Record<string, string> = {};
+    const vezesArea: Record<string, number> = {};   // "area|pessoa", so pras areas sem conflito
+    const ultimaVezArea: Record<string, string> = {};
     (existentesData ?? []).forEach((e: any) => {
-      (usadoNoDia[e.data] ??= new Set()).add(e.membro_id);
       const chave = `${e.area_id}|${e.data}`;
+      (usadoNaAreaDia[chave] ??= new Set()).add(e.membro_id);
       existentesPorAreaData[chave] = (existentesPorAreaData[chave] ?? 0) + 1;
+      if (semConflito.has(e.area_id)) {
+        const k = `${e.area_id}|${e.membro_id}`;
+        vezesArea[k] = (vezesArea[k] ?? 0) + 1;
+        return;
+      }
+      (usadoNoDia[e.data] ??= new Set()).add(e.membro_id);
       vezes[e.membro_id] = (vezes[e.membro_id] ?? 0) + 1;
     });
     const indisponivel = new Set((indData ?? []).map((i: any) => `${i.membro_id}|${i.data}`));
@@ -2234,7 +2279,7 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
     // pra area que mais depende dele.
     const poolPorArea: Record<string, string[]> = {};
     areas.forEach(a => { poolPorArea[a.id] = voluntarios.filter(v => v.area_id === a.id).map(v => v.membro_id); });
-    const areasOrdenadas = [...areas].sort((a, b) =>
+    const areasOrdenadas = [...areasGerar].sort((a, b) =>
       (poolPorArea[a.id].length - poolPorArea[b.id].length) || a.nome.localeCompare(b.nome));
     // Unidades de cada area: [pessoa] ou [pessoa, pessoa] (dupla).
     const unidadesPorArea: Record<string, string[][]> = {};
@@ -2266,10 +2311,14 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
         if (!unidades.length) return;
         // Quem serviu menos vem primeiro; empate: quem serviu ha mais tempo.
         // Numa dupla vale a pessoa da dupla que serviu mais.
-        const vezesU = (u: string[]) => Math.max(...u.map(id => vezes[id] ?? 0));
-        const ultimaU = (u: string[]) => u.map(id => ultimaVez[id] ?? '').sort().reverse()[0];
+        const livre = !!area.sem_conflito;
+        const naArea = usadoNaAreaDia[`${area.id}|${data}`] ?? new Set<string>();
+        const vezesDe = (id: string) => (livre ? vezesArea[`${area.id}|${id}`] : vezes[id]) ?? 0;
+        const ultimaDe = (id: string) => (livre ? ultimaVezArea[`${area.id}|${id}`] : ultimaVez[id]) ?? '';
+        const vezesU = (u: string[]) => Math.max(...u.map(vezesDe));
+        const ultimaU = (u: string[]) => u.map(ultimaDe).sort().reverse()[0];
         const candidatos = unidades
-          .filter(u => u.every(id => !usadosHoje.has(id) && !indisponivel.has(`${id}|${data}`)))
+          .filter(u => u.every(id => !naArea.has(id) && (livre || !usadosHoje.has(id)) && !indisponivel.has(`${id}|${data}`)))
           .sort((a, b) =>
             (vezesU(a) - vezesU(b))
             || ultimaU(a).localeCompare(ultimaU(b))
@@ -2296,9 +2345,15 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
         }
         vagasSemNinguem += precisa - escolhidos.length;
         escolhidos.forEach(id => {
-          usadosHoje.add(id);
-          vezes[id] = (vezes[id] ?? 0) + 1;
-          ultimaVez[id] = data;
+          if (livre) {
+            const k = `${area.id}|${id}`;
+            vezesArea[k] = (vezesArea[k] ?? 0) + 1;
+            ultimaVezArea[k] = data;
+          } else {
+            usadosHoje.add(id);
+            vezes[id] = (vezes[id] ?? 0) + 1;
+            ultimaVez[id] = data;
+          }
           novas.push({ area_id: area.id, membro_id: id, data, gerado_automaticamente: true, criado_por: userId });
         });
       });
@@ -2389,6 +2444,24 @@ function GerarEscalaModal({ visible, areas, voluntarios, userId, onClose, onGera
                 )}
               </TouchableOpacity>
             ))}
+
+            <Text style={[s.sectionLabel, { marginTop: 14 }]}>
+              {t('admin.escalaAreasParaGerar', { n: areasSel.size })}
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {areas.map(a => {
+                const on = areasSel.has(a.id);
+                return (
+                  <TouchableOpacity key={a.id}
+                    onPress={() => setAreasSel(prev => { const n = new Set(prev); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, borderWidth: 1,
+                      borderColor: on ? C.purple : C.border, backgroundColor: on ? C.purple + '18' : 'transparent' }}>
+                    <Ionicons name={on ? 'checkbox' : 'square-outline'} size={16} color={on ? C.purple : C.textDim} />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: on ? C.text : C.textDim }}>{a.nome}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             <View style={[mo.fieldWrap, { marginTop: 14 }]}>
               <Text style={mo.fieldLabel}>{t('admin.escalaAdicionarData')}</Text>

@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { nomeCurto } from '../lib/nomeCurto';
 import { useAuth } from '../lib/useAuth';
 
 const C = {
@@ -17,6 +18,23 @@ const C = {
 };
 
 type Indisponivel = { id: string; data: string };
+
+// Escala Geral: cada area tem sua cor e icone, iguais em todas as datas
+// (pedido do Marcos, 23/10 — card por area, nome da area em cima e as
+// pessoas uma embaixo da outra).
+const CORES_AREA = ['#2563EB', '#C8960A', '#059669', '#9333EA', '#DC2626', '#0891B2', '#DB2777', '#4F46E5', '#65A30D', '#EA580C'];
+function iconeDaArea(nome: string): keyof typeof Ionicons.glyphMap {
+  const n = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (n.includes('cantina')) return 'cafe';
+  if (n.includes('recep')) return 'hand-left';
+  if (n.includes('diacon')) return 'people';
+  if (n.includes('obreiro')) return 'shield-checkmark';
+  if (n.includes('infantil') || n.includes('kids')) return 'happy';
+  if (n.includes('transmiss') || n.includes('video')) return 'videocam';
+  if (n.includes('midia') || n.includes('som')) return 'images';
+  if (n.includes('louvor') || n.includes('banda')) return 'musical-notes';
+  return 'ribbon';
+}
 
 // Data de calendario LOCAL (nao `toISOString`, que converte pra UTC e no
 // horario de verao britanico joga a meia-noite pro dia anterior).
@@ -244,6 +262,9 @@ export default function EscalasScreen() {
     return acc;
   }, {});
   const datasOrdenadas = Object.keys(porData).sort();
+  const corDaArea: Record<string, string> = {};
+  [...new Set(designacoes.map(d => d.escala_areas?.nome ?? ''))].sort((a, b) => a.localeCompare(b))
+    .forEach((nome, i) => { corDaArea[nome] = CORES_AREA[i % CORES_AREA.length]; });
 
   if (loading) {
     return (
@@ -322,24 +343,48 @@ export default function EscalasScreen() {
             <Text style={s.emptyMsg}>{t('escalas.semDesignacoesGeral')}</Text>
           </View>
         ) : (
-          datasOrdenadas.map(data => (
-            <View key={data} style={s.dataGroup}>
-              <Text style={s.dataGroupTitle}>{formatDataLonga(data)}</Text>
-              <View style={[s.card, s.cardLista]}>
-                {porData[data].map((d, idx) => (
-                  <View key={d.id} style={[s.areaRow, idx > 0 && s.areaRowBorder]}>
-                    <Text style={s.areaRowNome}>{d.escala_areas?.nome ?? ''}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={s.areaRowPessoa}>{d.members ? `${d.members.nome} ${d.members.sobrenome ?? ''}` : ''}</Text>
-                      {d.membro_id === meuMembroId && (
-                        <View style={s.voceBadge}><Text style={s.voceBadgeText}>{t('escalas.voceBadge')}</Text></View>
-                      )}
-                    </View>
-                  </View>
-                ))}
+          datasOrdenadas.map(data => {
+            // Agrupa por area, em ordem alfabetica; pessoas em ordem de nome.
+            const porArea: Record<string, Designacao[]> = {};
+            porData[data].forEach(d => { (porArea[d.escala_areas?.nome ?? ''] ??= []).push(d); });
+            const nomesArea = Object.keys(porArea).sort((a, b) => a.localeCompare(b));
+            return (
+              <View key={data} style={s.dataGroup}>
+                <View style={s.dataBanner}>
+                  <Ionicons name="calendar" size={16} color={C.accent} />
+                  <Text style={s.dataBannerText}>{formatDataLonga(data)}</Text>
+                </View>
+                <View style={s.areaGrid}>
+                  {nomesArea.map(nome => {
+                    const cor = corDaArea[nome] ?? C.primary;
+                    return (
+                      <View key={nome} style={[s.areaCard, { borderTopColor: cor, backgroundColor: cor + '0D' }]}>
+                        <View style={s.areaCardHead}>
+                          <View style={[s.areaIcon, { backgroundColor: cor }]}>
+                            <Ionicons name={iconeDaArea(nome)} size={13} color="#fff" />
+                          </View>
+                          <Text style={[s.areaCardNome, { color: cor }]} numberOfLines={2}>{nome}</Text>
+                        </View>
+                        {porArea[nome].map(d => {
+                          const souEu = d.membro_id === meuMembroId;
+                          return (
+                            <View key={d.id} style={s.pessoaRow}>
+                              <Text style={[s.pessoaNome, souEu && { color: C.accent, fontWeight: '800' }]}>
+                                {d.members ? nomeCurto(d.members.nome, d.members.sobrenome) : ''}
+                              </Text>
+                              {souEu && (
+                                <View style={s.voceBadge}><Text style={s.voceBadgeText}>{t('escalas.voceBadge')}</Text></View>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
       <IndisponibilidadeEscalaModal
@@ -395,14 +440,16 @@ const s = StyleSheet.create({
   cardIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', margin: 12 },
   cardData: { fontSize: 15, fontWeight: '700', color: C.text, textTransform: 'capitalize' },
   cardArea: { fontSize: 13, color: C.accent, fontWeight: '600', marginTop: 2 },
-  // Escala Geral: as areas do dia ficam uma embaixo da outra (o `card` e em linha).
-  cardLista: { flexDirection: 'column', alignItems: 'stretch' },
-  dataGroup: { marginBottom: 16 },
-  dataGroupTitle: { fontSize: 13, fontWeight: '700', color: C.text, textTransform: 'capitalize', marginBottom: 8, marginLeft: 4 },
-  areaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 },
-  areaRowBorder: { borderTopWidth: 1, borderTopColor: C.border },
-  areaRowNome: { fontSize: 13, color: C.textMuted, fontWeight: '600', flex: 1 },
-  areaRowPessoa: { fontSize: 14, color: C.text, fontWeight: '600' },
+  dataGroup: { marginBottom: 22 },
+  dataBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.primary, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10 },
+  dataBannerText: { fontSize: 15, fontWeight: '800', color: '#fff', textTransform: 'capitalize', flex: 1 },
+  areaGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 },
+  areaCard: { width: '48.5%', backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border, borderTopWidth: 4, padding: 10 },
+  areaCardHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  areaIcon: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  areaCardNome: { flex: 1, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.3 },
+  pessoaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, paddingVertical: 3 },
+  pessoaNome: { fontSize: 14, fontWeight: '600', color: C.text, flexShrink: 1 },
   voceBadge: { backgroundColor: C.accent + '22', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
   voceBadgeText: { fontSize: 10, fontWeight: '800', color: C.accent },
 });

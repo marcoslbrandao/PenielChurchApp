@@ -1275,7 +1275,12 @@
     "liderAreaTirarMsg": "{{nome}} deja de ser líder de {{area}} y ya no podrá editar su escala. Sigue en el equipo.",
     "liderAreaTirar": "Quitar",
     "liderAreaCartao": "Líder: {{nomes}}",
-    "liderAreaCartaoNenhum": "Sin líder"
+    "liderAreaCartaoNenhum": "Sin líder",
+    "semConflitoTitulo": "Puede servir en otra escala en el mismo culto",
+    "semConflitoLigado": "Activado: quien está en esta área también puede estar en otra área en el mismo culto (ej.: Cantina).",
+    "semConflitoDesligado": "Desactivado: quien está aquí no entra en otra área en el mismo culto.",
+    "escalaAreasParaGerar": "Áreas a generar ({{n}})",
+    "escalaNenhumaArea": "Marca al menos un área para generar."
   },
   "membros": {
     "buscarPeloNome": "Buscar por nombre...",

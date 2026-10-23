@@ -1275,7 +1275,12 @@
     "liderAreaTirarMsg": "{{nome}} will no longer lead {{area}} and won't be able to edit its rota. They stay on the team.",
     "liderAreaTirar": "Remove",
     "liderAreaCartao": "Leader: {{nomes}}",
-    "liderAreaCartaoNenhum": "No leader"
+    "liderAreaCartaoNenhum": "No leader",
+    "semConflitoTitulo": "Can serve in another rota at the same service",
+    "semConflitoLigado": "On: people in this area can also be on another area's rota at the same service (e.g. Canteen).",
+    "semConflitoDesligado": "Off: people rostered here are not put in another area at the same service.",
+    "escalaAreasParaGerar": "Areas to generate ({{n}})",
+    "escalaNenhumaArea": "Select at least one area to generate."
   },
   "membros": {
     "buscarPeloNome": "Search by name...",

@@ -23,6 +23,7 @@ import { useVersiculoDoDia, parseReferencia, getTextoVersiculo, getReferenciaVer
 import { useCampoTraduzido } from '../lib/useTraducao';
 import { useTheme } from '../lib/theme';
 import { useAcesso } from '../lib/acesso';
+import { destinoDoAviso, Destino } from '../lib/destinoNotificacao';
 import { WebView } from 'react-native-webview';
 import { extractYoutubeId, youtubeThumbnail } from '../lib/youtube';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -68,7 +69,7 @@ function resolverLivroDoVersiculo(ref: string): { slug: string; capitulo: number
 
 // ─── Busca ────────────────────────────────────────────────────────────────────
 type AvisoResult = { id: string; titulo: string; texto: string; data: string; tipo: string;
-  cta_texto?: string | null; cta_url?: string | null };
+  cta_texto?: string | null; cta_url?: string | null; grupo?: string | null; origem?: string | null };
 
 // Linha de resultado de aviso na busca — título traduzido pro idioma do app.
 function AvisoResultRow({ aviso, onPress }: { aviso: AvisoResult; onPress: () => void }) {
@@ -150,14 +151,16 @@ const ba = StyleSheet.create({
   botaoTexto: { fontSize: 13, fontWeight: '700', color: '#fff' },
 });
 
-function NotifAvisoCard({ aviso, onRemover }: { aviso: AvisoResult; onRemover: () => void }) {
+// `onAbrir` (26/10/2026): o card leva ao lugar do aviso — o link (Zoom,
+// YouTube), o grupo ou o chat do grupo. Sem destino, fica como era.
+function NotifAvisoCard({ aviso, onRemover, onAbrir }: { aviso: AvisoResult; onRemover: () => void; onAbrir?: () => void }) {
   const { i18n } = useTranslation();
   const titulo = useCampoTraduzido(aviso.titulo, 'avisos', aviso.id, 'titulo');
   const texto = useCampoTraduzido(aviso.texto, 'avisos', aviso.id, 'texto');
   const locale = LOCALE_POR_IDIOMA[i18n.language] ?? 'pt-BR';
   return (
     <SwipeParaRemover onRemover={onRemover}>
-      <View style={sm.notifCard}>
+      <TouchableOpacity style={sm.notifCard} activeOpacity={onAbrir ? 0.8 : 1} onPress={onAbrir} disabled={!onAbrir}>
         <View style={sm.notifIcone}>
           <Ionicons name="megaphone-outline" size={16} color="#F5C842" />
         </View>
@@ -175,7 +178,10 @@ function NotifAvisoCard({ aviso, onRemover }: { aviso: AvisoResult; onRemover: (
         >
           <Ionicons name="trash-outline" size={16} color="rgba(255,255,255,0.45)" />
         </TouchableOpacity>
-      </View>
+        {onAbrir && (
+          <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.35)" style={{ alignSelf: 'center', marginLeft: 2 }} />
+        )}
+      </TouchableOpacity>
     </SwipeParaRemover>
   );
 }
@@ -927,6 +933,18 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   // dispensarAviso salva no Supabase (por conta, permanente entre
   // reinstalações) quando a pessoa está logada, além de local — ver
   // lib/notificacoesLidas.ts.
+  const abrirDestinoDoAviso = (destino: Destino) => {
+    if (destino.url) {
+      Linking.openURL(destino.url).catch(() => Alert.alert(t('common.erro'), t('home.erroAbrirLink')));
+      return;
+    }
+    setNotifModalVisible(false);
+    // Daqui de dentro das abas, a rota é a aba de destino (ex.: Membros).
+    const p = destino.params;
+    if (destino.nome === 'MainTabs' && p?.screen) navigation?.navigate(p.screen, p.params);
+    else navigation?.navigate(destino.nome, p);
+  };
+
   const removerNotificacao = async (id: string) => {
     setNotifAvisos(prev => prev.filter(a => a.id !== id));
     const novos = await dispensarAviso(id, user?.id);
@@ -1373,9 +1391,17 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
             ) : (
               <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false}>
                 <Text style={sm.swipeHint}>{t('home.deslizeRemover')}</Text>
-                {notifAvisos.map(a => (
-                  <NotifAvisoCard key={a.id} aviso={a} onRemover={() => removerNotificacao(a.id)} />
-                ))}
+                {notifAvisos.map(a => {
+                  const destino = destinoDoAviso(a, { ehMembro, ehAdmin, logado: isLoggedIn });
+                  return (
+                    <NotifAvisoCard
+                      key={a.id}
+                      aviso={a}
+                      onRemover={() => removerNotificacao(a.id)}
+                      onAbrir={destino ? () => abrirDestinoDoAviso(destino) : undefined}
+                    />
+                  );
+                })}
                 <View style={{ height: 30 }} />
               </ScrollView>
             )}

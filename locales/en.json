@@ -351,7 +351,14 @@
     "infantilNome": "Children's Ministry",
     "infantilSubtitulo": "Peniel Kids · Sundays",
     "infantilDescricao": "The group for everyone serving in the Children's Ministry: notices, meetings, classroom materials and the team chat.",
-    "infantilAbrirKids": "This week's lesson for families: story, video, song and activity"
+    "infantilAbrirKids": "This week's lesson for families: story, video, song and activity",
+    "notificarEncontro": {
+      "titulo": "Send notification",
+      "pergunta": "Notify the group about \"{{titulo}}\"? Everyone gets a notification now.",
+      "enviar": "Send",
+      "enviada": "Notification sent",
+      "erro": "Could not send"
+    }
   },
   "devocionais": {
     "titulo": "Devotionals",

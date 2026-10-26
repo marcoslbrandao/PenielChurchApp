@@ -351,7 +351,14 @@
     "infantilNome": "Ministère des enfants",
     "infantilSubtitulo": "Peniel Kids · dimanches",
     "infantilDescricao": "Le groupe de ceux qui servent au ministère des enfants : annonces, rencontres, supports de la salle et le chat de l'équipe.",
-    "infantilAbrirKids": "Leçon de la semaine pour les familles : histoire, vidéo, chant et activité"
+    "infantilAbrirKids": "Leçon de la semaine pour les familles : histoire, vidéo, chant et activité",
+    "notificarEncontro": {
+      "titulo": "Envoyer une notification",
+      "pergunta": "Prévenir le groupe pour « {{titulo}} » ? Tout le monde reçoit une notification maintenant.",
+      "enviar": "Envoyer",
+      "enviada": "Notification envoyée",
+      "erro": "Envoi impossible"
+    }
   },
   "devocionais": {
     "titulo": "Dévotions",

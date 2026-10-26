@@ -182,12 +182,14 @@ function formatDataDevocional(iso: string, lang: string = 'pt'): string {
 
 // Card de evento do grupo — título e descrição (digitados pelo admin em
 // português) traduzidos automaticamente pro idioma do app.
-function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar, onAbrir, podeChamada, onChamada, semDescricao }: {
+function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar, onNotificar, onAbrir, podeChamada, onChamada, semDescricao }: {
   evento: GrupoEvento; tag: { bg: string; text: string; label: string };
   // Aulas anteriores: a descrição é o texto do Zoom (ID e senha), que não
   // serve para nada numa aula que já passou.
   semDescricao?: boolean;
   podeEditar?: boolean; onEditar?: () => void; onApagar?: () => void;
+  // Criar encontro não notifica ninguém (26/10). O sino é o aviso à mão.
+  onNotificar?: () => void;
   // Tocar no card abre a aula (roteiro, material, perguntas, anotações).
   // A chamada é só do líder, e só aparece onde a presença está ligada.
   onAbrir?: () => void; podeChamada?: boolean; onChamada?: () => void;
@@ -212,6 +214,11 @@ function GrupoEventoCard({ evento, tag, podeEditar, onEditar, onApagar, onAbrir,
               mas um ano digitado errado ficaria ali para sempre. */}
           {podeEditar && (
             <>
+              {onNotificar && (
+                <TouchableOpacity onPress={onNotificar} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+                  <Ionicons name="notifications-outline" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity onPress={onEditar} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
                 <Ionicons name="create-outline" size={16} color={C.textMuted} />
               </TouchableOpacity>
@@ -688,6 +695,25 @@ export default function GruposScreen() {
   // pode: as policies de `grupo_eventos`, `shorts_videos`, `grupo_arquivos` e
   // `devocionais` liberam o admin e o líder DAQUELE grupo, e mais ninguém —
   // esconder o botão é conveniência, não é a trava.
+  // Aviso manual de um encontro. A RPC checa se é líder do grupo ou admin.
+  const confirmarNotificacao = (evento: GrupoEvento) => {
+    Alert.alert(
+      t('grupos.notificarEncontro.titulo'),
+      t('grupos.notificarEncontro.pergunta', { titulo: evento.titulo }),
+      [
+        { text: t('common.cancelar'), style: 'cancel' },
+        {
+          text: t('grupos.notificarEncontro.enviar'),
+          onPress: async () => {
+            const { error } = await supabase.rpc('notificar_encontro', { p_evento: evento.id });
+            if (error) Alert.alert(t('grupos.notificarEncontro.erro'), error.message);
+            else Alert.alert(t('grupos.notificarEncontro.enviada'));
+          },
+        },
+      ],
+    );
+  };
+
   const confirmarRemocao = (tabela: string, id: string, titulo: string, geradoAutomaticamente = false) => {
     Alert.alert(
       t('grupos.removerConteudoTitulo'),
@@ -1074,6 +1100,7 @@ export default function GruposScreen() {
                   podeEditar={souLiderDesteGrupo}
                   onEditar={() => { setEncontroEditando(evento); setAdminModalVisible(true); }}
                   onApagar={() => confirmarRemocao('grupo_eventos', evento.id, evento.titulo, evento.geradoAutomaticamente)}
+                  onNotificar={() => confirmarNotificacao(evento)}
                   onAbrir={ferramentasAula ? () => setAulaAberta(evento) : undefined}
                   // A aula de HOJE ainda está nesta lista (o filtro é `>= hoje`),
                   // e é logo depois dela que o líder faz a chamada. Sem isto ele

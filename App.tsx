@@ -218,14 +218,26 @@ function RoteadorDeNotificacoes({ navPronta }: { navPronta: boolean }) {
     // sininho nos primeiros segundos depois de abrir o app — o mesmo engano
     // que a guarda de `carregandoPapel` evita nos atalhos da Home.
     if (!pendente || !navPronta || carregando || !navigationRef.isReady()) return;
-    const destino = destinoDaNotificacao(pendente, { ehMembro, ehAdmin, logado: isLoggedIn });
+    const dados = pendente;
     setPendente(null);
-    if (!destino) return;
+    (async () => {
+      // O push de aviso traz só o `id`. Se o aviso tem link (Zoom, YouTube),
+      // busca aqui — vale também para pushes que já estão no celular.
+      let d = dados;
+      if (d?.type === 'aviso' && d?.id && !d?.grupo && !d?.url) {
+        const { data: av } = await supabase.from('avisos').select('cta_url').eq('id', d.id).maybeSingle();
+        if (av?.cta_url) d = { ...d, url: av.cta_url };
+      }
+      const destino = destinoDaNotificacao(d, { ehMembro, ehAdmin, logado: isLoggedIn });
+      if (!destino) return;
+      if (destino.url) { Linking.openURL(destino.url).catch(() => {}); return; }
+      if (!navigationRef.isReady()) return;
     // O ref é criado sem tipagem de rotas (`createNavigationContainerRef()`
     // sem parâmetro), então a sobrecarga de dois argumentos do `navigate`
     // não aceita `never` no segundo. O cast é na função, não nos valores:
     // assim `nome` e `params` continuam conferidos aqui dentro.
-    (navigationRef.navigate as (nome: string, params?: any) => void)(destino.nome, destino.params);
+      (navigationRef.navigate as (nome: string, params?: any) => void)(destino.nome!, destino.params);
+    })();
   }, [pendente, navPronta, carregando, ehMembro, ehAdmin, isLoggedIn]);
 
   return null;

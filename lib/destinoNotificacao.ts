@@ -27,9 +27,13 @@ export type DadosNotificacao = {
   grupo?: string | null;
   origem?: string | null;
   id?: string | null;
+  // Link do aviso (`avisos.cta_url`, ex.: o Zoom). Com ele, o toque abre o
+  // link direto em vez do sininho (26/10/2026).
+  url?: string | null;
 };
 
-export type Destino = { nome: string; params?: any };
+// `url` = abrir um link fora do app; senão é uma rota do app.
+export type Destino = { nome: string; params?: any; url?: undefined } | { url: string; nome?: undefined; params?: undefined };
 
 /** O sininho da Home — destino neutro e sempre acessível. */
 const SININHO: Destino = { nome: 'MainTabs', params: { screen: 'Inicio', params: { abrirSininho: true } } };
@@ -49,6 +53,10 @@ export function destinoDaNotificacao(
   if (!dados?.type) return null;
   const { type, grupo, origem } = dados;
   const podeMembros = acesso.logado && acesso.ehMembro;
+
+  // Aviso com link (Zoom da Reunião de Oração / Estudo Bíblico, YouTube do
+  // culto): "Toque para entrar" tem de entrar mesmo.
+  if (dados.url) return { url: dados.url };
 
   // Conteúdo de grupo — aviso, devocional ou short com `grupo` preenchido.
   // Tudo mora na mesma tela (abas dentro de Grupos), então o grupo vai como
@@ -79,7 +87,10 @@ export function destinoDaNotificacao(
       // por isso `abaMembros`, e por isso o gate: quem perdeu o acesso de
       // membro e toca num push de ontem cairia numa aba que não existe mais
       // para ele, e o React Navigation simplesmente não navegaria.
-      return podeMembros ? abaMembros('Banda') : SININHO;
+      if (!podeMembros) return SININHO;
+      // Push do chat da Banda já abre o chat (26/10/2026). `Date.now()` para
+      // dois toques seguidos não serem o mesmo valor e o efeito disparar.
+      return abaMembros('Banda', origem === 'chat' ? { abrirChat: Date.now() } : undefined);
     case 'admin_contato':
     case 'admin_oracao':
     case 'admin_denuncia':
@@ -106,4 +117,19 @@ export function destinoDaNotificacao(
       // melhor que navegar para lugar errado.
       return null;
   }
+}
+
+/**
+ * Toque num card do sininho (o mural de avisos). Só tem destino o aviso que
+ * leva a algum lugar: com link, ou de um grupo. Aviso geral sem link já está
+ * sendo lido ali mesmo — devolve null e o card não fica tocável.
+ */
+export function destinoDoAviso(
+  aviso: { grupo?: string | null; origem?: string | null; cta_url?: string | null },
+  acesso: { ehMembro: boolean; logado: boolean; ehAdmin?: boolean },
+): Destino | null {
+  if (aviso.cta_url) return { url: aviso.cta_url };
+  if (!aviso.grupo) return null;
+  if (!(acesso.logado && acesso.ehMembro)) return null;
+  return destinoDaNotificacao({ type: 'aviso', grupo: aviso.grupo, origem: aviso.origem }, acesso);
 }

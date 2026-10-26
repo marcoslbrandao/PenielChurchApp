@@ -1,25 +1,21 @@
 #!/bin/bash
-# Publica a rodada de 26/10/2026: lista de Membros = acesso de membro; ofertas do link do Stripe com nome de quem pagou.
-# ANTES: colar "Claude outputs/membros-acesso-colar-no-sql-editor.sql" no SQL Editor do Supabase e rodar.
+# Publica a rodada de 26/10/2026 (tarde): criar encontro nao notifica mais; sino no card; tocar na notificacao leva ao lugar certo.
+# ANTES: colar "Claude outputs/encontro-colar-no-sql-editor.sql" no SQL Editor do Supabase e rodar.
 cd "$(dirname "$0")/.."
 LOG=".vscode/publicar.log"
 exec > >(tee "$LOG") 2>&1
 echo "== inicio $(date)"
-MSG="fix(membros): quem esta na lista de Membros tem acesso; vincular conta libera o acesso; ofertas do link do Stripe com nome de quem pagou
+MSG="fix(notificacoes): encontro nao notifica sozinho; sino no card; toque abre chat da Banda, link do aviso e cards do sininho; culto ao vivo com link e horario de inverno
 
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01NuA4tKb7o3w8fxNNWRWmKS"
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 limpar_locks() { for f in .git/index.lock .git/HEAD.lock .git/objects/maintenance.lock; do [ -e "$f" ] && mv "$f" "$f.old-$(date +%s)"; done; }
 
-echo "== 1/3 webhook do Stripe"
-npx supabase functions deploy stripe-webhook --no-verify-jwt || echo "AVISO: deploy do stripe-webhook falhou (o resto continua)"
-
-echo "== 2/3 git do app"
+echo "== 1/2 git do app"
 limpar_locks
-git add supabase/migrations/20261026140000_lista_de_membros_tem_acesso.sql supabase/functions/stripe-webhook/index.ts screens/AdminScreen.tsx locales/pt.json locales/en.json locales/es.json locales/fr.json .vscode/publicar-ajustes.sh
+git add supabase/migrations/20261026170000_encontro_nao_notifica_sozinho.sql supabase/migrations/20261026180000_culto_ao_vivo_com_link.sql screens/GruposScreen.tsx screens/HomeScreen.tsx screens/BandaScreen.tsx lib/destinoNotificacao.ts App.tsx locales/pt.json locales/en.json locales/es.json locales/fr.json .vscode/publicar-ajustes.sh
 git commit -m "$MSG" || echo "(nada novo para commitar)"
 git push origin main || { echo "FALHOU: git push do app"; exit 1; }
 
-echo "== 3/3 eas update"
-npx eas update --branch production --environment production --message "Ofertas: nome de quem pagou pelo link do Stripe" --non-interactive || { echo "FALHOU: eas update"; exit 1; }
+echo "== 2/2 eas update"
+npx eas update --branch production --environment production --message "Notificacoes levam ao lugar certo; encontros sem push automatico" --non-interactive || { echo "FALHOU: eas update"; exit 1; }
 echo "== TUDO PUBLICADO $(date)"

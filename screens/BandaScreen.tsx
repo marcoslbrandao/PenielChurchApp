@@ -4,7 +4,7 @@ import {
   TextInput, FlatList, Linking, Alert, KeyboardAvoidingView, Image,
   Platform, StatusBar, Animated, Modal, ActivityIndicator, RefreshControl, Keyboard, AppState,
 } from 'react-native';
-import { useFocusEffect, useIsFocused } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused, useRoute, useNavigation } from '@react-navigation/native';
 import ChatGeralModal from '../components/ChatGeralModal';
 import SeloNovas from '../components/SeloNovas';
 import { fonteBanda } from '../lib/chatFonte';
@@ -3445,6 +3445,15 @@ function BandaMain() {
   // pra assinar o que eu mando.
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('hoje');
+  // Toque no push do chat da Banda abre direto a aba Chat (26/10/2026).
+  // Consome o parâmetro para não reabrir o chat ao voltar para a Banda.
+  const rotaBanda = useRoute<any>();
+  const navBanda = useNavigation<any>();
+  useEffect(() => {
+    if (!rotaBanda.params?.abrirChat) return;
+    navBanda.setParams({ abrirChat: undefined });
+    setActiveTab('chat');
+  }, [rotaBanda.params?.abrirChat]);
   const [songs, setSongs] = useState<Song[]>([]);
   const [cultos, setCultos] = useState<Culto[]>([]);
   const [ensaios, setEnsaios] = useState<Ensaio[]>([]);

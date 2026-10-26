@@ -67,8 +67,31 @@ Deno.serve(async (req) => {
   const pi = evento.data.object as Stripe.PaymentIntent;
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  const userId = pi.metadata?.user_id || null;
+  let userId: string | null = pi.metadata?.user_id || null;
   const tipo = pi.metadata?.tipo || 'oferta';
+
+  // Quem pagou. Pelo app logado vem o user_id; pelo LINK do Stripe (QR code
+  // da live, site) nao vem nada — entao guardamos o nome e o e-mail que a
+  // pessoa digitou na pagina do Stripe e, se o e-mail for de uma conta do
+  // app, ligamos a oferta a ela. Sem isto o relatorio so mostrava
+  // "Membro removido".
+  let paganteNome: string | null = null;
+  let paganteEmail: string | null = pi.receipt_email ?? null;
+  try {
+    if (pi.latest_charge) {
+      const charge = typeof pi.latest_charge === 'string'
+        ? await stripe.charges.retrieve(pi.latest_charge)
+        : pi.latest_charge;
+      paganteNome = charge.billing_details?.name ?? null;
+      paganteEmail = charge.billing_details?.email ?? charge.receipt_email ?? paganteEmail;
+    }
+  } catch (err) {
+    console.error('Nao deu para ler o pagante no Stripe:', err);
+  }
+  if (!userId && paganteEmail) {
+    const { data: conta } = await admin.rpc('perfil_por_email', { p_email: paganteEmail });
+    if (conta) userId = conta as string;
+  }
 
   const { error } = await admin.from('offerings').insert({
     user_id: userId,
@@ -78,13 +101,29 @@ Deno.serve(async (req) => {
     metodo: 'stripe',
     data: new Date(pi.created * 1000).toISOString().slice(0, 10),
     stripe_payment_intent: pi.id,
+    pagante_nome: paganteNome,
+    pagante_email: paganteEmail,
   });
 
   if (error) {
     // 23505 = violação de índice único. É o Stripe reenviando um evento que
     // já foi gravado (ele reenvia até receber 200) — não é problema, e
     // responder erro faria ele reenviar de novo, para sempre.
+    // Aproveita o reenvio para completar quem pagou nas ofertas antigas que
+    // ficaram sem nome (Stripe > Eventos > Reenviar).
     if ((error as { code?: string }).code === '23505') {
+      const { data: antiga } = await admin.from('offerings')
+        .select('id, user_id, pagante_nome, pagante_email')
+        .eq('stripe_payment_intent', pi.id).maybeSingle();
+      if (antiga) {
+        const completar: Record<string, string> = {};
+        if (!antiga.user_id && userId) completar.user_id = userId;
+        if (!antiga.pagante_nome && paganteNome) completar.pagante_nome = paganteNome;
+        if (!antiga.pagante_email && paganteEmail) completar.pagante_email = paganteEmail;
+        if (Object.keys(completar).length) {
+          await admin.from('offerings').update(completar).eq('id', antiga.id);
+        }
+      }
       return new Response(JSON.stringify({ duplicado: pi.id }), { status: 200 });
     }
     console.error('Falha ao gravar a oferta:', error, 'payment_intent:', pi.id);

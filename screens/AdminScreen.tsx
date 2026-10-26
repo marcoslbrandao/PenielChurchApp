@@ -53,6 +53,7 @@ type Stats = {
 type Offering = {
   id: string; user_id: string; valor: number; tipo: string; metodo: string | null;
   data: string; observacoes: string | null;
+  pagante_nome?: string | null; pagante_email?: string | null;
   profiles?: { full_name: string | null } | null;
 };
 
@@ -3709,7 +3710,7 @@ export default function AdminScreen() {
                 offerings.map(o => (
                   <View key={o.id} style={s.inviteCard}>
                     <View style={s.inviteLeft}>
-                      <Text style={s.inviteCode}>{o.profiles?.full_name ?? 'Membro removido'}</Text>
+                      <Text style={s.inviteCode}>{o.profiles?.full_name ?? o.pagante_nome ?? o.pagante_email ?? t('admin.ofertaSemConta')}</Text>
                       <View style={s.inviteMetaRow}>
                         <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
                           <Text style={[s.statusBadgeText, { color: C.purple }]}>

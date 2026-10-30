@@ -247,7 +247,8 @@
     "notificacoesBloqueadasTitulo": "Notificações desligadas no celular",
     "notificacoesBloqueadasTexto": "Para receber os avisos da Peniel, ative as notificações do app nos Ajustes do seu celular.",
     "abrirAjustes": "Abrir Ajustes",
-    "nomeVemDaFicha": "O nome vem do seu cadastro de membro. Para mudar, vá em Meu Cadastro."
+    "nomeVemDaFicha": "O nome vem do seu cadastro de membro. Para mudar, vá em Meu Cadastro.",
+    "notificacoesChatIgreja": "Notificações do Chat da Igreja"
   },
   "grupos": {
     "titulo": "Grupos",

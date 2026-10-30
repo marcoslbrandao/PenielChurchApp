@@ -6,7 +6,20 @@
       "type": "shell",
       "command": "bash .vscode/publicar-ajustes.sh",
       "problemMatcher": [],
-      "presentation": { "reveal": "always", "panel": "new" }
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Peniel: publicar site",
+      "type": "shell",
+      "command": "bash .vscode/publicar-site.sh",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     }
   ]
 }

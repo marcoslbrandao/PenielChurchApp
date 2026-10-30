@@ -9,6 +9,8 @@
 //       título, descrição, horário, público, auto-start/stop, categoria
 //       Sem fins lucrativos, idioma pt-BR, thumb e playlist dos cultos.
 //   { acao: 'remover', id }   apaga o live agendado do YouTube.
+//   { acao: 'fim_da_live' }   (só cron) desliga a tradução ao vivo quando a
+//       live do dia terminou no YouTube, ou se ficou ligada mais de 4 h.
 //
 // No domingo, no OBS, a equipe escolhe "Selecionar transmissão existente"
 // e pega este live — assim não nasce um segundo live "Peniel Church Reading".
@@ -21,6 +23,7 @@
 // Não precisa da auditoria do Google: live agendado não é upload de vídeo.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { chamadaAutorizada } from '../_shared/hook-auth.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -285,6 +288,45 @@ async function remover(admin: ReturnType<typeof createClient>, c: Culto) {
   return { ok: true };
 }
 
+// ─── Fim da live → desliga a tradução (30/10/2026) ──────────────────────────
+// O cron `traducao-fim-da-live` chama a cada 5 min, só enquanto a tradução
+// está ligada. Desligar = gravar ativa=false com atualizado_em próprio (o
+// mesmo que o botão "Finalizar" do Admin faz); o serviço no Mac mini escuta
+// pelo Realtime e para a captura.
+const LIMITE_HORAS_TRADUCAO = 4;
+
+async function fimDaLive(admin: ReturnType<typeof createClient>) {
+  const { data: t } = await admin.from('traducao_ao_vivo')
+    .select('ativa, iniciado_em, atualizado_em').eq('id', 1).maybeSingle();
+  if (!t?.ativa) return { ok: true, acao: 'nada', motivo: 'tradução já desligada' };
+
+  const ligadaDesde = new Date(t.iniciado_em ?? t.atualizado_em ?? Date.now()).getTime();
+  let motivo = '';
+  if (Date.now() - ligadaDesde > LIMITE_HORAS_TRADUCAO * 3600_000) {
+    motivo = `ligada há mais de ${LIMITE_HORAS_TRADUCAO} h`;
+  } else {
+    const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date());
+    const { data: cultos } = await admin.from('cultos_semana')
+      .select('youtube_id').eq('data', hoje).not('youtube_id', 'is', null);
+    for (const c of cultos ?? []) {
+      try {
+        const r = await yt(`liveBroadcasts?part=status&id=${c.youtube_id}`);
+        const st = r.items?.[0]?.status?.lifeCycleStatus;
+        if (st === 'complete' || st === 'revoked') { motivo = `live ${c.youtube_id} ${st}`; break; }
+      } catch (e) {
+        console.error('fim_da_live: não consegui ler a live', c.youtube_id, (e as Error).message);
+      }
+    }
+  }
+  if (!motivo) return { ok: true, acao: 'nada', motivo: 'live ainda no ar' };
+
+  const { error } = await admin.from('traducao_ao_vivo')
+    .update({ ativa: false, atualizado_em: new Date().toISOString() }).eq('id', 1);
+  if (error) throw error;
+  console.log('Tradução desligada automaticamente:', motivo);
+  return { ok: true, acao: 'desligada', motivo };
+}
+
 // ─── Entrada ────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -292,6 +334,13 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'Método não suportado.' }, 405);
 
   try {
+    // Chamada do cron (sem JWT de pessoa): só a ação de fim da live.
+    const corpoBruto = await req.clone().json().catch(() => ({}));
+    if (corpoBruto?.acao === 'fim_da_live') {
+      if (!chamadaAutorizada(req)) return json({ error: 'Não autorizado.' }, 401);
+      return json(await fimDaLive(createClient(SUPABASE_URL, SERVICE_KEY)));
+    }
+
     const jwt = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
     const pessoa = createClient(SUPABASE_URL, ANON_KEY, {
       global: { headers: { Authorization: `Bearer ${jwt}` } },

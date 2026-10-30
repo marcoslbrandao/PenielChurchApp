@@ -62,18 +62,44 @@ Deno.serve(async (req) => {
 
     const dataFormatada = `${dataAlvo.slice(8, 10)}/${dataAlvo.slice(5, 7)}`;
 
-    // 3. Monta uma mensagem por token (uma pessoa pode ter mais de um device)
-    const mensagens: any[] = [];
+    // Texto do Marcos (24/10): "Graca e paz, Fulano! Lembrando que neste
+    // domingo (01/11), voce serve na Cantina. Que Deus te abencoe!"
+    // - uma mensagem por PESSOA (quem serve em 2 areas recebe uma so);
+    // - artigo certo por area (na Cantina, no Ministerio Infantil, nos Diaconos);
+    // - dia certo: domingo -> "neste domingo"; outro dia (Virada, quinta
+    //   31/12) -> "na quinta-feira".
+    const DIAS = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+    const diaSemana = new Date(`${dataAlvo}T12:00:00Z`).getUTCDay();
+    const quando = diaSemana === 0 ? `neste domingo (${dataFormatada})` : `na ${DIAS[diaSemana]} (${dataFormatada})`;
+    const comArtigo = (area: string) => {
+      const a = area.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      if (a.startsWith('diacono')) return `nos ${area}`;
+      if (a.startsWith('ministerio')) return `no ${area}`;
+      return `na ${area}`;
+    };
+
+    const porPessoa = new Map<string, { nome: string; areas: string[] }>();
     comConta.forEach((d: any) => {
-      const tokens = tokensPorUsuario.get(d.members.profile_id) ?? [];
-      const areaNome = d.escala_areas?.nome ?? 'sua área';
+      const id = d.members.profile_id;
+      const p = porPessoa.get(id) ?? { nome: String(d.members.nome ?? '').trim().split(/\s+/)[0] ?? '', areas: [] };
+      const area = d.escala_areas?.nome;
+      if (area && !p.areas.includes(area)) p.areas.push(area);
+      porPessoa.set(id, p);
+    });
+
+    // 3. Uma mensagem por token (uma pessoa pode ter mais de um aparelho)
+    const mensagens: any[] = [];
+    porPessoa.forEach((p, profileId) => {
+      const tokens = tokensPorUsuario.get(profileId) ?? [];
+      const areas = p.areas.sort((x, y) => x.localeCompare(y)).map(comArtigo).join(' e ') || 'na sua área';
+      const saudacao = p.nome ? `Graça e paz, ${p.nome}!` : 'Graça e paz!';
       tokens.forEach(token => {
         mensagens.push({
           to: token,
-          title: '📋 Você está na escala!',
-          body: `Você serve em ${areaNome} neste domingo (${dataFormatada}). Não esqueça!`,
+          title: '📋 Lembrete da escala',
+          body: `${saudacao} Lembrando que ${quando}, você serve ${areas}. Que Deus te abençoe! 🙏`,
           sound: 'default',
-          data: { type: 'escala', area: areaNome, data: dataAlvo },
+          data: { type: 'escala', data: dataAlvo },
         });
       });
     });

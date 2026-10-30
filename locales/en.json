@@ -247,7 +247,8 @@
     "notificacoesBloqueadasTitulo": "Notifications are off on your phone",
     "notificacoesBloqueadasTexto": "To get updates from Peniel, turn on notifications for the app in your phone's Settings.",
     "abrirAjustes": "Open Settings",
-    "nomeVemDaFicha": "Your name comes from your member registration. To change it, go to My Registration."
+    "nomeVemDaFicha": "Your name comes from your member registration. To change it, go to My Registration.",
+    "notificacoesChatIgreja": "Church Chat notifications"
   },
   "grupos": {
     "titulo": "Groups",

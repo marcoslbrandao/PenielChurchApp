@@ -247,7 +247,8 @@
     "notificacoesBloqueadasTitulo": "Notifications désactivées sur le téléphone",
     "notificacoesBloqueadasTexto": "Pour recevoir les annonces de Peniel, activez les notifications de l'app dans les Réglages de votre téléphone.",
     "abrirAjustes": "Ouvrir les Réglages",
-    "nomeVemDaFicha": "Votre nom vient de votre fiche de membre. Pour le modifier, allez dans Mon inscription."
+    "nomeVemDaFicha": "Votre nom vient de votre fiche de membre. Pour le modifier, allez dans Mon inscription.",
+    "notificacoesChatIgreja": "Notifications du Chat de l'Église"
   },
   "grupos": {
     "titulo": "Groupes",

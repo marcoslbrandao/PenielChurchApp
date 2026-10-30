@@ -32,6 +32,7 @@ type Devocional = {
   texto: string;
   data: string;
   grupo: string | null;
+  imagem_url?: string | null;
 };
 
 const GRUPO_LABEL_KEY: Record<string, string> = {
@@ -95,7 +96,7 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
     setLoading(true);
     let query = supabase
       .from('devocionais')
-      .select('id, titulo, versiculo, referencia, texto, data, grupo')
+      .select('id, titulo, versiculo, referencia, texto, data, grupo, imagem_url')
       .order('data', { ascending: false });
     query = grupoFiltro ? query.eq('grupo', grupoFiltro) : query.is('grupo', null);
     query.then(({ data }) => {

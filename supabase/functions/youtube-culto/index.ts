@@ -42,7 +42,7 @@ const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
 const NOME_TIPO: Record<string, string> = {
-  adoracao: 'Culto de Adoração', ceia: 'Culto da Família & Ceia', alive: 'Peniel Alive',
+  adoracao: 'Culto de Adoração', ceia: 'Culto da Família & Santa Ceia', alive: 'Peniel Alive',
   mulheres: 'Culto de Mulheres', homens: 'Culto de Homens', kids: 'Peniel Kids',
   casais: 'Culto de Casais', especial: 'Culto Especial',
 };

@@ -20,7 +20,7 @@ export type TipoCulto = 'adoracao' | 'ceia' | 'alive' | 'mulheres' | 'homens' | 
 
 export const TIPOS_CULTO: { id: TipoCulto; nome: string; cor: string }[] = [
   { id: 'adoracao', nome: 'Culto de Adoração', cor: '#7B61FF' },
-  { id: 'ceia', nome: 'Família & Ceia', cor: '#c2185b' },
+  { id: 'ceia', nome: 'Família & Santa Ceia', cor: '#c2185b' },
   { id: 'alive', nome: 'Peniel Alive', cor: '#14b8a6' },
   { id: 'mulheres', nome: 'Mulheres', cor: '#ec4899' },
   { id: 'homens', nome: 'Homens', cor: '#3b82f6' },
@@ -48,7 +48,7 @@ export function htmlThumbCulto(): string {
 <script>
 var TEMAS = {
   adoracao:{nome:'Culto de Adoração',fundo:['#0b0a2e','#1A1740','#2b1866','#3b1477'],b1:'35,65,214',b2:'123,97,255',b3:'59,20,119',acento:'#7B61FF',acentoRgb:'123,97,255'},
-  ceia:{nome:'Culto da Família & Ceia',fundo:['#2a0a1a','#5a1030','#7a1a2e','#7a1a2e'],b1:'194,24,91',b2:'194,24,91',b3:'122,26,46',acento:'#c2185b',acentoRgb:'194,24,91'},
+  ceia:{nome:'Culto da Família & Santa Ceia',fundo:['#2a0a1a','#5a1030','#7a1a2e','#7a1a2e'],b1:'194,24,91',b2:'194,24,91',b3:'122,26,46',acento:'#c2185b',acentoRgb:'194,24,91'},
   alive:{nome:'Peniel Alive',fundo:['#04121f','#0a3a4a','#0e5c5c','#0e5c5c'],b1:'20,184,166',b2:'20,184,166',b3:'14,92,92',acento:'#14b8a6',acentoRgb:'20,184,166'},
   mulheres:{nome:'Culto de Mulheres',fundo:['#2a0a24','#5a1450','#7a2266','#7a2266'],b1:'236,72,153',b2:'244,114,182',b3:'122,34,102',acento:'#ec4899',acentoRgb:'236,72,153'},
   homens:{nome:'Culto de Homens',fundo:['#0a1420','#14283c','#1e3a52','#1e3a52'],b1:'59,130,246',b2:'96,165,250',b3:'30,58,82',acento:'#3b82f6',acentoRgb:'59,130,246'},

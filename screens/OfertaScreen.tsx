@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -98,6 +98,29 @@ export default function OfertaScreen({ navigation }: { navigation?: any }) {
     }
 
     setProcessandoPagamento(true);
+
+    // ANDROID (provisorio, 02 Nov 2026): o Google Pay dentro do app depende da
+    // aprovacao do Google Pay & Wallet Console, que so sai com o numero de
+    // charity. Ate la, o Android abre o Checkout do Stripe no navegador, onde
+    // o Google Pay ja funciona (cartao tambem). Quando a integracao for
+    // aprovada, e so apagar este bloco que volta para a PaymentSheet.
+    if (Platform.OS === 'android') {
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke('create-checkout-session', {
+          body: { valor: valorFinal, tipo: tipoSelecionado, moeda: 'gbp', origem: 'app_android' },
+        });
+        if (fnError || !data?.url) {
+          throw new Error(fnError?.message || 'Não foi possível iniciar o pagamento.');
+        }
+        await Linking.openURL(data.url);
+      } catch (e: any) {
+        Alert.alert(t('common.atencao'), e?.message || 'Erro ao processar pagamento.');
+      } finally {
+        setProcessandoPagamento(false);
+      }
+      return;
+    }
+
     try {
       const { data, error: fnError } = await supabase.functions.invoke('create-payment-intent', {
         body: { valor: valorFinal, tipo: tipoSelecionado, moeda: 'gbp' },

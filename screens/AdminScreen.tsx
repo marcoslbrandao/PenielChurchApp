@@ -14,7 +14,9 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
 import { nomeCurto } from '../lib/nomeCurto';
-import { mascaraDataBR, dataBRparaISO, isoParaDataBR } from '../lib/datas';
+import { mascaraDataBR, dataBRparaISO, isoParaDataBR, seisDaManhaLondresISO } from '../lib/datas';
+import DevocionaisAdmin, { escolherImagemDevocional, enviarImagemDevocional, proximaOrdemDaSerie } from '../components/DevocionaisAdmin';
+import type { SerieDevocional } from '../lib/devocionalSeries';
 import { useAuth } from '../lib/useAuth';
 import { useBirthdays } from '../lib/useBirthdays';
 import { useTranslation } from 'react-i18next';
@@ -563,25 +565,62 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
   const [texto, setTexto] = useState('');
   const [grupo, setGrupo] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Serie, ordem, imagem e agendamento (03/11/2026).
+  const [autor, setAutor] = useState('Pr. Marcos Brandão');
+  const [series, setSeries] = useState<SerieDevocional[]>([]);
+  const [serieId, setSerieId] = useState<string | null>(null);
+  const [ordem, setOrdem] = useState('');
+  const [imagemLocal, setImagemLocal] = useState<string | null>(null);
+  const [agendar, setAgendar] = useState(true);
+  const [dataAgendada, setDataAgendada] = useState('');
 
   useEffect(() => {
-    if (!visible) { setTitulo(''); setVersiculo(''); setReferencia(''); setTexto(''); setGrupo(null); }
+    if (!visible) {
+      setTitulo(''); setVersiculo(''); setReferencia(''); setTexto(''); setGrupo(null);
+      setAutor('Pr. Marcos Brandão'); setSerieId(null); setOrdem(''); setImagemLocal(null);
+      setAgendar(true); setDataAgendada('');
+      return;
+    }
+    supabase.from('devocional_series').select('*').eq('ativa', true).order('ordem', { ascending: true })
+      .then(({ data }) => setSeries((data as SerieDevocional[]) ?? []));
   }, [visible]);
+
+  const escolherSerie = async (id: string | null) => {
+    setSerieId(id);
+    setOrdem(id ? String(await proximaOrdemDaSerie(id)) : '');
+  };
 
   const handleSave = async () => {
     if (!titulo.trim() || !versiculo.trim() || !referencia.trim() || !texto.trim()) {
       Alert.alert(t('common.atencao'), t('admin.preenchaTodosOsCamposDo'));
       return;
     }
+    const iso = agendar ? dataBRparaISO(dataAgendada) : '';
+    if (agendar && !iso) { Alert.alert(t('common.atencao'), 'Informe a data de publicação no formato DD/MM/AAAA.'); return; }
+    if (agendar && seisDaManhaLondresISO(iso) <= new Date().toISOString()) {
+      Alert.alert(t('common.atencao'), 'Essa data já passou das 06:00. Escolha uma data futura ou publique agora.');
+      return;
+    }
     setSaving(true);
-    const { error } = await supabase.from('devocionais').insert({
-      titulo: titulo.trim(), versiculo: versiculo.trim(), referencia: referencia.trim(),
-      texto: texto.trim(), autor: 'Peniel Church', data: new Date().toISOString(), grupo,
-    });
-    setSaving(false);
-    if (error) { Alert.alert(t('common.erro'), error.message); return; }
-    onSaved();
-    onClose();
+    try {
+      const imagem_url = imagemLocal ? await enviarImagemDevocional(imagemLocal) : null;
+      const base = {
+        titulo: titulo.trim(), versiculo: versiculo.trim(), referencia: referencia.trim(),
+        texto: texto.trim(), autor: autor.trim() || 'Peniel Church', grupo,
+        serie_id: serieId, ordem_na_serie: serieId && ordem ? Number(ordem) : null,
+      };
+      const { error } = agendar
+        ? await supabase.from('devocionais_agendados').insert({ ...base, data: iso, publicar_em: seisDaManhaLondresISO(iso), imagem_url })
+        // Sem imagem, `imagem_url` nao vai no insert: o gatilho do banco escolhe uma.
+        : await supabase.from('devocionais').insert({ ...base, data: new Date().toISOString(), ...(imagem_url ? { imagem_url } : {}) });
+      if (error) throw error;
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      Alert.alert(t('common.erro'), e?.message ?? String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -650,9 +689,81 @@ function NovoDevocionalModal({ visible, onClose, onSaved }: {
               />
             </View>
 
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Autor</Text>
+              <View style={mo.fieldRow}>
+                <TextInput style={mo.fieldInput} value={autor} onChangeText={setAutor} placeholderTextColor={C.textDim} />
+              </View>
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Série</Text>
+              <View style={[mo.daysRow, { flexWrap: 'wrap' }]}>
+                <TouchableOpacity style={[mo.dayPill, !serieId && mo.dayPillActive]} onPress={() => escolherSerie(null)}>
+                  <Text style={[mo.dayPillText, !serieId && mo.dayPillTextActive]}>Sem série</Text>
+                </TouchableOpacity>
+                {series.map(sr => (
+                  <TouchableOpacity key={sr.id} style={[mo.dayPill, serieId === sr.id && mo.dayPillActive]} onPress={() => escolherSerie(sr.id)}>
+                    <Text style={[mo.dayPillText, serieId === sr.id && mo.dayPillTextActive]}>{sr.titulo}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {!!serieId && (
+                <View style={[mo.fieldRow, { marginTop: 8 }]}>
+                  <Text style={{ color: C.textMuted, fontSize: 13, marginRight: 8 }}>Nº na série</Text>
+                  <TextInput
+                    style={mo.fieldInput} value={ordem} keyboardType="number-pad"
+                    onChangeText={v => setOrdem(v.replace(/\D/g, ''))}
+                  />
+                  {!!series.find(x => x.id === serieId)?.total_devocionais && (
+                    <Text style={{ color: C.textMuted, fontSize: 13 }}>de {series.find(x => x.id === serieId)?.total_devocionais}</Text>
+                  )}
+                </View>
+              )}
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Imagem (2:1, opcional)</Text>
+              <TouchableOpacity
+                style={{ borderRadius: 10, borderWidth: 1, borderColor: C.border, borderStyle: 'dashed', overflow: 'hidden', minHeight: 56, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceAlt }}
+                onPress={async () => { const u = await escolherImagemDevocional(); if (u) setImagemLocal(u); }}
+              >
+                {imagemLocal
+                  ? <Image source={{ uri: imagemLocal }} style={{ width: '100%', aspectRatio: 2 }} />
+                  : <Text style={{ color: C.textMuted, fontSize: 13, padding: 12, textAlign: 'center' }}>Escolher imagem. Sem imagem, o app escolhe uma automaticamente.</Text>}
+              </TouchableOpacity>
+              {!!imagemLocal && (
+                <TouchableOpacity onPress={() => setImagemLocal(null)} style={{ marginTop: 6 }}>
+                  <Text style={{ color: C.danger, fontSize: 12, fontWeight: '600' }}>Remover imagem</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>Quando publicar</Text>
+              <View style={mo.daysRow}>
+                <TouchableOpacity style={[mo.dayPill, agendar && mo.dayPillActive]} onPress={() => setAgendar(true)}>
+                  <Text style={[mo.dayPillText, agendar && mo.dayPillTextActive]}>Agendar (06:00)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[mo.dayPill, !agendar && mo.dayPillActive]} onPress={() => setAgendar(false)}>
+                  <Text style={[mo.dayPillText, !agendar && mo.dayPillTextActive]}>Publicar agora</Text>
+                </TouchableOpacity>
+              </View>
+              {agendar && (
+                <View style={[mo.fieldRow, { marginTop: 8 }]}>
+                  <TextInput
+                    style={mo.fieldInput} value={dataAgendada} keyboardType="number-pad"
+                    placeholder="DD/MM/AAAA" placeholderTextColor={C.textDim}
+                    onChangeText={v => setDataAgendada(mascaraDataBR(v))}
+                  />
+                  <Text style={{ color: C.textMuted, fontSize: 13 }}>às 06:00 (Londres)</Text>
+                </View>
+              )}
+            </View>
+
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="book-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.publicarDevocional')}</Text></>
+                <><Ionicons name={agendar ? 'calendar-outline' : 'book-outline'} size={18} color="#fff" /><Text style={mo.saveBtnText}>{agendar ? 'Agendar devocional' : t('admin.publicarDevocional')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -2855,6 +2966,7 @@ export default function AdminScreen() {
   const [avisoModalVisible, setAvisoModalVisible] = useState(false);
   const [avisoEditando, setAvisoEditando] = useState<Aviso | null>(null);
   const [devocionalModalVisible, setDevocionalModalVisible] = useState(false);
+  const [devAdminRecarregar, setDevAdminRecarregar] = useState(0);
   const [eventoModalVisible, setEventoModalVisible] = useState(false);
   const [contasVisitantesVisible, setContasVisitantesVisible] = useState(false);
   const [shortModalVisible, setShortModalVisible] = useState(false);
@@ -3341,6 +3453,7 @@ export default function AdminScreen() {
               <Text style={{ fontSize: 12, color: C.textMuted, marginBottom: 12, lineHeight: 18 }}>
                 Devocionais gerais aparecem em destaque na Home pra todo mundo. Devocionais de grupo só aparecem pra quem tem acesso àquele grupo.
               </Text>
+              <DevocionaisAdmin recarregar={devAdminRecarregar} />
               {devocionais.length === 0 ? (
                 <View style={s.empty}>
                   <Ionicons name="book-outline" size={40} color={C.textDim} />
@@ -3888,7 +4001,7 @@ export default function AdminScreen() {
       <NovoDevocionalModal
         visible={devocionalModalVisible}
         onClose={() => setDevocionalModalVisible(false)}
-        onSaved={fetchData}
+        onSaved={() => { fetchData(); setDevAdminRecarregar(n => n + 1); }}
       />
       <ContasVisitantesModal visible={contasVisitantesVisible} onClose={() => setContasVisitantesVisible(false)} onChanged={fetchData} />
       <NovoEventoModal

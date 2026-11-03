@@ -48,3 +48,12 @@ export function hojeEmLondres(agora: Date = new Date()): { dia: number; mes: num
   const londres = new Date(t + (emBST ? 3600_000 : 0));
   return { dia: londres.getUTCDate(), mes: londres.getUTCMonth() + 1, ano: londres.getUTCFullYear() };
 }
+
+// AAAA-MM-DD -> instante UTC das 06:00 em Londres naquele dia (03/11/2026).
+// Usado para agendar devocionais: 06:00 GMT no inverno, 05:00 UTC no BST.
+export function seisDaManhaLondresISO(iso: string): string {
+  const [a, m, d] = iso.split('-').map(Number);
+  const comoUTC = Date.UTC(a, m - 1, d, 6, 0, 0);
+  const emBST = comoUTC >= ultimoDomingoUTC(a, 2) && comoUTC < ultimoDomingoUTC(a, 9);
+  return new Date(comoUTC - (emBST ? 3600_000 : 0)).toISOString();
+}

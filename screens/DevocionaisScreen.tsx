@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import DevocionalCorpo from '../components/DevocionalCorpo';
+import { ProgressoSerie, textoOrdem } from '../components/SeloSerie';
+import { SerieDevocional, guardarSeries, useSerie, dataBR } from '../lib/devocionalSeries';
 
 // Tela aberta como modal (presentation: 'modal'): no iOS ela ja comeca abaixo
 // da barra de status, mas a area segura continua informando a altura do
@@ -33,6 +35,8 @@ type Devocional = {
   data: string;
   grupo: string | null;
   imagem_url?: string | null;
+  serie_id?: string | null;
+  ordem_na_serie?: number | null;
 };
 
 const GRUPO_LABEL_KEY: Record<string, string> = {
@@ -43,8 +47,12 @@ const GRUPO_LABEL_KEY: Record<string, string> = {
   infantil: 'grupos.tabInfantil',
 };
 
-function DevocionalItem({ dev, aberto, onToggle }: { dev: Devocional; aberto: boolean; onToggle: () => void }) {
-  const { i18n } = useTranslation();
+type Navegacao = { onAnterior?: () => void; onProximo?: () => void };
+
+function DevocionalItem({ dev, aberto, onToggle, totalSerie, nav }: {
+  dev: Devocional; aberto: boolean; onToggle: () => void; totalSerie?: number | null; nav?: Navegacao;
+}) {
+  const { t, i18n } = useTranslation();
   const titulo = useCampoTraduzido(dev.titulo, 'devocionais', dev.id, 'titulo');
   const versiculo = useCampoTraduzido(dev.versiculo, 'devocionais', dev.id, 'versiculo');
   const referencia = useCampoTraduzido(dev.referencia, 'devocionais', dev.id, 'referencia');
@@ -61,7 +69,10 @@ function DevocionalItem({ dev, aberto, onToggle }: { dev: Devocional; aberto: bo
         <View style={{ flex: 1 }}>
           {/* Destino não aparece mais aqui — a tela inteira já é sempre de
               um destino só (Geral ou o grupo escolhido), ver header. */}
-          <Text style={styles.data}>{dataLabel}</Text>
+          <Text style={styles.data}>
+            {dataLabel}
+            {!!dev.ordem_na_serie && !!dev.serie_id ? `  ·  ${textoOrdem(t, dev.ordem_na_serie, totalSerie)}` : ''}
+          </Text>
           <Text style={styles.titulo}>{titulo}</Text>
         </View>
         <Ionicons name={aberto ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.4)" />
@@ -76,52 +87,137 @@ function DevocionalItem({ dev, aberto, onToggle }: { dev: Devocional; aberto: bo
             corFundo="rgba(245,200,66,0.15)"
             corTexto="#F5C842"
           />
+          {nav && (nav.onAnterior || nav.onProximo) && (
+            <View style={styles.navSerie}>
+              {nav.onAnterior ? (
+                <TouchableOpacity style={styles.navBtn} onPress={nav.onAnterior}>
+                  <Ionicons name="chevron-back" size={14} color="#F5C842" />
+                  <Text style={styles.navTexto}>{t('devocionais.anterior')}</Text>
+                </TouchableOpacity>
+              ) : <View />}
+              {nav.onProximo ? (
+                <TouchableOpacity style={styles.navBtn} onPress={nav.onProximo}>
+                  <Text style={styles.navTexto}>{t('devocionais.proximo')}</Text>
+                  <Ionicons name="chevron-forward" size={14} color="#F5C842" />
+                </TouchableOpacity>
+              ) : <View />}
+            </View>
+          )}
         </View>
       )}
     </TouchableOpacity>
   );
 }
 
+// Card de uma serie na lista geral: capa, nome, situacao e progresso.
+function SerieCard({ serie, publicados, capa, onPress }: {
+  serie: SerieDevocional; publicados: number; capa?: string | null; onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  const titulo = useCampoTraduzido(serie.titulo, 'devocional_series', serie.id, 'titulo');
+  const descricao = useCampoTraduzido(serie.descricao, 'devocional_series', serie.id, 'descricao');
+  const total = serie.total_devocionais ?? null;
+  const status = publicados === 0
+    ? t('devocionais.comecaEm', { data: dataBR(serie.data_inicio) })
+    : total && publicados >= total ? t('devocionais.concluida') : t('devocionais.emAndamento');
+  const ativo = publicados > 0 && !(total && publicados >= total);
+  return (
+    <TouchableOpacity style={styles.serieCard} activeOpacity={0.85} onPress={onPress}>
+      {capa ? (
+        <Image source={{ uri: capa }} style={styles.serieCapa} resizeMode="cover" />
+      ) : (
+        <View style={[styles.serieCapa, styles.serieCapaVazia]}>
+          <Ionicons name="library" size={28} color="rgba(245,200,66,0.6)" />
+        </View>
+      )}
+      <View style={[styles.serieStatus, ativo ? styles.serieStatusAtivo : styles.serieStatusNeutro]}>
+        <Text style={[styles.serieStatusTexto, { color: ativo ? '#1A1740' : '#fff' }]}>{status}</Text>
+      </View>
+      <View style={styles.serieCorpo}>
+        <Text style={styles.serieRotulo}>{t('devocionais.serie')}</Text>
+        <Text style={styles.serieTitulo}>{titulo}</Text>
+        {!!descricao && <Text style={styles.serieDescricao} numberOfLines={2}>{descricao}</Text>}
+        <Text style={styles.serieMeta}>
+          {total ? t('devocionais.qtdDevocionais', { total }) + '  ·  ' : ''}{t('devocionais.publicados', { n: publicados })}
+        </Text>
+        <ProgressoSerie ordem={publicados} total={total} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 export default function DevocionaisScreen({ navigation, route }: { navigation?: any; route?: any }) {
   const { t } = useTranslation();
-  // Sem `route.params.grupo` → Geral (grupo IS NULL, o que aparece na Home).
-  // Com `route.params.grupo` (ex.: 'homens') → só os devocionais daquele
-  // grupo, aberto a partir da tela do grupo (GruposScreen).
+  // Tres modos:
+  // - `route.params.serie` → os devocionais daquela serie, em ordem (1, 2, 3...).
+  // - `route.params.grupo` → so os devocionais daquele grupo (aberto pelo grupo).
+  // - sem parametro → Geral: primeiro os cards das series, depois os
+  //   devocionais avulsos (sem serie). Pedido do Marcos (03/11): a lista
+  //   estava longa demais.
   const grupoFiltro: string | null = route?.params?.grupo ?? null;
+  const serieFiltro: string | null = route?.params?.serie ?? null;
+  const serieAtual = useSerie(serieFiltro);
   const [devocionais, setDevocionais] = useState<Devocional[]>([]);
+  const [series, setSeries] = useState<SerieDevocional[]>([]);
   const [loading, setLoading] = useState(true);
   const [abertoId, setAbertoId] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const posicoes = useRef<Record<string, number>>({});
 
   useEffect(() => {
     setLoading(true);
     let query = supabase
       .from('devocionais')
-      .select('id, titulo, versiculo, referencia, texto, data, grupo, imagem_url')
-      .order('data', { ascending: false });
-    query = grupoFiltro ? query.eq('grupo', grupoFiltro) : query.is('grupo', null);
-    query.then(({ data }) => {
-      setDevocionais((data as Devocional[]) ?? []);
+      .select('id, titulo, versiculo, referencia, texto, data, grupo, imagem_url, serie_id, ordem_na_serie');
+    if (serieFiltro) query = query.eq('serie_id', serieFiltro).order('ordem_na_serie', { ascending: true });
+    else if (grupoFiltro) query = query.eq('grupo', grupoFiltro).order('data', { ascending: false });
+    else query = query.is('grupo', null).order('data', { ascending: false });
+
+    const pedidoSeries = !serieFiltro && !grupoFiltro
+      ? supabase.from('devocional_series').select('*').eq('ativa', true).order('ordem', { ascending: true })
+      : Promise.resolve({ data: [] as any[] });
+
+    Promise.all([query, pedidoSeries]).then(([dev, ser]: any) => {
+      setDevocionais((dev.data as Devocional[]) ?? []);
+      const lista = (ser.data as SerieDevocional[]) ?? [];
+      guardarSeries(lista);
+      setSeries(lista);
       setLoading(false);
     });
-  }, [grupoFiltro]);
+  }, [grupoFiltro, serieFiltro]);
 
-  const subtitulo = grupoFiltro ? t(GRUPO_LABEL_KEY[grupoFiltro] ?? grupoFiltro) : t('devocionais.geral');
+  const subtitulo = serieFiltro
+    ? t('devocionais.serie')
+    : grupoFiltro ? t(GRUPO_LABEL_KEY[grupoFiltro] ?? grupoFiltro) : t('devocionais.geral');
+  const tituloTela = serieFiltro && serieAtual ? serieAtual.tituloTraduzido : t('devocionais.titulo');
 
-  // `paddingTop` fixo em 55 dava um respiro engraçado em aparelho sem
-  // entalhe e apertava o título contra o relógio nos iPhone mais novos. A
-  // área segura é a medida real do aparelho.
+  // Geral: os devocionais de serie ficam dentro do card da serie.
+  const avulsos = serieFiltro || grupoFiltro ? devocionais : devocionais.filter(d => !d.serie_id);
+  const seriesComDados = series.map(sr => {
+    const daSerie = devocionais.filter(d => d.serie_id === sr.id);
+    const maisRecente = daSerie[0]; // lista vem da mais nova para a mais antiga
+    return { serie: sr, publicados: daSerie.length, capa: sr.imagem_url ?? maisRecente?.imagem_url ?? null };
+  });
+
+  // Anterior/Proximo dentro da serie: abre o vizinho e rola ate ele.
+  const abrirVizinho = (id: string) => {
+    setAbertoId(id);
+    const y = posicoes.current[id];
+    if (y != null) setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true }), 50);
+  };
+
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: topoDoModal(insets.top) }]}>
-        <View>
-          <Text style={styles.headerTitulo}>{t('devocionais.titulo')}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitulo} numberOfLines={1}>{tituloTela}</Text>
           <Text style={styles.headerSubtitulo}>{subtitulo}</Text>
         </View>
         {navigation && (
           <TouchableOpacity style={styles.closeBtn} onPress={() => navigation.goBack()}>
-            <Ionicons name="close" size={22} color="#fff" />
+            <Ionicons name={serieFiltro ? 'chevron-back' : 'close'} size={22} color="#fff" />
           </TouchableOpacity>
         )}
       </View>
@@ -131,20 +227,46 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
           <ActivityIndicator color="#F5C842" />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {devocionais.length === 0 ? (
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {serieFiltro && !!serieAtual?.descricao && (
+            <Text style={styles.serieIntro}>{serieAtual.descricao}</Text>
+          )}
+
+          {seriesComDados.length > 0 && (
+            <>
+              <Text style={styles.secao}>{t('devocionais.series')}</Text>
+              {seriesComDados.map(({ serie, publicados, capa }) => (
+                <SerieCard
+                  key={serie.id}
+                  serie={serie}
+                  publicados={publicados}
+                  capa={capa}
+                  onPress={() => navigation?.push('Devocionais', { serie: serie.id })}
+                />
+              ))}
+              {avulsos.length > 0 && <Text style={styles.secao}>{t('devocionais.outros')}</Text>}
+            </>
+          )}
+
+          {avulsos.length === 0 && seriesComDados.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="book-outline" size={40} color="rgba(255,255,255,0.25)" />
               <Text style={styles.emptyTexto}>{t('devocionais.nenhumDevocional')}</Text>
             </View>
           ) : (
-            devocionais.map(dev => (
-              <DevocionalItem
-                key={dev.id}
-                dev={dev}
-                aberto={abertoId === dev.id}
-                onToggle={() => setAbertoId(abertoId === dev.id ? null : dev.id)}
-              />
+            avulsos.map((dev, i) => (
+              <View key={dev.id} onLayout={e => { posicoes.current[dev.id] = e.nativeEvent.layout.y; }}>
+                <DevocionalItem
+                  dev={dev}
+                  aberto={abertoId === dev.id}
+                  onToggle={() => setAbertoId(abertoId === dev.id ? null : dev.id)}
+                  totalSerie={serieAtual?.total_devocionais}
+                  nav={serieFiltro ? {
+                    onAnterior: i > 0 ? () => abrirVizinho(avulsos[i - 1].id) : undefined,
+                    onProximo: i < avulsos.length - 1 ? () => abrirVizinho(avulsos[i + 1].id) : undefined,
+                  } : undefined}
+                />
+              </View>
             ))
           )}
         </ScrollView>
@@ -181,4 +303,21 @@ const styles = StyleSheet.create({
   versiculo: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontStyle: 'italic', lineHeight: 20 },
   referencia: { fontSize: 11, fontWeight: '700', color: '#F5C842', marginTop: 6 },
   texto: { fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 20, marginTop: 10 },
+  navSerie: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTopWidth: 0.5, borderTopColor: 'rgba(255,255,255,0.1)' },
+  navBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 999, backgroundColor: 'rgba(245,200,66,0.12)' },
+  navTexto: { fontSize: 12, fontWeight: '700', color: '#F5C842' },
+  secao: { fontSize: 11, fontWeight: '800', color: '#F5C842', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginTop: 4 },
+  serieIntro: { fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 20, marginBottom: 16 },
+  serieCard: { backgroundColor: '#0F4A47', borderRadius: 16, marginBottom: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(245,200,66,0.35)' },
+  serieCapa: { width: '100%', aspectRatio: 2.6, backgroundColor: '#0B3835' },
+  serieCapaVazia: { alignItems: 'center', justifyContent: 'center' },
+  serieStatus: { position: 'absolute', top: 10, left: 10, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  serieStatusAtivo: { backgroundColor: '#F5C842' },
+  serieStatusNeutro: { backgroundColor: 'rgba(7,43,41,0.85)' },
+  serieStatusTexto: { fontSize: 11, fontWeight: '800' },
+  serieCorpo: { padding: 14 },
+  serieRotulo: { fontSize: 10, fontWeight: '800', color: '#F5C842', textTransform: 'uppercase', letterSpacing: 1 },
+  serieTitulo: { fontSize: 17, fontWeight: '800', color: '#fff', marginTop: 2 },
+  serieDescricao: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4, lineHeight: 18 },
+  serieMeta: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 6 },
 });

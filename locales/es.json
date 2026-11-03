@@ -365,7 +365,18 @@
     "titulo": "Devocionales",
     "nenhumDevocional": "Aún no hay devocionales publicados.",
     "geral": "Devocional Peniel",
-    "verTodos": "Ver todos los devocionales"
+    "verTodos": "Ver todos los devocionales",
+    "serie": "Serie",
+    "series": "Series",
+    "nDeTotal": "{{n}} de {{total}}",
+    "emAndamento": "En curso",
+    "comecaEm": "Comienza el {{data}}",
+    "concluida": "Completada",
+    "qtdDevocionais": "{{total}} devocionales",
+    "publicados": "{{n}} publicados",
+    "outros": "Otros devocionales",
+    "anterior": "Anterior",
+    "proximo": "Siguiente"
   },
   "traducao": {
     "titulo": "Traducción en vivo",

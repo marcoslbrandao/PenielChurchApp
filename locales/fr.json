@@ -365,7 +365,18 @@
     "titulo": "Dévotions",
     "nenhumDevocional": "Aucune dévotion publiée pour le moment.",
     "geral": "Dévotion Peniel",
-    "verTodos": "Voir toutes les dévotions"
+    "verTodos": "Voir toutes les dévotions",
+    "serie": "Série",
+    "series": "Séries",
+    "nDeTotal": "{{n}} sur {{total}}",
+    "emAndamento": "En cours",
+    "comecaEm": "Commence le {{data}}",
+    "concluida": "Terminée",
+    "qtdDevocionais": "{{total}} dévotions",
+    "publicados": "{{n}} publiées",
+    "outros": "Autres dévotions",
+    "anterior": "Précédent",
+    "proximo": "Suivant"
   },
   "traducao": {
     "titulo": "Traduction en direct",

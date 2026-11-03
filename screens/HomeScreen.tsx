@@ -13,6 +13,8 @@ import { compartilharEvento } from '../lib/compartilharEvento';
 import { liveSemCota, liveComApi, urlDoVideo, YOUTUBE_CANAL_URL, YOUTUBE_LIVES_URL, type LiveAtual } from '../lib/youtubeCanal';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import DevocionalCorpo from '../components/DevocionalCorpo';
+import { SeloSerieSobreFoto, SeloSerieLinha, ProgressoSerie } from '../components/SeloSerie';
+import { useSerie } from '../lib/devocionalSeries';
 import BirthdayBanner from '../components/BirthdayBanner';
 import ChatGeralCard from '../components/ChatGeralCard';
 import CartaoNotificacoes from '../components/CartaoNotificacoes';
@@ -718,13 +720,14 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   }, []);
 
   // ── Devocional em destaque (publicado pelo Admin) ─────────────────────────
-  const [devocional, setDevocional] = useState<{ id: string; titulo: string; versiculo: string; referencia: string; texto: string; data: string; imagem_url: string | null } | null>(null);
+  const [devocional, setDevocional] = useState<{ id: string; titulo: string; versiculo: string; referencia: string; texto: string; data: string; imagem_url: string | null; serie_id?: string | null; ordem_na_serie?: number | null } | null>(null);
   const [devocionalAberto, setDevocionalAberto] = useState(false);
   const devocionalTituloTraduzido = useCampoTraduzido(devocional?.titulo, 'devocionais', devocional?.id, 'titulo');
   const devocionalVersiculoTraduzido = useCampoTraduzido(devocional?.versiculo, 'devocionais', devocional?.id, 'versiculo');
   const devocionalReferenciaTraduzida = useCampoTraduzido(devocional?.referencia, 'devocionais', devocional?.id, 'referencia');
   const devocionalTextoTraduzido = useCampoTraduzido(devocional?.texto, 'devocionais', devocional?.id, 'texto');
   // "Novo" nas primeiras 36 horas — os devocionais saem às 6h, seg/qua/sex.
+  const devocionalSerie = useSerie(devocional?.serie_id);
   const devocionalNovo = !!devocional?.data && Date.now() - new Date(devocional.data).getTime() < 36 * 3600 * 1000;
 
   // useFocusEffect (não useEffect simples) — assim o card sempre mostra o
@@ -735,7 +738,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     useCallback(() => {
       supabase
         .from('devocionais')
-        .select('id, titulo, versiculo, referencia, texto, data, imagem_url')
+        .select('id, titulo, versiculo, referencia, texto, data, imagem_url, serie_id, ordem_na_serie')
         .is('grupo', null)
         .order('data', { ascending: false })
         .limit(1)
@@ -1172,28 +1175,6 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           </View>
         </View>
 
-        {/* ── Mensagem de domingo em destaque (blog) ──────────────────────── */}
-        {mensagem && (
-          <TouchableOpacity
-            style={styles.mensagemCard}
-            activeOpacity={0.9}
-            onPress={() => setMensagemAberta(true)}
-          >
-            {!!mensagem.imagem_url && (
-              <Image source={{ uri: mensagem.imagem_url }} style={styles.mensagemImagem} resizeMode="cover" />
-            )}
-            <View style={styles.mensagemCorpo}>
-              <Text style={styles.mensagemLabel}>{t('home.mensagemDeDomingo')}</Text>
-              <Text style={styles.mensagemTitulo}>{mensagemTituloTraduzido}</Text>
-              <Text style={styles.mensagemResumo} numberOfLines={2}>{mensagemResumoTraduzido}</Text>
-              <View style={styles.mensagemLerMais}>
-                <Text style={styles.mensagemLerMaisTexto}>{t('home.lerMensagemCompleta')}</Text>
-                <Ionicons name="arrow-forward" size={14} color="#F5C842" />
-              </View>
-            </View>
-          </TouchableOpacity>
-        )}
-
         {/* ── Devocional em destaque ───────────────────────────────────────── */}
         {devocional && (
           <TouchableOpacity
@@ -1215,12 +1196,26 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
                   <View key={o} style={{ flex: 1, backgroundColor: `rgba(15,74,71,${o})` }} />
                 ))}
               </View>
+              {devocionalSerie && (
+                <SeloSerieSobreFoto
+                  titulo={devocionalSerie.tituloTraduzido}
+                  ordem={devocional.ordem_na_serie}
+                  total={devocionalSerie.total_devocionais}
+                />
+              )}
               {devocionalNovo && (
-                <View style={styles.devocionalNovoPill}>
+                <View style={[styles.devocionalNovoPill, devocionalSerie && { top: undefined, bottom: 12 }]}>
                   <Text style={styles.devocionalNovoTexto}>{t('home.devocionalNovo')}</Text>
                 </View>
               )}
             </View>
+            )}
+            {devocionalSerie && !devocional.imagem_url && (
+              <SeloSerieLinha
+                titulo={devocionalSerie.tituloTraduzido}
+                ordem={devocional.ordem_na_serie}
+                total={devocionalSerie.total_devocionais}
+              />
             )}
             <View style={styles.devocionalHeader}>
               <View style={styles.devocionalIcone}>
@@ -1229,6 +1224,9 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
               <View style={{ flex: 1 }}>
                 <Text style={styles.devocionalLabel}>{t('home.devocional')}</Text>
                 <Text style={styles.devocionalTitulo}>{devocionalTituloTraduzido}</Text>
+                {devocionalSerie && (
+                  <ProgressoSerie ordem={devocional.ordem_na_serie} total={devocionalSerie.total_devocionais} />
+                )}
               </View>
               <Ionicons name={devocionalAberto ? 'chevron-up' : 'chevron-down'} size={18} color="rgba(255,255,255,0.4)" />
             </View>
@@ -1325,6 +1323,28 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
             <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.5)" />
           </View>
         </TouchableOpacity>
+
+        {/* ── Mensagem de domingo em destaque (blog) ──────────────────────── */}
+        {mensagem && (
+          <TouchableOpacity
+            style={styles.mensagemCard}
+            activeOpacity={0.9}
+            onPress={() => setMensagemAberta(true)}
+          >
+            {!!mensagem.imagem_url && (
+              <Image source={{ uri: mensagem.imagem_url }} style={styles.mensagemImagem} resizeMode="cover" />
+            )}
+            <View style={styles.mensagemCorpo}>
+              <Text style={styles.mensagemLabel}>{t('home.mensagemDeDomingo')}</Text>
+              <Text style={styles.mensagemTitulo}>{mensagemTituloTraduzido}</Text>
+              <Text style={styles.mensagemResumo} numberOfLines={2}>{mensagemResumoTraduzido}</Text>
+              <View style={styles.mensagemLerMais}>
+                <Text style={styles.mensagemLerMaisTexto}>{t('home.lerMensagemCompleta')}</Text>
+                <Ionicons name="arrow-forward" size={14} color="#F5C842" />
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* ── Próximos eventos ─────────────────────────────────────────────── */}
         <Text style={styles.secaoTitulo}>{t('home.proximosEventos')}</Text>

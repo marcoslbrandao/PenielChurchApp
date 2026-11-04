@@ -193,11 +193,13 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
 
   // Geral: os devocionais de serie ficam dentro do card da serie.
   const avulsos = serieFiltro || grupoFiltro ? devocionais : devocionais.filter(d => !d.serie_id);
+  // Serie so aparece depois que o primeiro devocional dela sai (pedido do
+  // Marcos, 04/11): antes disso fica escondida, sem "Comeca em".
   const seriesComDados = series.map(sr => {
     const daSerie = devocionais.filter(d => d.serie_id === sr.id);
     const maisRecente = daSerie[0]; // lista vem da mais nova para a mais antiga
     return { serie: sr, publicados: daSerie.length, capa: sr.imagem_url ?? maisRecente?.imagem_url ?? null };
-  });
+  }).filter(x => x.publicados > 0);
 
   // Anterior/Proximo dentro da serie: abre o vizinho e rola ate ele.
   const abrirVizinho = (id: string) => {

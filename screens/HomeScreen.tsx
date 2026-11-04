@@ -1204,7 +1204,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
                 />
               )}
               {devocionalNovo && (
-                <View style={[styles.devocionalNovoPill, devocionalSerie && { top: undefined, bottom: 12 }]}>
+                <View style={devocionalSerie ? styles.devocionalNovoPillBaixo : styles.devocionalNovoPill}>
                   <Text style={styles.devocionalNovoTexto}>{t('home.devocionalNovo')}</Text>
                 </View>
               )}
@@ -1493,6 +1493,9 @@ function buildStyles(C: PaletaHome) { return StyleSheet.create({
   devocionalImagem: { width: '100%', aspectRatio: 2, backgroundColor: '#0B3835' },
   devocionalImagemFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '35%' },
   devocionalNovoPill: { position: 'absolute', top: 12, left: 12, backgroundColor: '#F5C842', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  // Com selo de serie em cima, o NOVO vai para o canto de baixo. Estilo proprio
+  // (sem `top`): sobrescrever `top` com undefined esticava a pilula na vertical.
+  devocionalNovoPillBaixo: { position: 'absolute', bottom: 12, left: 12, backgroundColor: '#F5C842', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   devocionalNovoTexto: { fontSize: 10, fontWeight: '800', color: '#1A1740', letterSpacing: 0.8, textTransform: 'uppercase' },
   devocionalHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   devocionalIcone: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(245,200,66,0.15)', alignItems: 'center', justifyContent: 'center' },

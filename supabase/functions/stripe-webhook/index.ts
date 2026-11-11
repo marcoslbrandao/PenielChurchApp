@@ -67,6 +67,23 @@ Deno.serve(async (req) => {
   const pi = evento.data.object as Stripe.PaymentIntent;
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+  // Parcela de inscrição em evento (11/11/2026): vai para inscricao_pagamentos,
+  // NÃO para offerings — taxa de evento não é doação. A função do banco é
+  // idempotente pelo id do PaymentIntent (reenvio do Stripe não duplica) e
+  // avisa a pessoa: "Recebemos £X. Pago £Y · Falta £Z".
+  if (pi.metadata?.tipo === 'evento' && pi.metadata?.inscricao_id) {
+    const { data, error } = await admin.rpc('evento_pagamento_stripe', {
+      p_inscricao: pi.metadata.inscricao_id,
+      p_valor: (pi.amount_received ?? pi.amount) / 100,
+      p_pi: pi.id,
+    });
+    if (error) {
+      console.error('Falha ao gravar pagamento de evento:', error, 'payment_intent:', pi.id);
+      return new Response('Falha ao gravar', { status: 500 });
+    }
+    return new Response(JSON.stringify({ evento: data, pi: pi.id }), { status: 200 });
+  }
+
   let userId: string | null = pi.metadata?.user_id || null;
   const tipo = pi.metadata?.tipo || 'oferta';
 

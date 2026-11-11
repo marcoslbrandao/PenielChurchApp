@@ -6,7 +6,7 @@ import {
   KeyboardAvoidingView, Platform, Linking, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -24,6 +24,7 @@ import { APP_LINK_URL } from '../lib/appLinks';
 import { versaoDoBinario } from '../lib/recursosNativos';
 import DenunciasAdmin from '../components/DenunciasAdmin';
 import SupervisoresAdmin from '../components/SupervisoresAdmin';
+import TesourariaAdmin from '../components/TesourariaAdmin';
 import CultoDaSemanaAdmin from '../components/CultoDaSemanaAdmin';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -3230,6 +3231,7 @@ export default function AdminScreen() {
   // Toque no push do Admin (Contato / pedido de oração) chega aqui com
   // `aba`: abre direto nela e relê a lista, para a mensagem nova já aparecer.
   const route = useRoute<any>();
+  const navegacaoAdmin = useNavigation<any>();
   const abaDoPush = route.params?.aba as string | undefined;
   // Pontinho da aba Denúncias (moderação dos chats, 17/10/2026).
   const [denunciasAbertas, setDenunciasAbertas] = useState(0);
@@ -3743,6 +3745,15 @@ export default function AdminScreen() {
                       >
                         <Ionicons name={e.destaque_home ? 'home' : 'home-outline'} size={16} color={e.destaque_home ? C.accent : C.textMuted} />
                       </TouchableOpacity>
+                      {e.especial && (
+                        // Inscrições do evento (11/11/2026): configurar, inscritos, equipe.
+                        <TouchableOpacity
+                          style={[s.actionBtn, { borderColor: C.accent }]}
+                          onPress={() => navegacaoAdmin.navigate('Evento', { id: e.id, gerenciar: true })}
+                        >
+                          <Ionicons name="ticket-outline" size={16} color={C.accent} />
+                        </TouchableOpacity>
+                      )}
                       <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteEvento(e.id)}>
                         <Ionicons name="trash-outline" size={16} color={C.danger} />
                       </TouchableOpacity>
@@ -3750,6 +3761,8 @@ export default function AdminScreen() {
                   </View>
                 ))
               )}
+              {/* Tesouraria dos eventos (11/11/2026): quantas pessoas o admin quiser. */}
+              {ehAdmin && <TesourariaAdmin C={C as any} />}
             </>
           )}
 

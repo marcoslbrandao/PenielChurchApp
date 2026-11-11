@@ -935,6 +935,7 @@ as $$
    limit greatest(1, least(p_limite, 1000));
 $$;
 revoke all on function public.chat_privado_midias_orfas(int) from public, anon, authenticated;
+grant execute on function public.chat_privado_midias_orfas(int) to service_role;
 
 
 -- ─── 7. Denúncias ───────────────────────────────────────────────────────────

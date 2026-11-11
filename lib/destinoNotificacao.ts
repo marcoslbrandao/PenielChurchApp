@@ -106,6 +106,12 @@ export function destinoDaNotificacao(
       // painel Admin já na aba certa.
       if (!acesso.logado || !acesso.ehAdmin) return SININHO;
       return abaMembros('Admin', { aba: type === 'admin_contato' ? 'contato' : type === 'admin_denuncia' ? 'denuncias' : 'oracao' });
+    case 'evento':
+    case 'evento_painel':
+      // Inscrição em evento (11/11/2026): pagamento recebido, lembrete de
+      // parcela, inscrição cancelada (gestão). Precisa estar logado.
+      if (!acesso.logado || !dados.id) return SININHO;
+      return { nome: 'Evento', params: { id: dados.id, gerenciar: type === 'evento_painel' || undefined } };
     case 'conversa':
       // Conversa privada (11/11/2026): abre a tela Conversas já na conversa.
       // Rota do Stack (modal), como Devocionais.

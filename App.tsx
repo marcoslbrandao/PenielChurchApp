@@ -23,6 +23,7 @@ import RegistrarVisitanteScreen from './screens/RegistrarVisitanteScreen';
 import VisitantesScreen from './screens/VisitantesScreen';
 import DevocionaisScreen from './screens/DevocionaisScreen';
 import ConversasScreen from './screens/ConversasScreen';
+import EventoScreen from './screens/EventoScreen';
 import TraducaoAoVivoScreen from './screens/TraducaoAoVivoScreen';
 import AuthScreen from './screens/AuthScreen';
 import AtivarMembroScreen from './screens/AtivarMembroScreen';
@@ -335,6 +336,11 @@ export default function App() {
               <Stack.Screen
                 name="Conversas"
                 component={ConversasScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="Evento"
+                component={EventoScreen}
                 options={{ presentation: 'modal' }}
               />
               <Stack.Screen

@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, A
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../lib/supabase';
 import { compartilharEvento } from '../lib/compartilharEvento';
 import { useCampoTraduzido } from '../lib/useTraducao';
@@ -212,7 +213,8 @@ type EspecialUI = {
   imagemUrl: string | null; ctaUrl: string | null;
 };
 
-function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbrirLink: (url: string, tipo: 'zoom' | 'mapa') => void }) {
+function EventoEspecialCard({ evento, onAbrirLink, inscricoes }: { evento: EspecialUI; onAbrirLink: (url: string, tipo: 'zoom' | 'mapa') => void; inscricoes?: boolean }) {
+  const navegacao = useNavigation<any>();
   const { t } = useTranslation();
   const nome = useCampoTraduzido(evento.nome, 'agenda_eventos', evento.id, 'nome');
   const descricao = useCampoTraduzido(evento.descricao, 'agenda_eventos', evento.id, 'descricao');
@@ -260,6 +262,16 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
             <Text style={styles.eventoInfoTexto}>{quando}</Text>
           </View>
         )}
+        {/* Evento com inscrição (Camping 2027 etc., 11/11/2026). */}
+        {inscricoes && (
+          <TouchableOpacity
+            onPress={() => navegacao.navigate('Evento', { id: evento.id })}
+            style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, marginVertical: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: evento.cor }}
+          >
+            <Ionicons name="ticket-outline" size={14} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12.5 }}>{t('eventos.inscricoesAbertasBotao')}</Text>
+          </TouchableOpacity>
+        )}
         {!!evento.local && (
           <View style={styles.eventoInfoRow}>
             <Ionicons name={evento.tipo === 'online' ? 'videocam-outline' : 'location-outline'} size={13} color={C.textMuted} />
@@ -297,6 +309,12 @@ function EventoEspecialCard({ evento, onAbrirLink }: { evento: EspecialUI; onAbr
 
 export default function AgendaScreen() {
   const { t } = useTranslation();
+  // Eventos especiais com inscrição ligada (precisa estar logado para ler).
+  const [comInscricao, setComInscricao] = useState<Set<string>>(new Set());
+  useFocusEffect(useCallback(() => {
+    supabase.from('evento_inscricao_config').select('evento_id').eq('ativa', true)
+      .then(({ data }) => setComInscricao(new Set(((data ?? []) as { evento_id: string }[]).map(r => r.evento_id))));
+  }, []));
   const { isDark } = useTheme();
   const C = useMemo(() => paletaAgenda(isDark), [isDark]);
   const styles = useMemo(() => buildStyles(C), [C]);
@@ -496,7 +514,7 @@ export default function AgendaScreen() {
         )}
 
         {eventosEspeciais.map((e) => (
-          <EventoEspecialCard key={e.id} evento={e} onAbrirLink={(url, tipo) => (tipo === 'zoom' ? abrirZoom(url) : abrirMapa(url))} />
+          <EventoEspecialCard key={e.id} evento={e} inscricoes={comInscricao.has(e.id)} onAbrirLink={(url, tipo) => (tipo === 'zoom' ? abrirZoom(url) : abrirMapa(url))} />
         ))}
 
         <View style={{ height: 30 }} />

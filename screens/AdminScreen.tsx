@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { APP_LINK_URL } from '../lib/appLinks';
 import { versaoDoBinario } from '../lib/recursosNativos';
 import DenunciasAdmin from '../components/DenunciasAdmin';
+import SupervisoresAdmin from '../components/SupervisoresAdmin';
 import CultoDaSemanaAdmin from '../components/CultoDaSemanaAdmin';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -3534,7 +3535,11 @@ export default function AdminScreen() {
 
           {/* ══ DENÚNCIAS (chats) ═════════════════════════════════════════════ */}
           {abaAtual === 'denuncias' && (
-            <DenunciasAdmin key={`den-${refreshing ? 1 : 0}`} C={C as any} onMudou={setDenunciasAbertas} />
+            <>
+              <DenunciasAdmin key={`den-${refreshing ? 1 : 0}`} C={C as any} onMudou={setDenunciasAbertas} />
+              {/* Supervisores de proteção das conversas privadas (11/11/2026). */}
+              <SupervisoresAdmin key={`sup-${refreshing ? 1 : 0}`} C={C as any} />
+            </>
           )}
 
           {/* ══ CONTATO ═══════════════════════════════════════════════════════ */}

@@ -106,6 +106,10 @@ export function destinoDaNotificacao(
       // painel Admin já na aba certa.
       if (!acesso.logado || !acesso.ehAdmin) return SININHO;
       return abaMembros('Admin', { aba: type === 'admin_contato' ? 'contato' : type === 'admin_denuncia' ? 'denuncias' : 'oracao' });
+    case 'conversa':
+      // Conversa privada (11/11/2026): abre a tela Conversas já na conversa.
+      // Rota do Stack (modal), como Devocionais.
+      return podeMembros ? { nome: 'Conversas', params: dados.id ? { abrir: dados.id } : undefined } : SININHO;
     case 'chat_igreja':
       // Push do Chat da Igreja (19/10/2026): abre a Home e já abre a janela
       // do chat. Só membro tem o cartão; quem perdeu o acesso cai no sininho.

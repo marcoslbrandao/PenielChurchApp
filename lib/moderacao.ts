@@ -25,7 +25,7 @@ import { Alert } from 'react-native';
 import type { TFunction } from 'i18next';
 import { supabase } from './supabase';
 
-export type ChatTipo = 'geral' | 'grupo' | 'banda';
+export type ChatTipo = 'geral' | 'grupo' | 'banda' | 'privada';
 
 /** Versão das Regras da comunidade. Subir quando o texto mudar de verdade:
  *  todo mundo precisa aceitar de novo. */

@@ -22,6 +22,7 @@ import PenielKidsScreen from './screens/PenielKidsScreen';
 import RegistrarVisitanteScreen from './screens/RegistrarVisitanteScreen';
 import VisitantesScreen from './screens/VisitantesScreen';
 import DevocionaisScreen from './screens/DevocionaisScreen';
+import ConversasScreen from './screens/ConversasScreen';
 import TraducaoAoVivoScreen from './screens/TraducaoAoVivoScreen';
 import AuthScreen from './screens/AuthScreen';
 import AtivarMembroScreen from './screens/AtivarMembroScreen';
@@ -329,6 +330,11 @@ export default function App() {
               <Stack.Screen
                 name="Devocionais"
                 component={DevocionaisScreen}
+                options={{ presentation: 'modal' }}
+              />
+              <Stack.Screen
+                name="Conversas"
+                component={ConversasScreen}
                 options={{ presentation: 'modal' }}
               />
               <Stack.Screen

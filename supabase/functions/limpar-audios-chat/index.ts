@@ -29,6 +29,8 @@ const MAX_LOTES = 20;
 const ALVOS = [
   { bucket: 'chat-audio', rpc: 'chat_audios_orfaos' },
   { bucket: 'chat-geral', rpc: 'chat_geral_midias_orfas' },
+  // Conversas privadas (11/11/2026): arquivo de denuncia aberta fica.
+  { bucket: 'chat-privado', rpc: 'chat_privado_midias_orfas' },
 ];
 
 async function limpar(sb: SupabaseClient, bucket: string, rpc: string) {

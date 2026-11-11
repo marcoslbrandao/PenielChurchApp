@@ -35,6 +35,8 @@ import { alternarNegrito, semFormatacao } from '../lib/negrito';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/moderacao';
 import { BUCKET_CHAT_GERAL } from '../lib/chatGeral';
 import { type FonteChat, fonteIgreja, chaveDaFonte, deLinha, paraLinha, marcarLido, infoDaMensagem, type LinhaInfo } from '../lib/chatFonte';
+import { erroDaConversa } from '../lib/conversas';
+import { useNavigation } from '@react-navigation/native';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
 // O chat geral dos membros, aberto pelo card da Home. Funciona como o WhatsApp:
@@ -209,11 +211,17 @@ export default function ChatGeralModal({
     setLoading(true);
     let qMsgs = supabase.from(fonte.tabela).select('*');
     if (fonte.grupo) qMsgs = qMsgs.eq('grupo', fonte.grupo);
+    if (fonte.conversa) qMsgs = qMsgs.eq('conversa_id', fonte.conversa);
     // Reações do grupo: só as das mensagens DESTE grupo (join pela mensagem).
+    // Na conversa privada, só as desta conversa.
     const qReac = fonte.grupo
       ? supabase.from(fonte.tabelaReacoes)
         .select('mensagem_id, user_id, emoji, grupo_chat_mensagens!inner(grupo)')
         .eq('grupo_chat_mensagens.grupo', fonte.grupo)
+      : fonte.conversa
+      ? supabase.from(fonte.tabelaReacoes)
+        .select('mensagem_id, user_id, emoji, conversa_mensagens!inner(conversa_id)')
+        .eq('conversa_mensagens.conversa_id', fonte.conversa)
       : supabase.from(fonte.tabelaReacoes).select('mensagem_id, user_id, emoji');
     const [msgs, reac, sil] = await Promise.all([
       // DESC + reverse: `limit` corta pelo começo da ordenação.
@@ -244,7 +252,8 @@ export default function ChatGeralModal({
     if (!visible) return;
     carregar();
 
-    const filtro = fonte.grupo ? { filter: `grupo=eq.${fonte.grupo}` } : {};
+    const filtro = fonte.grupo ? { filter: `grupo=eq.${fonte.grupo}` }
+      : fonte.conversa ? { filter: `conversa_id=eq.${fonte.conversa}` } : {};
     const canal = supabase
       .channel(`chat_${chaveDaFonte(fonte)}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: fonte.tabela, ...filtro }, (payload) => {
@@ -323,7 +332,11 @@ export default function ChatGeralModal({
       .insert(paraLinha(fonte, { ...linha, resposta_a: respondendo?.id ?? null }, userId, autorNome))
       .select('*')
       .single();
-    if (error) throw error;
+    if (error) {
+      // Conversa privada: horário (menor), bloqueio, não aceita... (lib/conversas.ts)
+      const traduzido = erroDaConversa(t, error.message);
+      throw traduzido ? new Error(traduzido) : error;
+    }
     const nova = deLinha(fonte, data);
     setMensagens(prev => (prev.some(m => m.id === nova.id) ? prev : [...prev, nova]));
     setRespondendo(null);
@@ -589,6 +602,18 @@ export default function ChatGeralModal({
     setTimeout(() => denunciarMensagem(fonte.tipo, msg.id, t), 350);
   };
 
+  // Mensagem privada para o autor (11/11/2026): fecha este chat e abre a
+  // conversa na tela Conversas, que cuida das regras (data de nascimento,
+  // bloqueio, "não aceita").
+  const navigation = useNavigation<any>();
+  const mensagemPrivada = (msg: MensagemGeral) => {
+    setMenuDe(null);
+    setTimeout(() => {
+      fechar();
+      navigation.navigate('Conversas', { abrirCom: msg.autor_id, nome: msg.autor_nome, em: Date.now() });
+    }, 350);
+  };
+
   const bloquear = (msg: MensagemGeral) => {
     setMenuDe(null);
     setTimeout(() => mod.bloquear(msg.autor_id, msg.autor_nome, t), 350);
@@ -788,7 +813,7 @@ export default function ChatGeralModal({
             <Text style={cs.headerTitle} numberOfLines={1}>{fonte.titulo}</Text>
             <Text style={cs.headerSub} numberOfLines={1}>{fonte.subtitulo}</Text>
           </View>
-          <TouchableOpacity onPress={() => Alert.alert(fonte.titulo, t('chatGeral.aviso15dias'))} hitSlop={10} style={cs.headerBtn}>
+          <TouchableOpacity onPress={() => Alert.alert(fonte.titulo, fonte.aviso ?? t('chatGeral.aviso15dias'))} hitSlop={10} style={cs.headerBtn}>
             <Ionicons name="information-circle-outline" size={22} color="rgba(255,255,255,0.8)" />
           </TouchableOpacity>
         </View>
@@ -951,6 +976,9 @@ export default function ChatGeralModal({
                 )}
                 {/* Denunciar e Bloquear voltaram (17/10/2026): exigência da
                     diretriz 1.2 da Apple. Apagar continua só autor e admin. */}
+                {menuDe.autor_id !== userId && fonte.tipo !== 'privada' && (
+                  <ItemMenu icone="chatbubble-ellipses-outline" texto={t('conversas.mensagemPrivadaPara', { nome: menuDe.autor_nome })} cor={C.text} onPress={() => mensagemPrivada(menuDe)} />
+                )}
                 {menuDe.autor_id !== userId && (
                   <ItemMenu icone="flag-outline" texto={t('moderacao.denunciar')} cor={C.text} onPress={() => denunciar(menuDe)} />
                 )}

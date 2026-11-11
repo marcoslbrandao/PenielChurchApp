@@ -21,7 +21,7 @@ import { alternarSuspensao } from '../lib/moderacao';
 
 type Denuncia = {
   id: string;
-  chat: 'geral' | 'grupo' | 'banda';
+  chat: 'geral' | 'grupo' | 'banda' | 'privada';
   grupo: string | null;
   mensagem_id: string;
   autor_id: string | null;
@@ -41,6 +41,9 @@ const TABELA: Record<Denuncia['chat'], string> = {
   geral: 'chat_geral_mensagens',
   grupo: 'grupo_chat_mensagens',
   banda: 'banda_chat_mensagens',
+  // Conversa privada: o admin não tem acesso à tabela; apaga pela RPC, que
+  // só aceita mensagem denunciada (ver `apagar`).
+  privada: 'conversa_mensagens',
 };
 
 function dataHora(iso: string): string {
@@ -107,7 +110,9 @@ export default function DenunciasAdmin({ C, onMudou }: {
         text: t('moderacao.apagar'), style: 'destructive', onPress: async () => {
           // Se a mensagem já tinha sumido (autor apagou, ou passou dos 15
           // dias), apagar zero linhas é normal: só fecha a denúncia.
-          const { error } = await supabase.from(TABELA[g.primeira.chat]).delete().eq('id', g.primeira.mensagem_id);
+          const { error } = g.primeira.chat === 'privada'
+            ? await supabase.rpc('admin_apagar_mensagem_privada', { p_mensagem: g.primeira.mensagem_id })
+            : await supabase.from(TABELA[g.primeira.chat]).delete().eq('id', g.primeira.mensagem_id);
           if (error) { Alert.alert(t('common.erro'), error.message); return; }
           resolver(g, 'apagada');
         },
@@ -124,6 +129,7 @@ export default function DenunciasAdmin({ C, onMudou }: {
   const onde = (d: Denuncia) =>
     d.chat === 'geral' ? t('moderacao.ondeIgreja')
       : d.chat === 'banda' ? t('moderacao.ondeBanda')
+      : d.chat === 'privada' ? t('moderacao.ondePrivada')
         : t('moderacao.ondeGrupo', { grupo: d.grupo ?? '' });
 
   const motivoTexto = (m: string) => (m === 'ofensivo' ? t('moderacao.motivoOfensivo') : t('moderacao.motivoOutro'));

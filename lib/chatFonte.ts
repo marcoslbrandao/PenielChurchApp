@@ -17,14 +17,18 @@ import { BUCKET_AUDIO, TEXTO_DO_AUDIO } from './chatAudio';
 import { legendaDoAnexo, TEXTO_FOTO, TEXTO_VIDEO } from './chatAnexos';
 
 export type FonteChat = {
-  /** 'geral' | 'grupo' | 'banda' — também o `chat` das denúncias. */
-  tipo: 'geral' | 'grupo' | 'banda';
+  /** 'geral' | 'grupo' | 'banda' | 'privada' — também o `chat` das denúncias. */
+  tipo: 'geral' | 'grupo' | 'banda' | 'privada';
   /** Grupo ('homens', 'infantil'...), só no tipo 'grupo'. */
   grupo?: string;
+  /** Conversa privada (11/11/2026), só no tipo 'privada'. */
+  conversa?: string;
+  /** Texto do botão (i) do cabeçalho. Padrão: o aviso dos 15 dias. */
+  aviso?: string;
   /** Destino no "Compartilhar com o chat aberto" (lib/chatAberto.ts). */
   destino: string;
-  tabela: 'chat_geral_mensagens' | 'grupo_chat_mensagens' | 'banda_chat_mensagens';
-  tabelaReacoes: 'chat_geral_reacoes' | 'grupo_chat_reacoes' | 'banda_chat_reacoes';
+  tabela: 'chat_geral_mensagens' | 'grupo_chat_mensagens' | 'banda_chat_mensagens' | 'conversa_mensagens';
+  tabelaReacoes: 'chat_geral_reacoes' | 'grupo_chat_reacoes' | 'banda_chat_reacoes' | 'conversa_reacoes';
   bucket: string;
   /** Pasta antes do autor no bucket `chat-audio` (grupo ou 'banda'). */
   prefixo?: string;
@@ -58,14 +62,33 @@ export function fonteBanda(t: TFunction, cor: string): FonteChat {
   };
 }
 
+export const COR_PRIVADA = '#1F8A70';
+export const BUCKET_PRIVADO = 'chat-privado';
+
+/** Conversa privada entre dois membros (11/11/2026). Mesmo formato de linha
+ *  do Chat da Igreja, mais `conversa_id`. Protegida = adulto com menor:
+ *  guarda 4 meses e não envia entre 22h e 7h (ver a migração 20261111220000). */
+export function fontePrivada(t: TFunction, conversa: string, nome: string, protegida: boolean): FonteChat {
+  return {
+    tipo: 'privada', conversa, destino: `privada:${conversa}`,
+    tabela: 'conversa_mensagens', tabelaReacoes: 'conversa_reacoes',
+    bucket: BUCKET_PRIVADO, prefixo: conversa,
+    titulo: nome,
+    subtitulo: protegida ? t('conversas.subtituloProtegida') : t('conversas.subtitulo'),
+    aviso: protegida ? t('conversas.avisoProtegida') : t('conversas.aviso'),
+    cor: COR_PRIVADA,
+  };
+}
+
 /** Chave da leitura ("visto por") e do canal de tempo real. */
 export function chaveDaFonte(f: FonteChat): string {
+  if (f.tipo === 'privada') return `privada:${f.conversa}`;
   return f.tipo === 'grupo' ? `grupo:${f.grupo}` : f.tipo;
 }
 
 /** Linha do banco → formato da tela. */
 export function deLinha(f: FonteChat, r: any): MensagemGeral {
-  if (f.tipo === 'geral') return r as MensagemGeral;
+  if (f.tipo === 'geral' || f.tipo === 'privada') return r as MensagemGeral;
   const tipo: TipoMensagem = r.audio_path ? 'audio' : (r.midia_tipo ?? 'texto');
   return {
     id: r.id,
@@ -88,6 +111,7 @@ export function deLinha(f: FonteChat, r: any): MensagemGeral {
 /** Formato da tela → linha para gravar no banco. */
 export function paraLinha(f: FonteChat, m: Partial<MensagemGeral>, autorId: string, autorNome: string): Record<string, unknown> {
   if (f.tipo === 'geral') return { ...m };
+  if (f.tipo === 'privada') return { ...m, conversa_id: f.conversa };
   const base: Record<string, unknown> = {
     autor_id: autorId,
     autor_nome: autorNome || 'Membro',
@@ -126,6 +150,10 @@ export function paraLinha(f: FonteChat, m: Partial<MensagemGeral>, autorId: stri
 
 export async function marcarLido(f: FonteChat): Promise<void> {
   if (f.tipo === 'geral') return marcarComoLido();
+  if (f.tipo === 'privada') {
+    await supabase.rpc('conversa_marcar_lido', { p_conversa: f.conversa }).then(() => {}, () => {});
+    return;
+  }
   await supabase.rpc('chat_marcar_lido', { p_chat: chaveDaFonte(f) }).then(() => {}, () => {});
 }
 
@@ -134,6 +162,8 @@ export type LinhaInfo = { tipo: 'reacao' | 'visto'; user_id: string; nome: strin
 export async function infoDaMensagem(f: FonteChat, mensagemId: string): Promise<LinhaInfo[]> {
   const { data, error } = f.tipo === 'geral'
     ? await supabase.rpc('chat_geral_info_mensagem', { p_mensagem: mensagemId })
+    : f.tipo === 'privada'
+    ? await supabase.rpc('conversa_info_mensagem', { p_mensagem: mensagemId })
     : await supabase.rpc('chat_info_mensagem', { p_chat: f.tipo, p_mensagem: mensagemId });
   return error ? [] : ((data ?? []) as LinhaInfo[]);
 }

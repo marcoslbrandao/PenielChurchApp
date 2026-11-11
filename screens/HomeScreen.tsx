@@ -26,6 +26,7 @@ import { useCampoTraduzido } from '../lib/useTraducao';
 import { useTheme } from '../lib/theme';
 import { useAcesso } from '../lib/acesso';
 import { destinoDoAviso, Destino } from '../lib/destinoNotificacao';
+import { conversasNaoLidas } from '../lib/conversas';
 import { WebView } from 'react-native-webview';
 import { extractYoutubeId, youtubeThumbnail } from '../lib/youtube';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -856,6 +857,25 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     }, [])
   );
 
+  // ── Conversas privadas: contador do ícone 💬 ──────────────────────────────
+  const [conversasNaoLidasN, setConversasNaoLidasN] = useState(0);
+  useFocusEffect(useCallback(() => {
+    if (!isLoggedIn || !ehMembro) { setConversasNaoLidasN(0); return; }
+    let vivo = true;
+    conversasNaoLidas().then(n => { if (vivo) setConversasNaoLidasN(n); });
+    return () => { vivo = false; };
+  }, [isLoggedIn, ehMembro]));
+  useEffect(() => {
+    if (!isLoggedIn || !ehMembro) return;
+    const canal = supabase
+      .channel('home_conversas')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversa_mensagens' }, () => {
+        conversasNaoLidas().then(setConversasNaoLidasN);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(canal); };
+  }, [isLoggedIn, ehMembro]);
+
   // ── Notificações (sininho) ────────────────────────────────────────────────
   const [notifModalVisible, setNotifModalVisible] = useState(false);
   const [notifAvisos, setNotifAvisos] = useState<AvisoResult[]>([]);
@@ -1089,6 +1109,17 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           <TouchableOpacity style={styles.iconeBtn} onPress={() => setSearchVisible(true)}>
             <Ionicons name="search-outline" size={22} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
+          {isLoggedIn && ehMembro && (
+            // Conversas privadas + Chat da Igreja (11/11/2026).
+            <TouchableOpacity style={styles.iconeBtn} onPress={() => navigation?.navigate('Conversas')} accessibilityLabel={t('conversas.titulo')}>
+              <Ionicons name="chatbubbles-outline" size={22} color="rgba(255,255,255,0.7)" />
+              {conversasNaoLidasN > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>{conversasNaoLidasN > 9 ? '9+' : conversasNaoLidasN}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.iconeBtn} onPress={abrirNotificacoes}>
             <Ionicons name="notifications-outline" size={22} color="rgba(255,255,255,0.7)" />
             {notifNaoLidas > 0 && (

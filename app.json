@@ -3,7 +3,7 @@
     "name": "Peniel Church",
     "slug": "PenielChurchApp",
     "scheme": "penielchurch",
-    "version": "1.5.2",
+    "version": "1.5.3",
     "runtimeVersion": "1.5.0",
     "updates": {
       "url": "https://u.expo.dev/f53e9e07-9556-4ea8-80e0-da4487b38e56",
@@ -25,11 +25,18 @@
       "bundleIdentifier": "org.uk.penielchurch.app",
       "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "Usado para atualizar sua foto de perfil.",
-        "NSMicrophoneUsageDescription": "Usado para gravar mensagens de voz no chat dos grupos.",
+        "NSCameraUsageDescription": "Usado para tirar fotos, gravar vídeos no chat, atualizar sua foto de perfil e ler QR codes de check-in.",
+        "NSMicrophoneUsageDescription": "Usado para gravar mensagens de voz e vídeos no chat.",
         "NSPhotoLibraryUsageDescription": "Usado para selecionar sua foto de perfil.",
         "NSUserNotificationsUsageDescription": "Receba notificações de aniversários e avisos da igreja.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSFaceIDUsageDescription": "Usado para proteger o acesso à Área do Pastor.",
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      },
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
       }
     },
     "android": {
@@ -60,7 +67,9 @@
         {
           "icon": "./assets/icon.png",
           "color": "#1A1740",
-          "sounds": []
+          "sounds": [
+            "./assets/sons/alerta_kids.wav"
+          ]
         }
       ],
       "expo-font",
@@ -74,7 +83,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Usado para gravar mensagens de voz no chat dos grupos.",
+          "microphonePermission": "Usado para gravar mensagens de voz e vídeos no chat.",
           "recordAudioAndroid": true
         }
       ],
@@ -97,6 +106,20 @@
             "audio/*",
             "application/*"
           ]
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Usado para tirar fotos, gravar vídeos no chat, atualizar sua foto de perfil e ler QR codes de check-in.",
+          "microphonePermission": "Usado para gravar mensagens de voz e vídeos no chat.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Usado para proteger o acesso à Área do Pastor."
         }
       ]
     ],

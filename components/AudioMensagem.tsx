@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
-import { aplicarSaida, alternarSaida, useSaidaAudio } from '../lib/saidaAudio';
+import { aplicarSaida, alternarSaida, useSaidaAudio, sensorDeProximidade } from '../lib/saidaAudio';
 import { urlDoAudio, formatarTempo } from '../lib/chatAudio';
 
 // Bolha de mensagem de voz: play/pausa, barra de progresso e tempo.
@@ -41,6 +41,14 @@ export default function AudioMensagem({
     if (p) { try { p.pause(); p.remove(); } catch { /* já liberado */ } }
     setTocando(false);
   };
+
+  // Sensor de proximidade só enquanto este áudio toca (encostar no rosto
+  // passa para o ouvido e apaga a tela, como no WhatsApp).
+  useEffect(() => {
+    if (!tocando) return;
+    sensorDeProximidade(true);
+    return () => { sensorDeProximidade(false); };
+  }, [tocando]);
 
   // Outro áudio começou (ou o chat fechou): para este.
   useEffect(() => { if (!ativo) soltar(); }, [ativo]);

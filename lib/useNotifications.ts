@@ -216,6 +216,21 @@ async function garantirCanalAndroid(): Promise<void> {
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
     });
+    // Peniel Kids: chamar o responsável na salinha (build 1.5.3). Canal
+    // próprio, prioridade máxima, som `alerta_kids` (res/raw) e vibração
+    // longa, visível na tela bloqueada. O push do Kids manda
+    // `channelId: 'kids-alerta'` (e no iPhone `interruptionLevel:
+    // 'time-sensitive'`, que passa pelo modo Foco).
+    await Notifications.setNotificationChannelAsync('kids-alerta', {
+      name: 'Peniel Kids — chamada dos pais',
+      description: 'Quando a salinha precisa de você durante o culto.',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: 'alerta_kids.wav',
+      vibrationPattern: [0, 600, 300, 600, 300, 600],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      bypassDnd: true,
+      enableVibrate: true,
+    });
   } catch {}
 }
 

@@ -22,6 +22,7 @@
 		32ADF2CDB3764A98AC8DADF7 /* ShareExtension-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DF5EE6279C0D40B29EB3BCBC /* ShareExtension-Info.plist */; };
 		ADD53494ACC04F7792DB2449 /* ShareExtension.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 42B63D88A8DB4994B5E44E8A /* ShareExtension.entitlements */; };
 		8A26CC368AA14290AF471CFD /* Peniel.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = AB89B93F25444920AF7A2B44 /* Peniel.appex */; };
+		2091FC12710C4A30941E4477 /* alerta_kids.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7DA2F2EDA5944BFF8F064076 /* alerta_kids.wav */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +47,7 @@
 		DF5EE6279C0D40B29EB3BCBC /* ShareExtension-Info.plist */ = {isa = PBXFileReference; name = "ShareExtension-Info.plist"; path = "ShareExtension-Info.plist"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = text.plist.xml; explicitFileType = undefined; includeInIndex = 0; };
 		42B63D88A8DB4994B5E44E8A /* ShareExtension.entitlements */ = {isa = PBXFileReference; name = "ShareExtension.entitlements"; path = "ShareExtension.entitlements"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		AB89B93F25444920AF7A2B44 /* Peniel.appex */ = {isa = PBXFileReference; name = "Peniel.appex"; path = "Peniel.appex"; sourceTree = BUILT_PRODUCTS_DIR; fileEncoding = undefined; lastKnownFileType = undefined; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; };
+		7DA2F2EDA5944BFF8F064076 /* alerta_kids.wav */ = {isa = PBXFileReference; name = "alerta_kids.wav"; path = "PenielChurch/alerta_kids.wav"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +90,7 @@
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 				7476E858F5804EC39D0554FD /* noop-file.swift */,
 				0BD48515EEB5A1EC4872FC0A /* PrivacyInfo.xcprivacy */,
+				7DA2F2EDA5944BFF8F064076 /* alerta_kids.wav */,
 			);
 			name = PenielChurch;
 			sourceTree = "<group>";
@@ -257,6 +260,7 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				6984CF40A30B551AC99CE592 /* PrivacyInfo.xcprivacy in Resources */,
+				2091FC12710C4A30941E4477 /* alerta_kids.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -461,7 +465,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.2;
+				MARKETING_VERSION = 1.5.3;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -492,7 +496,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.2;
+				MARKETING_VERSION = 1.5.3;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -643,7 +647,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "1";
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.5.2;
+				MARKETING_VERSION = 1.5.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.uk.penielchurch.app.share-extension";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -663,7 +667,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "1";
 				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.5.2;
+				MARKETING_VERSION = 1.5.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.uk.penielchurch.app.share-extension";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;

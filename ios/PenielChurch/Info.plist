@@ -56,15 +56,21 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Usado para atualizar sua foto de perfil.</string>
+    <string>Usado para tirar fotos, gravar vídeos no chat, atualizar sua foto de perfil e ler QR codes de check-in.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Usado para proteger o acesso à Área do Pastor.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Usado para gravar mensagens de voz no chat dos grupos.</string>
+    <string>Usado para gravar mensagens de voz e vídeos no chat.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Usado para selecionar sua foto de perfil.</string>
     <key>NSUserNotificationsUsageDescription</key>
     <string>Receba notificações de aniversários e avisos da igreja.</string>
     <key>RCTNewArchEnabled</key>
     <true/>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>audio</string>
+    </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

@@ -1,0 +1,9 @@
+{
+  "name": "proximidade",
+  "version": "1.0.0",
+  "description": "Sensor de proximidade do Peniel Church App (audio no ouvido como no WhatsApp)",
+  "license": "UNLICENSED",
+  "author": "Peniel Church",
+  "homepage": "https://penielchurch.org.uk",
+  "main": "index.ts"
+}

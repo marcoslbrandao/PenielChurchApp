@@ -25,6 +25,7 @@ import { versaoDoBinario } from '../lib/recursosNativos';
 import DenunciasAdmin from '../components/DenunciasAdmin';
 import SupervisoresAdmin from '../components/SupervisoresAdmin';
 import TesourariaAdmin from '../components/TesourariaAdmin';
+import CalendarioAdmin from '../components/CalendarioAdmin';
 import CultoDaSemanaAdmin from '../components/CultoDaSemanaAdmin';
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
@@ -3763,6 +3764,8 @@ export default function AdminScreen() {
               )}
               {/* Tesouraria dos eventos (11/11/2026): quantas pessoas o admin quiser. */}
               {ehAdmin && <TesourariaAdmin C={C as any} />}
+              {/* Calendário anual (11/11/2026): cores, emojis e quem edita cada categoria. */}
+              {ehAdmin && <CalendarioAdmin C={C as any} />}
             </>
           )}
 

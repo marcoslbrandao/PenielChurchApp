@@ -456,3 +456,10 @@ entrypoint = "./functions/materiais-drive/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/youtube-culto/index.ts"
+
+# Calendário anual (11/11/2026): feed .ics público que o Calendário do iPhone
+# e o Google Agenda assinam — eles não mandam cabeçalho de autorização.
+[functions.calendario]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/calendario/index.ts"

@@ -532,7 +532,7 @@ type DestaqueHome = {
   imagem_url: string | null; local?: string | null;
 };
 
-function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onAbrirAgenda: () => void }) {
+function DestaqueHomeCard({ evento, onAbrirAgenda, onInscrever }: { evento: DestaqueHome; onAbrirAgenda: () => void; onInscrever?: () => void }) {
   const { t, i18n } = useTranslation();
   const { isDark } = useTheme();
   const C = useMemo(() => paletaHome(isDark), [isDark]);
@@ -565,7 +565,8 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
     link: evento.cta_url, imagemUrl: evento.imagem_url,
   });
   const abrirLink = () => { if (evento.cta_url) Linking.openURL(evento.cta_url); else onAbrirAgenda(); };
-  const abrir = () => Alert.alert(nome, undefined, [
+  // Evento com inscrição ligada (11/11/2026): o toque abre a página do evento.
+  const abrir = () => onInscrever ? onInscrever() : Alert.alert(nome, undefined, [
     { text: t('convite.compartilhar'), onPress: convidar },
     { text: evento.cta_url ? (ctaTexto || t('convite.saibaMais')) : t('convite.verNaAgenda'), onPress: abrirLink },
     { text: t('common.cancelar'), style: 'cancel' },
@@ -598,7 +599,13 @@ function DestaqueHomeCard({ evento, onAbrirAgenda }: { evento: DestaqueHome; onA
           <Text style={styles.eventoMetaTexto}>{dataLabel}</Text>
         </View>
         {!!descricao && <Text style={styles.especialDesc}>{descricao}</Text>}
-        {!!ctaTexto && (
+        {!!onInscrever && (
+          <View style={[styles.especialCta, { backgroundColor: cor, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            <Ionicons name="ticket-outline" size={14} color="#fff" />
+            <Text style={styles.especialCtaTexto}>{t('eventos.inscreverSe')}</Text>
+          </View>
+        )}
+        {!!ctaTexto && !onInscrever && (
           <View style={[styles.especialCta, { backgroundColor: cor }]}>
             <Text style={styles.especialCtaTexto}>{ctaTexto}</Text>
           </View>
@@ -856,6 +863,15 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
         .then(({ data }) => { setDestaque((data as DestaqueHome) ?? null); });
     }, [])
   );
+
+  // ── Evento em destaque com inscrição ligada (11/11/2026) ──────────────────
+  const [destaqueComInscricao, setDestaqueComInscricao] = useState(false);
+  useEffect(() => {
+    const id = (destaque as any)?.id as string | undefined;
+    if (!id || !isLoggedIn) { setDestaqueComInscricao(false); return; }
+    supabase.from('evento_inscricao_config').select('ativa').eq('evento_id', id).maybeSingle()
+      .then(({ data }) => setDestaqueComInscricao(!!(data as any)?.ativa));
+  }, [(destaque as any)?.id, isLoggedIn]);
 
   // ── Conversas privadas: contador do ícone 💬 ──────────────────────────────
   const [conversasNaoLidasN, setConversasNaoLidasN] = useState(0);
@@ -1172,6 +1188,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           <DestaqueHomeCard
             evento={destaque}
             onAbrirAgenda={() => navigation?.navigate('Agenda')}
+            onInscrever={destaqueComInscricao ? () => navigation?.navigate('Evento', { id: destaque.id }) : undefined}
           />
         )}
 
@@ -1310,6 +1327,8 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
           {([
             { key: 'biblia', icone: 'book', cor: '#7C4DFF', label: t('home.quickBiblia'), onPress: () => navigation?.navigate('Biblia') },
             { key: 'agenda', icone: 'calendar', cor: '#D99A00', label: t('home.quickAgenda'), onPress: () => navigation?.navigate('Agenda') },
+            // Calendário anual da igreja (11/11/2026): abre a Agenda na aba do mês.
+            { key: 'calendario', icone: 'calendar-number', cor: '#E64C93', label: t('home.quickCalendario'), onPress: () => navigation?.navigate('Agenda', { aba: 'mes' }) },
             { key: 'oferta', icone: 'heart', cor: '#E84B1A', label: t('home.quickOferta'), onPress: () => navigation?.navigate('Oferta'), destaque: true },
             { key: 'grupos', icone: 'people', cor: '#27AE60', label: t('home.quickGrupos'), onPress: () => abrirAreaMembro({ screen: 'Grupos' }) },
           ] as const).map(a => {

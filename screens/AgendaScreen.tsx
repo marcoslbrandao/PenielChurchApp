@@ -2,7 +2,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, A
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
+import CalendarioAnual from '../components/CalendarioAnual';
 import { supabase } from '../lib/supabase';
 import { compartilharEvento } from '../lib/compartilharEvento';
 import { useCampoTraduzido } from '../lib/useTraducao';
@@ -309,6 +310,19 @@ function EventoEspecialCard({ evento, onAbrirLink, inscricoes }: { evento: Espec
 
 export default function AgendaScreen() {
   const { t } = useTranslation();
+  // Abas "Esta semana · Calendário · Ano" (calendário anual, 11/11/2026).
+  // A Home abre direto no calendário com { aba: 'mes' }.
+  const route = useRoute<any>();
+  const navegacaoAgenda = useNavigation<any>();
+  const [aba, setAba] = useState<'semana' | 'mes' | 'ano'>('semana');
+  const [mesInicial, setMesInicial] = useState<Date | null>(null);
+  useEffect(() => {
+    const pedida = route.params?.aba;
+    if (pedida === 'mes' || pedida === 'ano' || pedida === 'semana') {
+      setAba(pedida);
+      navegacaoAgenda.setParams({ aba: undefined });
+    }
+  }, [route.params?.aba, navegacaoAgenda]);
   // Eventos especiais com inscrição ligada (precisa estar logado para ler).
   const [comInscricao, setComInscricao] = useState<Set<string>>(new Set());
   useFocusEffect(useCallback(() => {
@@ -449,17 +463,43 @@ export default function AgendaScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
-          <Text style={styles.headerSub}>{t('agenda.semanaAtual')}</Text>
+          <Text style={styles.headerSub}>{aba === 'semana' ? t('agenda.semanaAtual') : t('calendario.subtitulo')}</Text>
           <Text style={styles.headerTitulo}>{t('agenda.titulo')}</Text>
         </View>
         {/* Antes era um botão sem `onPress`: dava o feedback de toque e não
             fazia nada. Agora recarrega a agenda, que é o que a pessoa espera
             de um ícone de calendário no cabeçalho de uma lista de eventos. */}
-        <TouchableOpacity style={styles.iconeBtn} onPress={() => fetchEventos(true)}>
-          <Ionicons name="refresh-outline" size={22} color="rgba(255,255,255,0.7)" />
-        </TouchableOpacity>
+        {aba === 'semana' && (
+          <TouchableOpacity style={styles.iconeBtn} onPress={() => fetchEventos(true)}>
+            <Ionicons name="refresh-outline" size={22} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        )}
       </View>
 
+      <View style={styles.abasContainer}>
+        <View style={styles.abas}>
+          {([
+            ['semana', t('calendario.abaSemana')],
+            ['mes', t('calendario.abaCalendario')],
+            ['ano', t('calendario.abaAno')],
+          ] as const).map(([id, rotulo]) => (
+            <TouchableOpacity key={id} style={[styles.aba, aba === id && styles.abaAtiva]} onPress={() => setAba(id)}>
+              <Text style={[styles.abaTexto, aba === id && styles.abaTextoAtivo]}>{rotulo}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {aba !== 'semana' ? (
+        <View style={{ flex: 1, backgroundColor: C.bg }}>
+          <CalendarioAnual
+            modo={aba}
+            C={C}
+            mesInicial={mesInicial}
+            onAbrirMes={(d) => { setMesInicial(d); setAba('mes'); }}
+          />
+        </View>
+      ) : (<>
       <View style={styles.filtrosContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtrosScrollContent}>
           <View style={styles.filtrosRow}>
@@ -519,6 +559,7 @@ export default function AgendaScreen() {
 
         <View style={{ height: 30 }} />
       </ScrollView>
+      </>)}
     </View>
   );
 }
@@ -530,6 +571,12 @@ function buildStyles(C: PaletaAgenda) { return StyleSheet.create({
   headerTitulo: { fontSize: 18, fontWeight: '500', color: '#fff', marginTop: 2 },
   iconeBtn: { padding: 4 },
   filtrosContainer: { backgroundColor: '#1A1740', paddingBottom: 14 },
+  abasContainer: { backgroundColor: '#1A1740', paddingHorizontal: 18, paddingBottom: 12 },
+  abas: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 4 },
+  aba: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
+  abaAtiva: { backgroundColor: '#F5C842' },
+  abaTexto: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.7)' },
+  abaTextoAtivo: { color: '#1A1740', fontWeight: '800' },
   filtrosScrollContent: { paddingHorizontal: 18 },
   filtrosRow: { flexDirection: 'row', gap: 8 },
   filtroPill: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.2)' },

@@ -26,6 +26,7 @@ import {
 } from '../lib/chatGeral';
 import { formatarTempo, duracaoDoAudio } from '../lib/chatAudio';
 import RegrasDoChat from './RegrasDoChat';
+import PlayerDeVideo from './PlayerDeVideo';
 import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 import { registrarChatAberto } from '../lib/chatAberto';
 import BotaoNegrito from './BotaoNegrito';
@@ -1190,13 +1191,21 @@ function VideoDaMensagem({
   const W = 230;
   const proporcao = largura && altura ? altura / largura : 0.5625;
   const H = Math.max(130, Math.min(300, Math.round(W * proporcao)));
+  // Toca dentro do app (PlayerDeVideo); só abre fora se não der a URL.
+  const [urlTocando, setUrlTocando] = useState<string | null>(null);
   const abrir = async () => {
     if (abrindo) return;
     setAbrindo(true);
-    await abrirMidia(caminho, erroTexto, bucket);
+    try {
+      setUrlTocando(await urlDaMidia(caminho, bucket));
+    } catch {
+      await abrirMidia(caminho, erroTexto, bucket);
+    }
     setAbrindo(false);
   };
   return (
+    <>
+    <PlayerDeVideo url={urlTocando} onFechar={() => setUrlTocando(null)} />
     <Pressable onPress={abrir} onLongPress={onLongPress} delayLongPress={300}>
       <View style={[st.foto, st.video, { width: W, height: H, backgroundColor: cor }]}>
         <Ionicons name="videocam" size={120} color="rgba(255,255,255,0.08)" style={st.videoMarca} />
@@ -1217,6 +1226,7 @@ function VideoDaMensagem({
         )}
       </View>
     </Pressable>
+    </>
   );
 }
 

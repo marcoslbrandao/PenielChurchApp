@@ -1,6 +1,6 @@
 // lib/eventos.ts
 //
-// Eventos com inscrição e pagamento parcelado (Camping 2027 e outros) —
+// Eventos com inscrição e pagamento parcelado (Retiro Peniel 2027 e outros) —
 // pedido do Marcos, 09–11/11/2026. As regras moram no banco (migração
 // 20261112090000_eventos_inscricoes.sql); aqui só as chamadas.
 //
@@ -137,7 +137,7 @@ export async function removerDaEquipe(eventoId: string, userId: string) {
   return error ? 'erro' : String(data);
 }
 
-/** Valores de exemplo do Camping 2027 (Marcos, 11/11/2026). Ele ajusta no painel. */
+/** Valores de exemplo do Retiro Peniel 2027 (Marcos, 11/11/2026). Ele ajusta no painel. */
 export const PRECOS_PADRAO: Preco[] = [
   { categoria: 'Criança até 5 anos', idade_min: 0, idade_max: 5, valor: 0 },
   { categoria: 'Criança de 6 a 12 anos', idade_min: 6, idade_max: 12, valor: 150 },

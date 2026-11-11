@@ -2144,7 +2144,7 @@
     "cat": {
       "ceia": "Sainte-Cène",
       "conferencia": "Conférences",
-      "retiro": "Retraites et Camping",
+      "retiro": "Retraites",
       "alive": "Alive",
       "mulheres": "Femmes",
       "homens": "Hommes",
@@ -2152,6 +2152,8 @@
       "oracao": "Prière et jeûne",
       "especial": "Dates spéciales",
       "fechada": "Église fermée"
-    }
+    },
+    "ligarEvento": "Lier à un événement avec inscription",
+    "semInscricao": "Sans inscription"
   }
 }

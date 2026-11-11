@@ -295,7 +295,7 @@ function ConfigEditor({ eventoId, detalhes, cor, podeSalvar, C, s, t }: {
   eventoId: string; detalhes: DetalhesEvento; cor: string; podeSalvar: boolean; C: ThemeColors; s: ReturnType<typeof estilos>; t: any;
 }) {
   const c = detalhes.config;
-  // Primeira vez: valores de exemplo do Camping 2027 (Marcos, 11/11/2026).
+  // Primeira vez: valores de exemplo do Retiro Peniel 2027 (Marcos, 11/11/2026).
   const [ativa, setAtiva] = useState(c?.ativa ?? false);
   const [inicio, setInicio] = useState(c?.inicio ? dataBR(c.inicio) : '');
   const [fim, setFim] = useState(c?.fim ? dataBR(c.fim) : '');

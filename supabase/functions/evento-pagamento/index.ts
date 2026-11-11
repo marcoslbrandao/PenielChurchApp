@@ -1,6 +1,6 @@
 // supabase/functions/evento-pagamento/index.ts
 //
-// Cobrança de uma parcela de inscrição em evento (Camping 2027 e outros),
+// Cobrança de uma parcela de inscrição em evento (Retiro Peniel 2027 e outros),
 // pedido do Marcos em 11/11/2026 — pagamento LIVRE: a pessoa paga o valor
 // que quiser, quando quiser, até quitar.
 //

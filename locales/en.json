@@ -2197,7 +2197,7 @@
     "cat": {
       "ceia": "Communion",
       "conferencia": "Conferences",
-      "retiro": "Retreats & Camping",
+      "retiro": "Retreats",
       "alive": "Alive",
       "mulheres": "Women",
       "homens": "Men",
@@ -2205,6 +2205,8 @@
       "oracao": "Prayer & fasting",
       "especial": "Special dates",
       "fechada": "Church closed"
-    }
+    },
+    "ligarEvento": "Link to an event with registration",
+    "semInscricao": "No registration"
   }
 }

@@ -263,7 +263,7 @@ function EventoEspecialCard({ evento, onAbrirLink, inscricoes }: { evento: Espec
             <Text style={styles.eventoInfoTexto}>{quando}</Text>
           </View>
         )}
-        {/* Evento com inscrição (Camping 2027 etc., 11/11/2026). */}
+        {/* Evento com inscrição (Retiro Peniel 2027 etc., 11/11/2026). */}
         {inscricoes && (
           <TouchableOpacity
             onPress={() => navegacao.navigate('Evento', { id: evento.id })}

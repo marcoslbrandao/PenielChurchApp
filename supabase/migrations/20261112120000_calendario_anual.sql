@@ -143,7 +143,7 @@ create trigger calendario_datas_carimbo before insert or update on public.calend
 insert into public.calendario_categorias (id, nome, emoji, cor, grupo, ordem) values
   ('ceia',        'Ceia',              '🍷', '#8E1B3A', null,       1),
   ('conferencia', 'Conferências',      '🔥', '#E84B1A', null,       2),
-  ('retiro',      'Retiros e Camping', '⛺', '#1F9D55', null,       3),
+  ('retiro',      'Retiros',          '⛺', '#1F9D55', null,       3),
   ('alive',       'Alive',             '⚡', '#7B3FE4', 'jovens',   4),
   ('mulheres',    'Mulheres',          '🌸', '#E64C93', 'mulheres', 5),
   ('homens',      'Homens',            '🛡️', '#2B6CB0', 'homens',   6),

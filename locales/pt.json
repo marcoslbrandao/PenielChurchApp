@@ -2197,7 +2197,7 @@
     "cat": {
       "ceia": "Ceia",
       "conferencia": "Conferências",
-      "retiro": "Retiros e Camping",
+      "retiro": "Retiros",
       "alive": "Alive",
       "mulheres": "Mulheres",
       "homens": "Homens",
@@ -2205,6 +2205,8 @@
       "oracao": "Oração e jejum",
       "especial": "Datas especiais",
       "fechada": "Igreja fechada"
-    }
+    },
+    "ligarEvento": "Ligar a um evento com inscrição",
+    "semInscricao": "Sem inscrição"
   }
 }

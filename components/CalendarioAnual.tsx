@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import {
   CategoriaCal, DataCal, carregarCalendario, minhasCategoriasEditaveis, salvarData, apagarData,
-  diaLocal, isoDoDia, cobreDia, horaCurta, assinarCalendario, adicionarUmaData, mascaraHora, horaValida,
+  diaLocal, isoDoDia, cobreDia, horaCurta, assinarCalendario, adicionarUmaData, mascaraHora, horaValida, eventosComInscricao,
 } from '../lib/calendario';
 import { dataBR, isoDeBR, mascaraData } from '../lib/eventos';
 import { useCampoTraduzido } from '../lib/useTraducao';
@@ -188,7 +188,11 @@ function EditorData({ visivel, inicial, diaSugerido, categorias, editaveis, C, o
   const [hFim, setHFim] = useState('');
   const [local, setLocal] = useState('');
   const [descricao, setDescricao] = useState('');
+  const [eventoId, setEventoId] = useState<string | null>(null);
+  const [eventos, setEventos] = useState<{ id: string; nome: string }[]>([]);
   const [salvando, setSalvando] = useState(false);
+  // Evento com inscrição (ex.: Retiro Peniel 2027): a data ganha o botão "Inscrições".
+  useEffect(() => { if (visivel) eventosComInscricao().then(setEventos); }, [visivel]);
   const minhas = categorias.filter(c => editaveis.includes(c.id) && (c.ativa || c.id === inicial?.categoria_id));
 
   useEffect(() => {
@@ -202,6 +206,7 @@ function EditorData({ visivel, inicial, diaSugerido, categorias, editaveis, C, o
     setHFim(horaCurta(inicial?.hora_fim ?? null));
     setLocal(inicial?.local ?? '');
     setDescricao(inicial?.descricao ?? '');
+    setEventoId(inicial?.evento_id ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visivel, inicial, diaSugerido]);
 
@@ -218,7 +223,7 @@ function EditorData({ visivel, inicial, diaSugerido, categorias, editaveis, C, o
       id: inicial?.id, categoria_id: cat, titulo, data_inicio: isoIni,
       data_fim: isoFim && isoFim !== isoIni ? isoFim : null,
       hora_inicio: diaInteiro ? null : hIni, hora_fim: diaInteiro || !hFim.trim() ? null : hFim,
-      local, descricao,
+      local, descricao, evento_id: eventoId,
     });
     setSalvando(false);
     if (r !== 'ok') return Alert.alert(t('common.erro'), r);
@@ -293,6 +298,23 @@ function EditorData({ visivel, inicial, diaSugerido, categorias, editaveis, C, o
             <Text style={[st.rotulo, { color: C.textMuted }]}>{t('calendario.descricao')}</Text>
             <TextInput style={[campo, { minHeight: 70, textAlignVertical: 'top' }]} value={descricao} onChangeText={setDescricao} multiline maxLength={2000} />
 
+            {eventos.length > 0 && (
+              <>
+                <Text style={[st.rotulo, { color: C.textMuted }]}>{t('calendario.ligarEvento')}</Text>
+                <View style={st.chipsQuebra}>
+                  {[{ id: null as string | null, nome: t('calendario.semInscricao') }, ...eventos].map(e => {
+                    const on = eventoId === e.id;
+                    return (
+                      <TouchableOpacity key={e.id ?? 'nenhum'} onPress={() => setEventoId(e.id)}
+                        style={[st.chip, { backgroundColor: on ? '#534AB7' : C.bg, borderColor: '#534AB7' + '66' }]}>
+                        <Text style={[st.chipTexto, { color: on ? '#fff' : C.textPrimary }]}>{e.id ? '🎟️ ' : ''}{e.nome}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
             <TouchableOpacity onPress={salvar} disabled={salvando || !cat} style={[st.botaoGrande, (salvando || !cat) && { opacity: 0.6 }]}>
               {salvando ? <ActivityIndicator color="#fff" /> : <Text style={st.botaoGrandeTexto}>{t('calendario.salvar')}</Text>}
             </TouchableOpacity>
@@ -343,7 +365,7 @@ export default function CalendarioAnual({ modo, C, onAbrirMes, mesInicial }: {
   const chips = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }} style={{ marginBottom: 12 }}>
       <TouchableOpacity onPress={() => setFiltro(null)} style={[st.chip, { backgroundColor: !filtro ? '#1A1740' : C.cardBg, borderColor: '#1A1740' + '40' }]}>
-        <Text style={[st.chipTexto, { color: !filtro ? '#fff' : C.textPrimary }]}>🌈 {t('calendario.todas')}</Text>
+        <Text style={[st.chipTexto, { color: !filtro ? '#fff' : C.textPrimary }]}>🖍️ {t('calendario.todas')}</Text>
       </TouchableOpacity>
       {ativas.map(c => {
         const on = filtro === c.id;

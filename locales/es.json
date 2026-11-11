@@ -2144,7 +2144,7 @@
     "cat": {
       "ceia": "Santa Cena",
       "conferencia": "Conferencias",
-      "retiro": "Retiros y Camping",
+      "retiro": "Retiros",
       "alive": "Alive",
       "mulheres": "Mujeres",
       "homens": "Hombres",
@@ -2152,6 +2152,8 @@
       "oracao": "Oración y ayuno",
       "especial": "Fechas especiales",
       "fechada": "Iglesia cerrada"
-    }
+    },
+    "ligarEvento": "Vincular a un evento con inscripción",
+    "semInscricao": "Sin inscripción"
   }
 }

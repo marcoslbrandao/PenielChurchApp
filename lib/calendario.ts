@@ -53,11 +53,18 @@ export async function salvarData(d: Partial<DataCal> & { categoria_id: string; t
     data_inicio: d.data_inicio, data_fim: d.data_fim || null,
     hora_inicio: d.hora_inicio || null, hora_fim: d.hora_inicio ? (d.hora_fim || null) : null,
     local: d.local?.trim() || null,
+    evento_id: d.evento_id || null,
   };
   const { error } = d.id
     ? await supabase.from('calendario_datas').update(linha).eq('id', d.id)
     : await supabase.from('calendario_datas').insert(linha);
   return error ? (error.message || 'erro') : 'ok';
+}
+
+/** Eventos especiais da Agenda com inscrição ligada (para ligar a uma data). */
+export async function eventosComInscricao(): Promise<{ id: string; nome: string }[]> {
+  const { data } = await supabase.from('evento_inscricao_config').select('evento_id, agenda_eventos(nome)').eq('ativa', true);
+  return ((data ?? []) as any[]).map(r => ({ id: r.evento_id, nome: r.agenda_eventos?.nome ?? '—' }));
 }
 
 export async function apagarData(id: string) {

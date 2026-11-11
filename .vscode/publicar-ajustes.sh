@@ -1,5 +1,5 @@
 #!/bin/bash
-# Publica 12/11/2026: Eventos com inscricao e pagamento parcelado (Camping 2027),
+# Publica 12/11/2026: Eventos com inscricao e pagamento parcelado (Retiro Peniel 2027),
 # equipe do evento e tesouraria + Calendario anual da igreja.
 # ANTES: rodar no SQL Editor, nesta ordem:
 #   supabase/migrations/20261112090000_eventos_inscricoes.sql
@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 LOG=".vscode/publicar.log"
 exec > >(tee "$LOG") 2>&1
 echo "== inicio $(date)"
-MSG="feat: eventos com inscricao (Camping 2027), tesouraria e calendario anual da igreja
+MSG="feat: eventos com inscricao (Retiro Peniel 2027), tesouraria e calendario anual da igreja
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_015Hcwi7BhMk9vnfwpsFfPrU"

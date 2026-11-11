@@ -1,6 +1,6 @@
 // screens/EventoScreen.tsx
 //
-// Página de um evento com inscrição (Camping 2027 e outros) — pedido do
+// Página de um evento com inscrição (Retiro Peniel 2027 e outros) — pedido do
 // Marcos, 09–11/11/2026. Abas: Sobre · Regras · Equipe · Minha inscrição.
 // Quem administra o evento (admin, tesouraria, líder) vê "Gerenciar".
 //

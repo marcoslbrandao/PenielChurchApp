@@ -36,7 +36,7 @@ import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/mo
 import { BUCKET_CHAT_GERAL } from '../lib/chatGeral';
 import { type FonteChat, fonteIgreja, chaveDaFonte, deLinha, paraLinha, marcarLido, infoDaMensagem, type LinhaInfo } from '../lib/chatFonte';
 import { erroDaConversa } from '../lib/conversas';
-import { useNavigation } from '@react-navigation/native';
+import { NavigationContext } from '@react-navigation/native';
 
 // ─── Chat da Igreja ──────────────────────────────────────────────────────────
 // O chat geral dos membros, aberto pelo card da Home. Funciona como o WhatsApp:
@@ -605,7 +605,11 @@ export default function ChatGeralModal({
   // Mensagem privada para o autor (11/11/2026): fecha este chat e abre a
   // conversa na tela Conversas, que cuida das regras (data de nascimento,
   // bloqueio, "não aceita").
-  const navigation = useNavigation<any>();
+  // NUNCA useNavigation aqui: este chat também é montado pelo
+  // RecebeCompartilhamento, que fica FORA do NavigationContainer (App.tsx), e
+  // useNavigation lança erro ali — o app fechava ao abrir (11/11/2026). O
+  // contexto devolve undefined fora da navegação; aí a opção não aparece.
+  const navigation = useContext(NavigationContext) as any;
   const mensagemPrivada = (msg: MensagemGeral) => {
     setMenuDe(null);
     setTimeout(() => {
@@ -976,7 +980,7 @@ export default function ChatGeralModal({
                 )}
                 {/* Denunciar e Bloquear voltaram (17/10/2026): exigência da
                     diretriz 1.2 da Apple. Apagar continua só autor e admin. */}
-                {menuDe.autor_id !== userId && fonte.tipo !== 'privada' && (
+                {menuDe.autor_id !== userId && fonte.tipo !== 'privada' && !!navigation && (
                   <ItemMenu icone="chatbubble-ellipses-outline" texto={t('conversas.mensagemPrivadaPara', { nome: menuDe.autor_nome })} cor={C.text} onPress={() => mensagemPrivada(menuDe)} />
                 )}
                 {menuDe.autor_id !== userId && (

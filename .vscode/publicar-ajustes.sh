@@ -24,7 +24,7 @@ git commit -m "$MSG" || echo "(nada novo para commitar)"
 git push origin main || { echo "FALHOU: git push do app"; exit 1; }
 
 echo "== 2/3 Edge Function limpar-audios-chat"
-npx supabase@latest functions deploy limpar-audios-chat --project-ref yudulaqsqhzbbarhxbnr --use-api || { echo "FALHOU: deploy limpar-audios-chat"; exit 1; }
+npx --yes supabase@2 functions deploy limpar-audios-chat --project-ref yudulaqsqhzbbarhxbnr --use-api || { echo "FALHOU: deploy limpar-audios-chat"; exit 1; }
 
 echo "== 3/3 eas update"
 npx eas update --branch production --environment production --message "Conversas privadas entre membros" --non-interactive || { echo "FALHOU: eas update"; exit 1; }

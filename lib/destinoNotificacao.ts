@@ -61,6 +61,14 @@ export function destinoDaNotificacao(
   // Conteúdo de grupo — aviso, devocional ou short com `grupo` preenchido.
   // Tudo mora na mesma tela (abas dentro de Grupos), então o grupo vai como
   // `grupoInicial` e só o chat pede um parâmetro a mais.
+  // Devocional (11/11/2026): o toque abre O devocional, ja aberto, e nao so a
+  // lista. O push traz o `id` (content-notifications, data.id). Devocional de
+  // grupo exige acesso de membro, como o resto do grupo.
+  if (type === 'devocional' && dados.id) {
+    if (grupo && !podeMembros) return SININHO;
+    return { nome: 'Devocionais', params: { abrir: dados.id, ...(grupo ? { grupo } : {}) } };
+  }
+
   if (grupo) {
     if (!podeMembros) return SININHO;
     return abaMembros('Grupos', { grupoInicial: grupo, abrirChat: origem === 'chat' || undefined });
@@ -125,10 +133,15 @@ export function destinoDaNotificacao(
  * sendo lido ali mesmo — devolve null e o card não fica tocável.
  */
 export function destinoDoAviso(
-  aviso: { grupo?: string | null; origem?: string | null; cta_url?: string | null },
+  aviso: { grupo?: string | null; origem?: string | null; cta_url?: string | null; texto?: string | null },
   acesso: { ehMembro: boolean; logado: boolean; ehAdmin?: boolean },
 ): Destino | null {
   if (aviso.cta_url) return { url: aviso.cta_url };
+  // Card "Novo devocional" do sininho (espelho geral): o `texto` e o titulo
+  // do devocional, que a tela usa para abrir o devocional certo.
+  if (aviso.origem === 'devocional' && !aviso.grupo) {
+    return { nome: 'Devocionais', params: aviso.texto ? { abrirTitulo: aviso.texto } : undefined };
+  }
   if (!aviso.grupo) return null;
   if (!(acesso.logado && acesso.ehMembro)) return null;
   return destinoDaNotificacao({ type: 'aviso', grupo: aviso.grupo, origem: aviso.origem }, acesso);

@@ -163,6 +163,14 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
   const [abertoId, setAbertoId] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const posicoes = useRef<Record<string, number>>({});
+  // Abrir UM devocional (11/11/2026): o toque na notificacao (`abrir` = id) ou
+  // no card "Novo devocional" do sininho (`abrirTitulo`) traz a pessoa direto
+  // para ele, ja aberto e na tela. Se ele e de uma serie, troca para a tela da
+  // serie (na lista Geral os de serie ficam dentro do card da serie).
+  const abrirId: string | null = route?.params?.abrir ?? null;
+  const abrirTitulo: string | null = route?.params?.abrirTitulo ?? null;
+  const rolarPara = useRef<string | null>(null);
+  const jaAbriu = useRef(false);
 
   useEffect(() => {
     setLoading(true);
@@ -185,6 +193,37 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
       setLoading(false);
     });
   }, [grupoFiltro, serieFiltro]);
+
+  useEffect(() => {
+    if (loading || jaAbriu.current || (!abrirId && !abrirTitulo)) return;
+    jaAbriu.current = true;
+    const alvo = abrirId
+      ? devocionais.find(d => d.id === abrirId)
+      : devocionais.find(d => d.titulo.trim() === abrirTitulo!.trim());
+    if (alvo) {
+      if (alvo.serie_id && !serieFiltro && !grupoFiltro && navigation?.replace) {
+        navigation.replace('Devocionais', { serie: alvo.serie_id, abrir: alvo.id });
+        return;
+      }
+      rolarPara.current = alvo.id;
+      setAbertoId(alvo.id);
+      const y = posicoes.current[alvo.id];
+      if (y != null) {
+        rolarPara.current = null;
+        setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true }), 150);
+      }
+      return;
+    }
+    // Nao esta nesta lista (ex.: devocional de grupo aberto sem o grupo):
+    // descobre onde ele mora e abre a tela certa.
+    if (abrirId && navigation?.replace) {
+      supabase.from('devocionais').select('grupo, serie_id').eq('id', abrirId).maybeSingle()
+        .then(({ data }: any) => {
+          if (data?.serie_id && data.serie_id !== serieFiltro) navigation.replace('Devocionais', { serie: data.serie_id, abrir: abrirId });
+          else if (data?.grupo && data.grupo !== grupoFiltro) navigation.replace('Devocionais', { grupo: data.grupo, abrir: abrirId });
+        });
+    }
+  }, [loading, devocionais, abrirId, abrirTitulo, serieFiltro, grupoFiltro, navigation]);
 
   const subtitulo = serieFiltro
     ? t('devocionais.serie')
@@ -257,7 +296,14 @@ export default function DevocionaisScreen({ navigation, route }: { navigation?: 
             </View>
           ) : (
             avulsos.map((dev, i) => (
-              <View key={dev.id} onLayout={e => { posicoes.current[dev.id] = e.nativeEvent.layout.y; }}>
+              <View key={dev.id} onLayout={e => {
+                const y = e.nativeEvent.layout.y;
+                posicoes.current[dev.id] = y;
+                if (rolarPara.current === dev.id) {
+                  rolarPara.current = null;
+                  setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: true }), 150);
+                }
+              }}>
                 <DevocionalItem
                   dev={dev}
                   aberto={abertoId === dev.id}

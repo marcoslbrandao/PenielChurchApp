@@ -718,6 +718,7 @@ export default function ChatGeralModal({
                 largura={m.midia_largura}
                 altura={m.midia_altura}
                 duracaoMs={m.duracao_ms}
+                autorNome={m.autor_nome}
                 onLongPress={() => setMenuDe(m)}
                 erroTexto={t('chatGeral.abrirErro')}
               />
@@ -1169,13 +1170,22 @@ async function abrirMidia(caminho: string, erroTexto: string, bucket: string) {
   }
 }
 
+// Capa do vídeo (11/11/2026): ainda não há como tirar um quadro do vídeo no
+// app (precisa de módulo nativo — próximo build). Até lá, em vez do preto, a
+// capa mostra quem enviou, na cor do chat.
+function iniciaisDe(nome: string) {
+  const p = (nome ?? '').trim().split(/\s+/).filter(Boolean);
+  return ((p[0]?.[0] ?? '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() || '🎬';
+}
+
 function VideoDaMensagem({
-  caminho, largura, altura, duracaoMs, onLongPress, erroTexto,
+  caminho, largura, altura, duracaoMs, autorNome, onLongPress, erroTexto,
 }: {
   caminho: string; largura: number | null; altura: number | null; duracaoMs: number | null;
-  onLongPress: () => void; erroTexto: string;
+  autorNome?: string; onLongPress: () => void; erroTexto: string;
 }) {
-  const { bucket } = useContext(ChatCtx);
+  const { bucket, cor } = useContext(ChatCtx);
+  const primeiroNome = (autorNome ?? '').trim().split(/\s+/)[0] ?? '';
   const [abrindo, setAbrindo] = useState(false);
   const W = 230;
   const proporcao = largura && altura ? altura / largura : 0.5625;
@@ -1188,7 +1198,14 @@ function VideoDaMensagem({
   };
   return (
     <Pressable onPress={abrir} onLongPress={onLongPress} delayLongPress={300}>
-      <View style={[st.foto, st.video, { width: W, height: H }]}>
+      <View style={[st.foto, st.video, { width: W, height: H, backgroundColor: cor }]}>
+        <Ionicons name="videocam" size={120} color="rgba(255,255,255,0.08)" style={st.videoMarca} />
+        {!!autorNome && (
+          <View style={st.videoAutor}>
+            <View style={st.videoIniciais}><Text style={st.videoIniciaisTexto}>{iniciaisDe(autorNome)}</Text></View>
+            <Text style={st.videoAutorNome} numberOfLines={1}>{primeiroNome}</Text>
+          </View>
+        )}
         <View style={st.videoPlay}>
           {abrindo ? <ActivityIndicator color="#fff" /> : <Ionicons name="play" size={26} color="#fff" style={{ marginLeft: 3 }} />}
         </View>
@@ -1316,6 +1333,11 @@ const st = StyleSheet.create({
   previaRodape: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 10 },
   previaSite: { fontSize: 13, fontWeight: '600' },
   video: { backgroundColor: '#14112E' },
+  videoMarca: { position: 'absolute', right: -18, bottom: -22 },
+  videoAutor: { position: 'absolute', top: 8, left: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  videoIniciais: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.25)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
+  videoIniciaisTexto: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  videoAutorNome: { color: '#fff', fontSize: 12.5, fontWeight: '700', flexShrink: 1, textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 3 },
   videoPlay: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(0,0,0,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)', alignItems: 'center', justifyContent: 'center' },
   videoTempo: { position: 'absolute', left: 8, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
   videoTempoTexto: { color: '#fff', fontSize: 11, fontWeight: '600', fontVariant: ['tabular-nums'] },

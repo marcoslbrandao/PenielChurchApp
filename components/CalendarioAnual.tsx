@@ -400,9 +400,9 @@ export default function CalendarioAnual({ modo, C, onAbrirMes, mesInicial }: {
       <View style={{ flex: 1 }}>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }} refreshControl={refresh}>
           <View style={st.navMes}>
-            <TouchableOpacity onPress={() => setAno(a => a - 1)} hitSlop={10}><Ionicons name="chevron-back" size={22} color={C.accentText} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setAno(a => a - 1)} hitSlop={10} style={[st.seta, { backgroundColor: C.eventoDataBg }]}><Ionicons name="chevron-back" size={26} color={C.accentText} /></TouchableOpacity>
             <Text style={[st.navTitulo, { color: C.textPrimary }]}>{ano}</Text>
-            <TouchableOpacity onPress={() => setAno(a => a + 1)} hitSlop={10}><Ionicons name="chevron-forward" size={22} color={C.accentText} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setAno(a => a + 1)} hitSlop={10} style={[st.seta, { backgroundColor: C.eventoDataBg }]}><Ionicons name="chevron-forward" size={26} color={C.accentText} /></TouchableOpacity>
           </View>
           {chips}
           {botaoAssinar}
@@ -453,9 +453,9 @@ export default function CalendarioAnual({ modo, C, onAbrirMes, mesInicial }: {
     <View style={{ flex: 1 }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 90 }} refreshControl={refresh}>
         <View style={st.navMes}>
-          <TouchableOpacity onPress={() => mudarMes(-1)} hitSlop={10}><Ionicons name="chevron-back" size={22} color={C.accentText} /></TouchableOpacity>
+          <TouchableOpacity onPress={() => mudarMes(-1)} hitSlop={10} style={[st.seta, { backgroundColor: C.eventoDataBg }]}><Ionicons name="chevron-back" size={26} color={C.accentText} /></TouchableOpacity>
           <Text style={[st.navTitulo, { color: C.textPrimary }]}>{MESES[mes.getMonth()]} {mes.getFullYear()}</Text>
-          <TouchableOpacity onPress={() => mudarMes(1)} hitSlop={10}><Ionicons name="chevron-forward" size={22} color={C.accentText} /></TouchableOpacity>
+          <TouchableOpacity onPress={() => mudarMes(1)} hitSlop={10} style={[st.seta, { backgroundColor: C.eventoDataBg }]}><Ionicons name="chevron-forward" size={26} color={C.accentText} /></TouchableOpacity>
         </View>
         {chips}
 
@@ -527,8 +527,9 @@ export default function CalendarioAnual({ modo, C, onAbrirMes, mesInicial }: {
 }
 
 const st = StyleSheet.create({
-  navMes: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 4 },
-  navTitulo: { fontSize: 19, fontWeight: '800' },
+  navMes: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 16, paddingHorizontal: 2 },
+  navTitulo: { fontSize: 24, fontWeight: '800' },
+  seta: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1 },
   chipTexto: { fontSize: 12.5, fontWeight: '700' },
   chipsQuebra: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },

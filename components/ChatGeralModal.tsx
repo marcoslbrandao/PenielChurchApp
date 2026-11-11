@@ -486,7 +486,11 @@ export default function ChatGeralModal({
     if (a.type === 'video') enviarVideo(a); else enviarImagem(a);
   };
 
-  const tirarFoto = async () => {
+  // Câmera do celular: foto ou vídeo (pedido do Marcos, 11/11/2026 — "como
+  // o WhatsApp"). O vídeo usa a câmera do sistema, com o mesmo limite de
+  // duração da galeria; a câmera dentro do chat (toque = foto, segurar =
+  // vídeo) vem depois que o build 1.5.3 estiver nas lojas.
+  const usarCamera = async (tipo: 'foto' | 'video') => {
     const p = await ImagePicker.requestCameraPermissionsAsync();
     if (!p.granted) {
       Alert.alert(t('chatGeral.permissaoCamera'), undefined, [
@@ -495,8 +499,27 @@ export default function ChatGeralModal({
       ]);
       return;
     }
-    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 });
-    if (!r.canceled && r.assets?.[0]) enviarImagem(r.assets[0]);
+    const r = tipo === 'foto'
+      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 })
+      : await ImagePicker.launchCameraAsync({
+          mediaTypes: ['videos'],
+          videoMaxDuration: VIDEO_MAX_SEGUNDOS,
+          videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium,
+          videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
+        });
+    const a = !r.canceled ? r.assets?.[0] : undefined;
+    if (!a) return;
+    if (a.type === 'video') enviarVideo(a); else enviarImagem(a);
+  };
+
+  // O Alert do Android mostra no máximo 3 botões; por isso a câmera abre
+  // uma segunda pergunta (Foto / Vídeo) em vez de somar opções na primeira.
+  const escolherCamera = () => {
+    Alert.alert(t('chatGeral.cameraTitulo'), undefined, [
+      { text: t('chatGeral.camera'), onPress: () => usarCamera('foto') },
+      { text: t('chatGeral.gravarVideo'), onPress: () => usarCamera('video') },
+      { text: t('common.cancelar'), style: 'cancel' },
+    ]);
   };
 
   const anexar = () => {
@@ -504,7 +527,7 @@ export default function ChatGeralModal({
     if (barrarSeOfensivo(texto, t)) return;
     Alert.alert(fonte.titulo, undefined, [
       { text: t('chatGeral.galeria'), onPress: escolherDaGaleria },
-      { text: t('chatGeral.camera'), onPress: tirarFoto },
+      { text: t('chatGeral.cameraTitulo'), onPress: escolherCamera },
       // Só nos binários com o seletor de arquivos (1.5.0+).
       ...(podeAnexarArquivo ? [{ text: t('chatGeral.arquivoOpcao'), onPress: anexarArquivo }] : []),
       { text: t('common.cancelar'), style: 'cancel' as const },

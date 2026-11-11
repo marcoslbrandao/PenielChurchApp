@@ -1698,6 +1698,8 @@
     "erroEnviarTexto": "Vérifiez votre connexion et réessayez.",
     "galeria": "Photo, GIF ou vidéo de la galerie",
     "camera": "Prendre une photo",
+    "cameraTitulo": "Caméra",
+    "gravarVideo": "Filmer une vidéo",
     "permissaoCamera": "Autorisez l'accès à l'appareil photo dans les Réglages.",
     "permissaoFotos": "Autorisez l'accès aux photos dans les Réglages.",
     "arquivoOpcao": "Fichier (audio, PDF, document)",

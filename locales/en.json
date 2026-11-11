@@ -1698,6 +1698,8 @@
     "erroEnviarTexto": "Check your connection and try again.",
     "galeria": "Photo, GIF or video from gallery",
     "camera": "Take a photo",
+    "cameraTitulo": "Camera",
+    "gravarVideo": "Record a video",
     "permissaoCamera": "Allow camera access in your phone's Settings.",
     "permissaoFotos": "Allow photo access in your phone's Settings.",
     "arquivoOpcao": "File (audio, PDF, document)",

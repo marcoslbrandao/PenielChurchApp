@@ -1698,6 +1698,8 @@
     "erroEnviarTexto": "Revisa tu conexión e inténtalo de nuevo.",
     "galeria": "Foto, GIF o video de la galería",
     "camera": "Hacer una foto",
+    "cameraTitulo": "Cámara",
+    "gravarVideo": "Grabar un vídeo",
     "permissaoCamera": "Permite el acceso a la cámara en los Ajustes del móvil.",
     "permissaoFotos": "Permite el acceso a las fotos en los Ajustes del móvil.",
     "arquivoOpcao": "Archivo (audio, PDF, documento)",

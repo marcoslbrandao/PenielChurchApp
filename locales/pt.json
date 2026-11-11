@@ -1698,6 +1698,8 @@
     "erroEnviarTexto": "Verifique a internet e tente de novo.",
     "galeria": "Foto, GIF ou vídeo da galeria",
     "camera": "Tirar foto",
+    "cameraTitulo": "Câmera",
+    "gravarVideo": "Gravar vídeo",
     "permissaoCamera": "Permita o acesso à câmera nos Ajustes do celular.",
     "permissaoFotos": "Permita o acesso às fotos nos Ajustes do celular.",
     "arquivoOpcao": "Arquivo (áudio, PDF, documento)",

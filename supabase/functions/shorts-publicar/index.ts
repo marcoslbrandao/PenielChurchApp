@@ -14,7 +14,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
-const GITHUB_TOKEN = Deno.env.get('GITHUB_TOKEN') ?? '';
+const GITHUB_TOKEN = (Deno.env.get('GITHUB_TOKEN') ?? '').trim();
 const REPO = Deno.env.get('GITHUB_REPO') ?? 'marcoslbrandao/PenielChurchApp';
 
 const cors = {

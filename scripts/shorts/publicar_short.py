@@ -23,7 +23,8 @@ import textwrap
 import urllib.request
 
 SUPABASE_URL = os.environ['SUPABASE_URL'].rstrip('/')
-SEGREDO = os.environ['SHORTS_SEGREDO']
+# .strip(): a chave colada no GitHub pode vir com quebra de linha no fim.
+SEGREDO = os.environ['SHORTS_SEGREDO'].strip()
 SHORT_ID = os.environ['SHORT_ID']
 BALCAO = f'{SUPABASE_URL}/functions/v1/shorts-trabalho'
 FONTE = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'

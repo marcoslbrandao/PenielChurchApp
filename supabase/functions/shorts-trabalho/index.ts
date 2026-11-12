@@ -16,7 +16,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const SEGREDO = Deno.env.get('SHORTS_SEGREDO') ?? '';
+// .trim(): a chave colada no painel pode vir com quebra de linha no fim.
+const SEGREDO = (Deno.env.get('SHORTS_SEGREDO') ?? '').trim();
 const YT_ID = Deno.env.get('YOUTUBE_CLIENT_ID') ?? '';
 const YT_SECRET = Deno.env.get('YOUTUBE_CLIENT_SECRET') ?? '';
 const YT_REFRESH = Deno.env.get('YOUTUBE_REFRESH_TOKEN') ?? '';
@@ -32,7 +33,7 @@ function iguais(a: string, b: string) {
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'metodo' }, 405);
-  if (!SEGREDO || !iguais(req.headers.get('x-shorts-segredo') ?? '', SEGREDO)) return json({ error: 'sem_acesso' }, 401);
+  if (!SEGREDO || !iguais((req.headers.get('x-shorts-segredo') ?? '').trim(), SEGREDO)) return json({ error: 'sem_acesso' }, 401);
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
   try {
     const { acao, id, youtube_id, erro } = await req.json();

@@ -2087,7 +2087,14 @@
     "resumoPessoas": "{{n}} personne(s)",
     "cfgComPagamento": "Avec paiement",
     "cfgComPagamentoSim": "Tarifs par âge et paiement dans l’app.",
-    "cfgComPagamentoNao": "Inscription seule : confirme la place, sans tarifs."
+    "cfgComPagamentoNao": "Inscription seule : confirme la place, sans tarifs.",
+    "status_pendente": "Acompte en attente",
+    "filtro_pendente": "Acompte en attente",
+    "inscritoPendente": "Inscription faite ! Votre place est confirmée dès que l’acompte de {{entrada}} est payé. Touchez « Payer ».",
+    "pendenteInfo": "Il reste {{entrada}} d’acompte à payer pour confirmer votre place.",
+    "canceladaInfo": "Cette inscription a été annulée par l’organisation. Pour toute question, contactez-nous.",
+    "erro_cancelada": "Votre inscription a été annulée par l’organisation. Contactez-nous pour vous réinscrire.",
+    "relatorio": "Rapport"
   },
   "tesouraria": {
     "titulo": "Trésorerie des événements",

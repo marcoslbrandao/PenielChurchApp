@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
       .eq('id', inscricao_id)
       .maybeSingle();
     if (erroInsc || !insc || insc.responsavel_id !== userId) return json({ error: 'Inscrição não encontrada.' }, 404);
-    if (insc.status !== 'confirmada') {
+    // 'pendente' = falta a entrada: é justamente para pagar que ela existe (12/11/2026).
+    if (insc.status !== 'confirmada' && insc.status !== 'pendente') {
       return json({ error: insc.status === 'espera'
         ? 'Sua inscrição está na lista de espera. O pagamento abre quando a vaga for confirmada.'
         : 'Esta inscrição foi cancelada.' }, 400);

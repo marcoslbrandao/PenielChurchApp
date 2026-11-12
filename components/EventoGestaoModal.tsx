@@ -21,12 +21,12 @@ import { useAcesso } from '../lib/acesso';
 import { useTheme, type ThemeColors } from '../lib/theme';
 import {
   painelEvento, detalheInscricao, registrarPagamento, definirDesconto, definirStatus, salvarConfig,
-  definirEquipe, removerDaEquipe, definirPagamento, libras, dataBR, isoDeBR, mascaraData, PRECOS_PADRAO, PERGUNTAS_PADRAO,
+  definirEquipe, removerDaEquipe, definirPagamento, relatorioEvento, libras, dataBR, isoDeBR, mascaraData, PRECOS_PADRAO, PERGUNTAS_PADRAO,
   type DetalhesEvento, type LinhaPainel, type Preco, type Pergunta,
 } from '../lib/eventos';
 
 type Aba = 'inscritos' | 'config' | 'equipe';
-type Filtro = 'todos' | 'saldo' | 'quitados' | 'espera' | 'cancelada';
+type Filtro = 'todos' | 'pendente' | 'saldo' | 'quitados' | 'espera' | 'cancelada';
 
 export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, detalhes, onClose }: {
   visible: boolean; eventoId: string; eventoNome: string; cor: string; detalhes: DetalhesEvento; onClose: () => void;
@@ -121,12 +121,13 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
     ]);
   };
 
+  // Planilha .xlsx (Resumo · Inscrições · Pessoas · Pagamentos), 12/11/2026.
+  const [gerando, setGerando] = useState(false);
   const exportar = async () => {
-    const cab = ['Responsável', 'Status', 'Pessoas', 'Nomes', 'Total', 'Desconto', 'Pago', 'Falta', 'Inscrito em'];
-    const csv = [cab, ...linhas.map(l => [l.responsavel_nome, l.status, l.pessoas, l.nomes ?? '', l.total, l.desconto, l.pago, l.saldo, dataBR(l.created_at)])]
-      .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    await Share.share({ message: csv, title: `${eventoNome} — inscritos.csv` });
+    setGerando(true);
+    const r = await relatorioEvento(eventoId);
+    setGerando(false);
+    if (r !== 'ok') Alert.alert(t('eventos.relatorio'), r.replace(/^erro:/, ''));
   };
 
   const abas: { k: Aba; r: string }[] = [
@@ -144,7 +145,10 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
           </TouchableOpacity>
           <Text style={s.headerTitulo} numberOfLines={1}>{detalhe ? detalhe.responsavel : `${t('eventos.gerenciar')} · ${eventoNome}`}</Text>
           {!detalhe && aba === 'inscritos' && linhas.length > 0 && (
-            <TouchableOpacity style={s.headerBtn} onPress={exportar}><Ionicons name="share-outline" size={18} color="#fff" /></TouchableOpacity>
+            <TouchableOpacity style={[s.headerBtn, { flexDirection: 'row', width: undefined, paddingHorizontal: 10, gap: 5 }]} onPress={exportar} disabled={gerando}>
+              {gerando ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="document-text-outline" size={16} color="#fff" />}
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{t('eventos.relatorio')}</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -252,7 +256,7 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
                     </View>
                     {comPag && <Text style={[s.sub, { textAlign: 'center' }]}>{t('eventos.gEsperado', { valor: libras(totais.esperado) })}</Text>}
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, padding: 12 }}>
-                      {((comPag ? ['todos', 'saldo', 'quitados', 'espera', 'cancelada'] : ['todos', 'espera', 'cancelada']) as Filtro[]).map(f => (
+                      {((comPag ? ['todos', 'pendente', 'saldo', 'quitados', 'espera', 'cancelada'] : ['todos', 'espera', 'cancelada']) as Filtro[]).map(f => (
                         <TouchableOpacity key={f} onPress={() => setFiltro(f)} style={[s.chip, filtro === f && { backgroundColor: cor, borderColor: cor }]}>
                           <Text style={{ color: filtro === f ? '#fff' : C.text, fontWeight: '600' }}>{t(`eventos.filtro_${f}`)}</Text>
                         </TouchableOpacity>

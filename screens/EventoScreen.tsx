@@ -20,7 +20,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/useAuth';
 import { useTheme, type ThemeColors } from '../lib/theme';
 import {
-  detalhesEvento, minhaFamilia, minhaInscricao, inscrever, cancelarMinhaInscricao, pagarParcela,
+  detalhesEvento, minhaFamilia, minhaInscricao, inscrever, pagarParcela,
   libras, dataBR, isoDeBR, mascaraData,
   type DetalhesEvento, type PessoaFamilia, type MinhaInscricao, type PessoaParaInscrever,
 } from '../lib/eventos';
@@ -173,7 +173,7 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
     setInscVisivel(false);
     await carregar();
     setAba('inscricao');
-    Alert.alert(t('eventos.titulo'), r.estado === 'espera' ? t('eventos.inscritoEspera') : (comPag ? t('eventos.inscritoOk', { total: libras(r.total) }) : t('eventos.inscritoOkSemPagamento')));
+    Alert.alert(t('eventos.titulo'), r.estado === 'espera' ? t('eventos.inscritoEspera') : r.estado === 'pendente' ? t('eventos.inscritoPendente', { entrada: libras(cfg?.entrada_minima) }) : (comPag ? t('eventos.inscritoOk', { total: libras(r.total) }) : t('eventos.inscritoOkSemPagamento')));
   };
 
   // ── Pagar ─────────────────────────────────────────────────────────────────
@@ -203,16 +203,7 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
     }
   };
 
-  const cancelar = () => {
-    Alert.alert(t('eventos.cancelarTitulo'), t('eventos.cancelarTexto'), [
-      { text: t('common.cancelar'), style: 'cancel' },
-      {
-        text: t('eventos.cancelarConfirma'), style: 'destructive', onPress: async () => {
-          if (await cancelarMinhaInscricao(eventoId)) carregar();
-        },
-      },
-    ]);
-  };
+  // Cancelar a inscrição é só com a organização (Marcos, 12/11/2026).
 
   // ── Render ────────────────────────────────────────────────────────────────
   if (carregando) {
@@ -345,8 +336,8 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
               <View style={s.bloco}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={s.secaoTitulo}>{t('eventos.minhaInscricao')}</Text>
-                  <View style={[s.selo, { backgroundColor: minha.status === 'espera' ? '#F5A62322' : cor + '22' }]}>
-                    <Text style={{ color: minha.status === 'espera' ? '#B7791F' : cor, fontWeight: '800', fontSize: 11 }}>
+                  <View style={[s.selo, { backgroundColor: minha.status === 'espera' || minha.status === 'pendente' ? '#F5A62322' : cor + '22' }]}>
+                    <Text style={{ color: minha.status === 'espera' || minha.status === 'pendente' ? '#B7791F' : cor, fontWeight: '800', fontSize: 11 }}>
                       {t(`eventos.status_${minha.status}`)}
                     </Text>
                   </View>
@@ -362,9 +353,12 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
                 </>)}
                 {!comPag && minha.status === 'confirmada' && <Text style={[s.textoForte, { color: C.success, marginTop: 6 }]}>{t('eventos.vagaConfirmada')}</Text>}
 
-                {comPag && minha.status === 'confirmada' && minha.saldo > 0 && (
+                {minha.status === 'pendente' && (
+                  <Text style={[s.textoForte, { color: '#B7791F', marginTop: 10 }]}>{t('eventos.pendenteInfo', { entrada: libras(Math.max(0, Math.min(cfg?.entrada_minima ?? 0, minha.total - minha.desconto) - minha.pago)) })}</Text>
+                )}
+                {comPag && (minha.status === 'confirmada' || minha.status === 'pendente') && minha.saldo > 0 && (
                   <>
-                    <Text style={[s.sub, { marginTop: 10 }]}>{t('eventos.sugestao', { valor: libras(minha.sugestao) })}</Text>
+                    {minha.status === 'confirmada' && <Text style={[s.sub, { marginTop: 10 }]}>{t('eventos.sugestao', { valor: libras(minha.sugestao) })}</Text>}
                     <TouchableOpacity style={[s.botao, { backgroundColor: cor, marginTop: 10 }]} onPress={abrirPagar}>
                       <Ionicons name="card-outline" size={18} color="#fff" />
                       <Text style={s.botaoTexto}>{t('eventos.pagarAgora')}</Text>
@@ -394,7 +388,6 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
                   {minha.pago <= 0 && podeInscrever && (
                     <TouchableOpacity onPress={abrirInscricao}><Text style={[s.link, { color: cor }]}>{t('eventos.editarPessoas')}</Text></TouchableOpacity>
                   )}
-                  <TouchableOpacity onPress={cancelar}><Text style={[s.link, { color: C.danger }]}>{t('eventos.cancelarInscricao')}</Text></TouchableOpacity>
                 </View>
               </View>
             )}

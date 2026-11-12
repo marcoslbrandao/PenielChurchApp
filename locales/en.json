@@ -2140,7 +2140,14 @@
     "resumoPessoas": "{{n}} person(s)",
     "cfgComPagamento": "With payment",
     "cfgComPagamentoSim": "Prices by age and payment in the app.",
-    "cfgComPagamentoNao": "Sign-up only: confirms the place, no prices."
+    "cfgComPagamentoNao": "Sign-up only: confirms the place, no prices.",
+    "status_pendente": "Awaiting deposit",
+    "filtro_pendente": "Awaiting deposit",
+    "inscritoPendente": "You’re registered! Your place is confirmed once the {{entrada}} deposit is paid. Tap \"Pay now\".",
+    "pendenteInfo": "{{entrada}} deposit still to pay to confirm your place.",
+    "canceladaInfo": "This registration was cancelled by the organisers. Any questions, please get in touch.",
+    "erro_cancelada": "Your registration was cancelled by the organisers. Please get in touch to register again.",
+    "relatorio": "Report"
   },
   "tesouraria": {
     "titulo": "Event treasury",

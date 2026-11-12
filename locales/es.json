@@ -2087,7 +2087,14 @@
     "resumoPessoas": "{{n}} persona(s)",
     "cfgComPagamento": "Con pago",
     "cfgComPagamentoSim": "Precios por edad y pago en la app.",
-    "cfgComPagamentoNao": "Solo inscripción: confirma la plaza, sin precios."
+    "cfgComPagamentoNao": "Solo inscripción: confirma la plaza, sin precios.",
+    "status_pendente": "Esperando la entrada",
+    "filtro_pendente": "Esperando la entrada",
+    "inscritoPendente": "¡Inscripción hecha! Tu plaza se confirma cuando pagues la entrada de {{entrada}}. Toca \"Pagar ahora\".",
+    "pendenteInfo": "Falta pagar {{entrada}} de entrada para confirmar tu plaza.",
+    "canceladaInfo": "La organización canceló esta inscripción. Si tienes dudas, habla con nosotros.",
+    "erro_cancelada": "La organización canceló tu inscripción. Habla con nosotros para rehacerla.",
+    "relatorio": "Informe"
   },
   "tesouraria": {
     "titulo": "Tesorería de eventos",

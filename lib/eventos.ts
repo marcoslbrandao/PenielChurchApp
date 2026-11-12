@@ -55,7 +55,8 @@ export type PessoaFamilia = {
 
 export type MinhaInscricao = {
   id: string;
-  status: 'confirmada' | 'espera' | 'cancelada';
+  /** pendente = inscrito, mas ainda sem a entrada mínima (não ocupa vaga). */
+  status: 'pendente' | 'confirmada' | 'espera' | 'cancelada';
   total: number; desconto: number; pago: number; saldo: number; sugestao: number;
   created_at: string;
   pessoas: { nome: string; idade: number | null; categoria: string | null; valor: number; member_id: string | null; data_nascimento: string | null; respostas: Record<string, string> }[];
@@ -95,6 +96,18 @@ export async function inscrever(eventoId: string, pessoas: PessoaParaInscrever[]
 export async function cancelarMinhaInscricao(eventoId: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('cancelar_minha_inscricao', { p_evento: eventoId });
   return !error && data === 'ok';
+}
+
+/** Planilha (.xlsx) do evento para a gestão: abre o link no navegador do celular. */
+export async function relatorioEvento(eventoId: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('evento-relatorio', { body: { evento_id: eventoId } });
+  if (error || !data?.url) {
+    let msg = data?.error;
+    try { msg = msg ?? (await (error as any)?.context?.json?.())?.error; } catch { /* sem corpo */ }
+    return `erro:${msg || 'Não foi possível gerar o relatório.'}`;
+  }
+  await Linking.openURL(data.url);
+  return 'ok';
 }
 
 export async function painelEvento(eventoId: string): Promise<LinhaPainel[]> {

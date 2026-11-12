@@ -268,7 +268,11 @@ const mo = StyleSheet.create({
   fieldHint: { fontSize: 11, color: C.textDim, marginTop: 6, lineHeight: 15 },
   fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surfaceAlt, borderRadius: 10, borderWidth: 1, borderColor: C.border, paddingHorizontal: 12, height: 46 },
   fieldInput: { flex: 1, fontSize: 15, color: C.text },
-  daysRow: { flexDirection: 'row', gap: 8 },
+  daysRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  gradeOpcoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  opcaoMetade: { flexBasis: '47%', flexGrow: 1, alignItems: 'center', paddingHorizontal: 8 },
+  linhaIgual: { flexDirection: 'row', gap: 6 },
+  opcaoIgual: { flex: 1, alignItems: 'center', paddingHorizontal: 6 },
   dayPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   dayPillActive: { backgroundColor: C.primary, borderColor: C.primary },
   dayPillText: { fontSize: 13, color: C.textMuted, fontWeight: '600' },
@@ -1037,10 +1041,11 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
 
             <View style={mo.fieldWrap}>
               <Text style={mo.fieldLabel}>{t('admin.tipoDeLocal')}</Text>
-              <View style={mo.daysRow}>
+              {/* Tudo visível, sem rolar para o lado (Marcos, 12/11/2026): 2 × 2. */}
+              <View style={mo.gradeOpcoes}>
                 {(['presencial', 'online', 'casa', 'externo'] as const).map(t => (
-                  <TouchableOpacity key={t} style={[mo.dayPill, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
-                    <Text style={[mo.dayPillText, tipo === t && mo.dayPillTextActive]}>
+                  <TouchableOpacity key={t} style={[mo.dayPill, mo.opcaoMetade, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
+                    <Text style={[mo.dayPillText, tipo === t && mo.dayPillTextActive]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
                       {t === 'presencial' ? '⛪ Igreja' : t === 'online' ? '💻 Online' : t === 'casa' ? '🏠 Nas casas' : '📍 Outro local'}
                     </Text>
                   </TouchableOpacity>
@@ -1050,15 +1055,15 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
 
             <View style={mo.fieldWrap}>
               <Text style={mo.fieldLabel}>{t('admin.repeticao')}</Text>
-              <View style={mo.daysRow}>
-                <TouchableOpacity style={[mo.dayPill, recorrente && mo.dayPillActive]} onPress={() => setRecorrente(true)}>
-                  <Text style={[mo.dayPillText, recorrente && mo.dayPillTextActive]}>{t('admin.todaSemana')}</Text>
+              <View style={mo.linhaIgual}>
+                <TouchableOpacity style={[mo.dayPill, mo.opcaoIgual, recorrente && mo.dayPillActive]} onPress={() => setRecorrente(true)}>
+                  <Text style={[mo.dayPillText, recorrente && mo.dayPillTextActive]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('admin.todaSemana')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[mo.dayPill, !recorrente && !variosDias && mo.dayPillActive]} onPress={() => { setRecorrente(false); setVariosDias(false); }}>
-                  <Text style={[mo.dayPillText, !recorrente && !variosDias && mo.dayPillTextActive]}>{t('admin.dataUnica')}</Text>
+                <TouchableOpacity style={[mo.dayPill, mo.opcaoIgual, !recorrente && !variosDias && mo.dayPillActive]} onPress={() => { setRecorrente(false); setVariosDias(false); }}>
+                  <Text style={[mo.dayPillText, !recorrente && !variosDias && mo.dayPillTextActive]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('admin.dataUnica')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[mo.dayPill, !recorrente && variosDias && mo.dayPillActive]} onPress={() => { setRecorrente(false); setVariosDias(true); }}>
-                  <Text style={[mo.dayPillText, !recorrente && variosDias && mo.dayPillTextActive]}>{t('admin.variosDias')}</Text>
+                <TouchableOpacity style={[mo.dayPill, mo.opcaoIgual, !recorrente && variosDias && mo.dayPillActive]} onPress={() => { setRecorrente(false); setVariosDias(true); }}>
+                  <Text style={[mo.dayPillText, !recorrente && variosDias && mo.dayPillTextActive]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('admin.variosDias')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1066,10 +1071,10 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
             {recorrente ? (
               <View style={mo.fieldWrap}>
                 <Text style={mo.fieldLabel}>{t('admin.diaDaSemana')}</Text>
-                <View style={mo.daysRow}>
+                <View style={[mo.linhaIgual, { gap: 5 }]}>
                   {DIAS_SEMANA_LABELS.map((label, idx) => (
-                    <TouchableOpacity key={idx} style={[mo.dayPill, diaSemana === idx && mo.dayPillActive]} onPress={() => setDiaSemana(idx)}>
-                      <Text style={[mo.dayPillText, diaSemana === idx && mo.dayPillTextActive]}>{label}</Text>
+                    <TouchableOpacity key={idx} style={[mo.dayPill, mo.opcaoIgual, { paddingHorizontal: 0 }, diaSemana === idx && mo.dayPillActive]} onPress={() => setDiaSemana(idx)}>
+                      <Text style={[mo.dayPillText, diaSemana === idx && mo.dayPillTextActive]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>

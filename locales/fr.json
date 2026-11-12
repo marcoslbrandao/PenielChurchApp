@@ -1305,7 +1305,7 @@
     "escalaAreasParaGerar": "Services à générer ({{n}})",
     "escalaNenhumaArea": "Cochez au moins un service à générer.",
     "aba_stats": "Stats",
-    "variosDias": "Plusieurs jours",
+    "variosDias": "🗓️ Plusieurs jours",
     "dataInicio": "Date de début (JJ/MM/AAAA)",
     "dataFinal": "Date de fin (JJ/MM/AAAA)",
     "dataFinalInvalida": "Indiquez la date de fin (JJ/MM/AAAA), égale ou après la date de début."

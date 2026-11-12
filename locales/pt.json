@@ -1305,7 +1305,7 @@
     "escalaAreasParaGerar": "Áreas para gerar ({{n}})",
     "escalaNenhumaArea": "Marque pelo menos uma área para gerar.",
     "aba_stats": "Estatísticas",
-    "variosDias": "Vários dias",
+    "variosDias": "🗓️ Vários dias",
     "dataInicio": "Data de início (DD/MM/AAAA)",
     "dataFinal": "Data final (DD/MM/AAAA)",
     "dataFinalInvalida": "Informe a data final (DD/MM/AAAA), igual ou depois da data de início."

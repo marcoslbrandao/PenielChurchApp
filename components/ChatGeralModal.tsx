@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, createContext, useContext } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Image, Pressable,
-  KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert, StatusBar, Keyboard, Linking, ScrollView,
+  KeyboardAvoidingView, Platform, Modal, ActivityIndicator, Alert, StatusBar, Keyboard, Linking, ScrollView, AppState,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +33,7 @@ import BotaoNegrito from './BotaoNegrito';
 import EscolherEmoji from './EscolherEmoji';
 import MemesModal from './MemesModal';
 import { memeParaEnviar, salvarMemeDeUrl, type Meme } from '../lib/memes';
+import { colarDisponivel, temImagemParaColar, colarImagem } from '../lib/colarImagem';
 import { useEmojisFavoritos } from '../lib/emojisFavoritos';
 import { alternarNegrito, semFormatacao } from '../lib/negrito';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/moderacao';
@@ -182,6 +183,26 @@ export default function ChatGeralModal({
       },
     });
   }, [visible, fonte.destino]);
+
+  // Colar imagem copiada (WhatsApp etc.) — 12/11/2026. Confere ao abrir o
+  // chat, ao voltar para o app e ao tocar no campo de digitar.
+  const [podeColar, setPodeColar] = useState(false);
+  const conferirColar = useCallback(() => {
+    if (!colarDisponivel) return;
+    temImagemParaColar().then(setPodeColar);
+  }, []);
+  useEffect(() => {
+    if (!visible || !colarDisponivel) return;
+    conferirColar();
+    const sub = AppState.addEventListener('change', e => { if (e === 'active') conferirColar(); });
+    return () => sub.remove();
+  }, [visible, conferirColar]);
+  const colar = async () => {
+    const a = await colarImagem();
+    setPodeColar(false);
+    if (a) setPendente(a);
+    else Alert.alert(t('chatGeral.colarErro'));
+  };
 
   useEffect(() => {
     if (!visible || !compartilhado) return;
@@ -882,11 +903,15 @@ export default function ChatGeralModal({
           {pendente && (
             <View style={cs.respondendoBar}>
               <View style={[cs.respondendoFaixa, { backgroundColor: '#2BB673' }]} />
+              {(pendente.mime ?? '').startsWith('image/') ? (
+                <Image source={{ uri: pendente.uri }} style={cs.pendenteMini} />
+              ) : (
               <Ionicons
                 name={(pendente.mime ?? '').startsWith('image/') ? 'image' : (pendente.mime ?? '').startsWith('video/') ? 'videocam' : (pendente.mime ?? '').startsWith('audio/') ? 'musical-notes' : 'document-text'}
                 size={22}
                 color={COR}
               />
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={cs.respondendoNome} numberOfLines={1}>{t('chatGeral.prontoParaEnviar')}</Text>
                 <Text style={cs.respondendoTexto} numberOfLines={1}>
@@ -921,6 +946,17 @@ export default function ChatGeralModal({
             </View>
           ) : (
             <>
+            {podeColar && !pendente && !gravando && !temSelecao && (
+              <View style={cs.colarLinha}>
+                <TouchableOpacity onPress={colar} style={[cs.colarBtn, { borderColor: COR }]} disabled={enviando}>
+                  <Ionicons name="clipboard-outline" size={16} color={COR} />
+                  <Text style={[cs.colarTexto, { color: COR }]}>{t('chatGeral.colarImagem')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setPodeColar(false)} hitSlop={10}>
+                  <Ionicons name="close" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+            )}
             {temSelecao && (
               <BotaoNegrito cor={COR} corTexto={C.text} corSuave={C.textMuted} corFundo={C.inputBarBg} corBorda={C.inputBarBorder} onPress={aplicarNegrito} />
             )}
@@ -945,6 +981,7 @@ export default function ChatGeralModal({
                   value={texto}
                   onChangeText={setTexto}
                   onSelectionChange={e => setSelecao(e.nativeEvent.selection)}
+                  onFocus={conferirColar}
                   multiline
                   maxLength={2000}
                 />
@@ -1426,6 +1463,10 @@ function buildStyles(C: PaletaChat, COR: string) { return StyleSheet.create({
   respondendoBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: C.inputBarBg, borderTopWidth: 1, borderTopColor: C.inputBarBorder },
   respondendoFaixa: { width: 3, alignSelf: 'stretch', borderRadius: 2, backgroundColor: COR },
   respondendoNome: { fontSize: 12.5, fontWeight: '700', color: COR },
+  pendenteMini: { width: 40, height: 40, borderRadius: 6 },
+  colarLinha: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 12, paddingTop: 8, backgroundColor: C.inputBarBg, borderTopWidth: 1, borderTopColor: C.inputBarBorder },
+  colarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
+  colarTexto: { fontSize: 13, fontWeight: '700' },
   respondendoTexto: { fontSize: 12.5, color: C.textMuted, marginTop: 1 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.inputBarBorder, backgroundColor: C.inputBarBg },
   anexarBtn: { height: 38, justifyContent: 'center' },

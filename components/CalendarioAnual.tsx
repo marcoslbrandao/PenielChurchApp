@@ -401,7 +401,7 @@ export default function CalendarioAnual({ modo, C, onAbrirMes, mesInicial }: {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }} refreshControl={refresh}>
           <View style={st.navMes}>
             <TouchableOpacity onPress={() => setAno(a => a - 1)} hitSlop={10} style={[st.seta, { backgroundColor: C.eventoDataBg }]}><Ionicons name="chevron-back" size={26} color={C.accentText} /></TouchableOpacity>
-            <Text style={[st.navTitulo, { color: C.textPrimary }]}>{ano}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[st.navTitulo, { color: C.textPrimary }]}>{ano}</Text>
             <TouchableOpacity onPress={() => setAno(a => a + 1)} hitSlop={10} style={[st.seta, { backgroundColor: C.eventoDataBg }]}><Ionicons name="chevron-forward" size={26} color={C.accentText} /></TouchableOpacity>
           </View>
           {chips}
@@ -454,14 +454,14 @@ export default function CalendarioAnual({ modo, C, onAbrirMes, mesInicial }: {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 90 }} refreshControl={refresh}>
         <View style={st.navMes}>
           <TouchableOpacity onPress={() => mudarMes(-1)} hitSlop={10} style={[st.seta, { backgroundColor: C.eventoDataBg }]}><Ionicons name="chevron-back" size={26} color={C.accentText} /></TouchableOpacity>
-          <Text style={[st.navTitulo, { color: C.textPrimary }]}>{MESES[mes.getMonth()]} {mes.getFullYear()}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} style={[st.navTitulo, { color: C.textPrimary }]}>{MESES[mes.getMonth()]} {mes.getFullYear()}</Text>
           <TouchableOpacity onPress={() => mudarMes(1)} hitSlop={10} style={[st.seta, { backgroundColor: C.eventoDataBg }]}><Ionicons name="chevron-forward" size={26} color={C.accentText} /></TouchableOpacity>
         </View>
         {chips}
 
         <View style={[st.grade, { backgroundColor: C.cardBg, borderColor: C.cardBorder }]}>
           <View style={st.semana}>
-            {DIAS.map((d, i) => <Text key={i} style={[st.diaSemana, { color: i === 0 ? '#E84B1A' : C.textMuted }]}>{d}</Text>)}
+            {DIAS.map((d, i) => <Text key={i} maxFontSizeMultiplier={1.15} style={[st.diaSemana, { color: i === 0 ? '#E84B1A' : C.textMuted }]}>{d}</Text>)}
           </View>
           {Array.from({ length: celulas.length / 7 }, (_, s) => (
             <View key={s} style={st.semana}>
@@ -479,7 +479,7 @@ export default function CalendarioAnual({ modo, C, onAbrirMes, mesInicial }: {
                       ehHoje && { backgroundColor: '#F5C842' },
                       sel && { backgroundColor: cores[0] ?? '#534AB7' },
                     ]}>
-                      <Text style={[st.numero, { color: C.textPrimary }, (ehHoje || sel) && { color: sel ? '#fff' : '#1A1740', fontWeight: '800' }, cores.length > 0 && !sel && { fontWeight: '800' }]}>
+                      <Text maxFontSizeMultiplier={1.15} style={[st.numero, { color: C.textPrimary }, (ehHoje || sel) && { color: sel ? '#fff' : '#1A1740', fontWeight: '800' }, cores.length > 0 && !sel && { fontWeight: '800' }]}>
                         {Number(iso.slice(8, 10))}
                       </Text>
                     </View>
@@ -528,7 +528,7 @@ export default function CalendarioAnual({ modo, C, onAbrirMes, mesInicial }: {
 
 const st = StyleSheet.create({
   navMes: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 16, paddingHorizontal: 2 },
-  navTitulo: { fontSize: 24, fontWeight: '800' },
+  navTitulo: { fontSize: 24, fontWeight: '800', flexShrink: 1, textAlign: 'center', marginHorizontal: 8 },
   seta: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1 },
   chipTexto: { fontSize: 12.5, fontWeight: '700' },

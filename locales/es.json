@@ -1748,7 +1748,9 @@
     "escolherEmoji": "Elegir emoji",
     "subtituloGrupo": "Solo miembros del grupo · se borran en 15 días",
     "tituloBanda": "Chat de la Banda",
-    "subtituloBanda": "Solo el equipo de la Banda · se borran en 15 días"
+    "subtituloBanda": "Solo el equipo de la Banda · se borran en 15 días",
+    "colarImagem": "Pegar imagen copiada",
+    "colarErro": "No se pudo pegar la imagen. Cópiala de nuevo e inténtalo otra vez."
   },
   "compartilhar": {
     "enviarPara": "Enviar a",

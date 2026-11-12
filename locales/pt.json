@@ -1748,7 +1748,9 @@
     "escolherEmoji": "Escolher emoji",
     "subtituloGrupo": "Só participantes do grupo · somem em 15 dias",
     "tituloBanda": "Chat da Banda",
-    "subtituloBanda": "Só a equipe da Banda · somem em 15 dias"
+    "subtituloBanda": "Só a equipe da Banda · somem em 15 dias",
+    "colarImagem": "Colar imagem copiada",
+    "colarErro": "Não consegui colar a imagem. Copie de novo e tente outra vez."
   },
   "compartilhar": {
     "enviarPara": "Enviar para",

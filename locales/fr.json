@@ -1748,7 +1748,9 @@
     "escolherEmoji": "Choisir un emoji",
     "subtituloGrupo": "Membres du groupe uniquement · effacés après 15 jours",
     "tituloBanda": "Chat du groupe de louange",
-    "subtituloBanda": "Équipe de louange uniquement · effacés après 15 jours"
+    "subtituloBanda": "Équipe de louange uniquement · effacés après 15 jours",
+    "colarImagem": "Coller l'image copiée",
+    "colarErro": "Impossible de coller l'image. Copiez-la à nouveau et réessayez."
   },
   "compartilhar": {
     "enviarPara": "Envoyer à",

@@ -1,3 +1,4 @@
+import './lib/fonteMaxima'; // limite da fonte grande do celular — tem que vir primeiro
 import { registerRootComponent } from 'expo';
 
 import App from './App';

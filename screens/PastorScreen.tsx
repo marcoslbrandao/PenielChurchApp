@@ -451,8 +451,8 @@ export default function PastorScreen() {
     <View style={[s.header, { paddingTop: insets.top + 10 }]}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}><Ionicons name="chevron-down" size={22} color="#fff" /></TouchableOpacity>
       <View style={{ flex: 1 }}>
-        <Text style={s.headerSub}>{t('pastor.sub')}</Text>
         <Text style={s.headerTitulo}>{t('pastor.tituloTela')}</Text>
+        <Text style={s.headerSub}>{t('pastor.sub')}</Text>
       </View>
       {destrancado && ehAdmin && (
         <TouchableOpacity onPress={() => setGerir(true)} style={s.headerBtn}><Ionicons name="people-outline" size={18} color="#fff" /></TouchableOpacity>
@@ -650,9 +650,9 @@ export default function PastorScreen() {
 function estilos(C: ThemeColors) {
   return StyleSheet.create({
     tela: { flex: 1, backgroundColor: C.bg },
-    header: { backgroundColor: COR, paddingHorizontal: 14, paddingBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    header: { backgroundColor: COR, paddingHorizontal: 14, paddingBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 10 },
     headerBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-    headerSub: { color: 'rgba(255,255,255,0.65)', fontSize: 12 },
+    headerSub: { color: 'rgba(255,255,255,0.65)', fontSize: 12.5, marginTop: 3 },
     headerTitulo: { color: '#fff', fontSize: 19, fontWeight: '800' },
     abas: { flexDirection: 'row', backgroundColor: COR, paddingHorizontal: 14, paddingBottom: 12, gap: 6 },
     aba: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },

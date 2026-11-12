@@ -9,9 +9,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
+import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import { supabase } from '../lib/supabase';
 import { formatarTempo } from '../lib/chatAudio';
+import { aplicarSaida, sensorDeProximidade } from '../lib/saidaAudio';
 
 const VELOCIDADES = [1, 1.25, 1.5, 0.85];
 
@@ -61,6 +62,16 @@ export default function OuvirDevocional({ devocionalId, titulo, cor = '#F5C842',
     setTocando(false);
   };
   useEffect(() => () => soltar(), []);
+
+  // Sensor de proximidade enquanto o devocional toca (pedido do Marcos,
+  // 12/11/2026): encostar o celular no rosto apaga a tela e passa o som para
+  // o ouvido, para ouvir no ônibus sem fone. Afastar volta ao alto-falante.
+  // Só no app 1.5.3 em diante; no antigo o módulo não existe e nada muda.
+  useEffect(() => {
+    if (!tocando) return;
+    sensorDeProximidade(true, { soSensor: true }).then(() => aplicarSaida({ soSensor: true }));
+    return () => { sensorDeProximidade(false); };
+  }, [tocando]);
   useEffect(() => { soltar(); setAtual(0); setTotal(0); }, [lang]);
 
   const alternar = async () => {
@@ -78,7 +89,9 @@ export default function OuvirDevocional({ devocionalId, titulo, cor = '#F5C842',
       return;
     }
     try {
-      await setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, allowsRecording: false }).catch(() => {});
+      // Mesmo modo de áudio do chat (silencioso, tela apagada); com o
+      // sensor longe do rosto, sai pelo alto-falante.
+      await aplicarSaida({ soSensor: true });
       if (tocandoAgora) { try { tocandoAgora.pause(); } catch { /* */ } }
       const novo = createAudioPlayer({ uri: r.url }, { updateInterval: 500 });
       player.current = novo;

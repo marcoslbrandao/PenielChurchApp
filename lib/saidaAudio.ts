@@ -27,10 +27,15 @@ export type Saida = 'altofalante' | 'ouvido';
 
 let saidaManual: Saida = 'altofalante';
 let pertoDoRosto = false;
+// Devocional em áudio (pedido do Marcos, 12/11/2026): usa só o sensor. O
+// botão de ouvido escolhido no chat não vale para ele — longe do rosto, o
+// devocional sempre toca no alto-falante.
+let soSensor = false;
 const ouvintes = new Set<(s: Saida) => void>();
 
 function saidaEfetiva(): Saida {
-  return pertoDoRosto ? 'ouvido' : saidaManual;
+  if (pertoDoRosto) return 'ouvido';
+  return soSensor ? 'altofalante' : saidaManual;
 }
 
 function avisar() {
@@ -39,7 +44,8 @@ function avisar() {
 }
 
 /** Aplica a rota escolhida. Chamar antes de tocar e sempre que trocar. */
-export async function aplicarSaida(): Promise<void> {
+export async function aplicarSaida(opcoes?: { soSensor?: boolean }): Promise<void> {
+  if (opcoes?.soSensor) soSensor = true;
   const ouvido = saidaEfetiva() === 'ouvido';
   await setAudioModeAsync({
     playsInSilentMode: true,
@@ -60,7 +66,8 @@ export function alternarSaida(): void {
 let assinatura: { remove(): void } | null = null;
 
 /** Liga o sensor de proximidade enquanto um áudio toca; desliga ao parar. */
-export async function sensorDeProximidade(ligar: boolean): Promise<void> {
+export async function sensorDeProximidade(ligar: boolean, opcoes?: { soSensor?: boolean }): Promise<void> {
+  soSensor = ligar && !!opcoes?.soSensor;
   if (!Proximidade) return;
   try {
     if (ligar) {

@@ -2,7 +2,7 @@
 //
 // Shorts dos grupos (pedido do Marcos, 11/11/2026; feito em 12/11/2026).
 // • Membro: "🎬 Enviar vídeo" — grava ou escolhe da galeria (até 5 min) e o
-//   vídeo vai para a FILA do líder.
+//   vídeo vai para a FILA do líder. (Até 10 min desde 12/11/2026.)
 // • Líder: "Fila" — vê os vídeos, põe título/arte/legenda, confirma a
 //   autorização de imagem e publica (ou recusa). Publicar dispara o GitHub
 //   Actions, que aplica a arte, legenda e sobe para o YouTube da igreja. O
@@ -20,9 +20,22 @@ import { supabase } from '../lib/supabase';
 import { enviarArquivo, tamanhoLocal } from '../lib/chatGeral';
 import { useTheme } from '../lib/theme';
 import PlayerDeVideo from './PlayerDeVideo';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 
-const MAX_S = 300;
-const MAX_MB = 200;
+// Câmera própria (720p, 2,5 Mbps) só no app 1.5.3 em diante, que tem o
+// expo-camera. No app antigo, o import do expo-camera quebraria, por isso o
+// arquivo só é carregado quando o módulo nativo existe; lá fica a câmera do
+// sistema, que grava pesado.
+const GravadorDeVideo: React.ComponentType<any> | null = requireOptionalNativeModule('ExpoCamera')
+  ? require('./GravadorDeVideo').default
+  : null;
+
+// Até 10 min (decisão do Marcos, 12/11/2026). O vídeo sai do Storage depois
+// de publicado ou recusado, então vídeo longo não acumula.
+const MAX_S = 600;
+// Igual ao limite do bucket shorts-fila (o limite geral do Storage também
+// precisa deixar passar: Storage › Settings no painel do Supabase).
+const MAX_MB = 300;
 
 type ItemFila = {
   id: string; grupo: string; autor: string; autor_nome: string | null; video_path: string; duracao_s: number | null;
@@ -70,7 +83,9 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
     });
     if (!r.canceled && r.assets?.[0]) aceitar(r.assets[0]);
   };
+  const [cameraAberta, setCameraAberta] = useState(false);
   const gravar = async () => {
+    if (GravadorDeVideo) { setCameraAberta(true); return; }
     const p = await ImagePicker.requestCameraPermissionsAsync();
     if (!p.granted) { Alert.alert(t('shorts.titulo'), t('shorts.semCamera')); return; }
     const r = await ImagePicker.launchCameraAsync({
@@ -108,7 +123,7 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
     } catch (e: any) {
       if (caminho) supabase.storage.from('shorts-fila').remove([caminho]);
       const msg = String(e?.message ?? '');
-      Alert.alert(t('shorts.titulo'), /too large|413|exceeded/i.test(msg) ? t('shorts.muitoGrande', { mb: 50 }) : (msg || t('shorts.erroEnvio')));
+      Alert.alert(t('shorts.titulo'), /too large|413|exceeded/i.test(msg) ? t('shorts.muitoGrande', { mb: MAX_MB }) : (msg || t('shorts.erroEnvio')));
     } finally {
       setEnviando(false);
     }
@@ -124,6 +139,20 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
 
   return (
     <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+      {GravadorDeVideo && (
+        <GravadorDeVideo
+          visivel={cameraAberta}
+          maxSegundos={MAX_S}
+          onFechar={() => setCameraAberta(false)}
+          onGravado={(v: { uri: string; duracao: number }) => {
+            setCameraAberta(false);
+            setMensagem('');
+            // Espera a câmera fechar: no iPhone, abrir um modal enquanto o
+            // outro ainda está saindo faz o segundo não aparecer.
+            setTimeout(() => setEnvio({ uri: v.uri, duracao: v.duracao, mime: /\.mov$/i.test(v.uri) ? 'video/quicktime' : 'video/mp4' }), 450);
+          }}
+        />
+      )}
       {podeEnviar && (
         <TouchableOpacity style={[st.botao, { backgroundColor: cor }]} onPress={escolher}>
           <Ionicons name="videocam" size={16} color="#fff" />
@@ -231,12 +260,16 @@ function EditorShort({ item, cor, onVoltar, onVer, onFeito }: {
     Alert.alert(t('shorts.titulo'), r.data?.disparado ? t('shorts.publicando') : t('shorts.aprovadoAguardando'));
     onFeito();
   };
+  // Recusado: o vídeo não vai ser usado, então sai do Storage (12/11/2026).
+  const apagarVideo = async () => {
+    await supabase.storage.from('shorts-fila').remove([item.video_path]).catch(() => {});
+  };
   const recusar = () => {
     Alert.prompt
-      ? Alert.prompt(t('shorts.recusar'), t('shorts.recusarSub'), async motivo => { await supabase.rpc('shorts_recusar', { p_id: item.id, p_motivo: motivo ?? '' }); onFeito(); })
+      ? Alert.prompt(t('shorts.recusar'), t('shorts.recusarSub'), async motivo => { await supabase.rpc('shorts_recusar', { p_id: item.id, p_motivo: motivo ?? '' }); await apagarVideo(); onFeito(); })
       : Alert.alert(t('shorts.recusar'), t('shorts.recusarSub'), [
         { text: t('common.cancelar'), style: 'cancel' },
-        { text: t('shorts.recusar'), style: 'destructive', onPress: async () => { await supabase.rpc('shorts_recusar', { p_id: item.id, p_motivo: '' }); onFeito(); } },
+        { text: t('shorts.recusar'), style: 'destructive', onPress: async () => { await supabase.rpc('shorts_recusar', { p_id: item.id, p_motivo: '' }); await apagarVideo(); onFeito(); } },
       ]);
   };
 

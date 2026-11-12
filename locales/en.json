@@ -2345,11 +2345,11 @@
     "enviarVideo": "Send video",
     "criarShort": "Create Short",
     "fila": "Queue",
-    "escolherSub": "Up to 5 minutes. Up to 3 min becomes a Short; longer, a regular YouTube video.",
+    "escolherSub": "Up to 10 minutes. Up to 3 min becomes a Short; longer, a regular YouTube video.",
     "gravar": "Record now",
     "galeria": "Choose from gallery",
     "semCamera": "Allow camera access in your phone Settings.",
-    "muitoLongo": "The video is longer than 5 minutes. Trim it and try again.",
+    "muitoLongo": "The video is longer than 10 minutes. Trim it and try again.",
     "muitoGrande": "The video is too large (max {{mb}} MB). Try a shorter one.",
     "enviarParaLider": "Send to the leader",
     "duracao": "Length {{tempo}}",
@@ -2392,6 +2392,8 @@
     "publicando": "Publishing! In about 10 minutes the video will appear here in the group’s Shorts.",
     "aprovadoAguardando": "Approved! It will be published as soon as the YouTube automation is switched on.",
     "recusar": "Don’t publish",
-    "recusarSub": "Want to leave a note for whoever sent it?"
+    "recusarSub": "Want to leave a note for whoever sent it?",
+    "pararGravacao": "Stop recording",
+    "virarCamera": "Flip camera"
   }
 }

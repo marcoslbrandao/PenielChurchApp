@@ -64,6 +64,16 @@ Deno.serve(async (req) => {
     if (acao === 'concluir') {
       if (!youtube_id) return json({ error: 'youtube_id' }, 400);
       const { data } = await admin.rpc('shorts_marcar', { p_id: id, p_status: 'publicado', p_youtube_id: String(youtube_id) });
+      // Publicado no YouTube: o vídeo da fila não é mais necessário (o app
+      // abre pelo link do YouTube). Apaga do Storage para não acumular
+      // (pedido do Marcos, 12/11/2026). Falha aqui não desfaz a publicação.
+      if (data === 'ok') {
+        const { data: f } = await admin.from('shorts_fila').select('video_path').eq('id', id).maybeSingle();
+        if (f?.video_path) {
+          const { error: eRm } = await admin.storage.from('shorts-fila').remove([f.video_path]);
+          if (eRm) console.error('shorts-trabalho: nao apagou', f.video_path, eRm.message);
+        }
+      }
       return json({ ok: data === 'ok' });
     }
     if (acao === 'erro') {

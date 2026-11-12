@@ -2292,11 +2292,11 @@
     "enviarVideo": "Enviar vídeo",
     "criarShort": "Crear Short",
     "fila": "Cola",
-    "escolherSub": "Hasta 5 minutos. Hasta 3 min es un Short; más, vídeo normal en YouTube.",
+    "escolherSub": "Hasta 10 minutos. Hasta 3 min es un Short; más, vídeo normal en YouTube.",
     "gravar": "Grabar ahora",
     "galeria": "Elegir de la galería",
     "semCamera": "Permite el acceso a la cámara en los Ajustes del móvil.",
-    "muitoLongo": "El vídeo pasa de 5 minutos. Recórtalo e inténtalo de nuevo.",
+    "muitoLongo": "El vídeo pasa de 10 minutos. Recórtalo e inténtalo de nuevo.",
     "muitoGrande": "El vídeo es demasiado grande (máx. {{mb}} MB). Prueba uno más corto.",
     "enviarParaLider": "Enviar al líder",
     "duracao": "Duración {{tempo}}",
@@ -2339,6 +2339,8 @@
     "publicando": "¡Publicando! En unos 10 minutos el vídeo aparecerá aquí en los Shorts del grupo.",
     "aprovadoAguardando": "¡Aprobado! Se publicará en cuanto la automatización de YouTube esté activada.",
     "recusar": "No publicar",
-    "recusarSub": "¿Quieres dejar un mensaje a quien lo envió?"
+    "recusarSub": "¿Quieres dejar un mensaje a quien lo envió?",
+    "pararGravacao": "Detener grabación",
+    "virarCamera": "Girar cámara"
   }
 }

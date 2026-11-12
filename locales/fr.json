@@ -360,7 +360,8 @@
       "enviar": "Envoyer",
       "enviada": "Notification envoyée",
       "erro": "Envoi impossible"
-    }
+    },
+    "tagExterno": "Autre lieu"
   },
   "devocionais": {
     "titulo": "Dévotions",
@@ -491,7 +492,8 @@
     ],
     "dataDe": "de",
     "idDaReuniao": "ID de la réunion",
-    "senhaDaReuniao": "Code de la réunion"
+    "senhaDaReuniao": "Code de la réunion",
+    "externo": "Autre lieu"
   },
   "midia": {
     "titulo": "Médias",
@@ -1302,7 +1304,11 @@
     "semConflitoDesligado": "Désactivé : les personnes planifiées ici ne sont pas mises dans un autre service au même culte.",
     "escalaAreasParaGerar": "Services à générer ({{n}})",
     "escalaNenhumaArea": "Cochez au moins un service à générer.",
-    "aba_stats": "Stats"
+    "aba_stats": "Stats",
+    "variosDias": "Plusieurs jours",
+    "dataInicio": "Date de début (JJ/MM/AAAA)",
+    "dataFinal": "Date de fin (JJ/MM/AAAA)",
+    "dataFinalInvalida": "Indiquez la date de fin (JJ/MM/AAAA), égale ou après la date de début."
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",

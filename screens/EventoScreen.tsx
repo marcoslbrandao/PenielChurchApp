@@ -28,7 +28,7 @@ import EventoGestaoModal from '../components/EventoGestaoModal';
 
 type Aba = 'sobre' | 'regras' | 'equipe' | 'inscricao';
 type EventoBase = {
-  id: string; nome: string; data: string | null; horario: string | null; local: string | null;
+  id: string; nome: string; data: string | null; data_fim?: string | null; horario: string | null; local: string | null;
   descricao: string | null; map_url: string | null; imagem_url: string | null; cor: string | null;
 };
 type Extra = { key: string; nome: string; nasc: string };
@@ -74,7 +74,7 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
   const carregar = useCallback(async () => {
     if (!eventoId) return;
     const [{ data: base }, d, m] = await Promise.all([
-      supabase.from('agenda_eventos').select('id, nome, data, horario, local, descricao, map_url, imagem_url, cor').eq('id', eventoId).maybeSingle(),
+      supabase.from('agenda_eventos').select('id, nome, data, data_fim, horario, local, descricao, map_url, imagem_url, cor').eq('id', eventoId).maybeSingle(),
       isLoggedIn ? detalhesEvento(eventoId) : Promise.resolve(null),
       isLoggedIn ? minhaInscricao(eventoId) : Promise.resolve(null),
     ]);
@@ -230,7 +230,7 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
 
   const quando = cfg?.inicio
     ? `${dataBR(cfg.inicio)}${cfg.fim ? ` – ${dataBR(cfg.fim)}` : ''}`
-    : [ev.data ? dataBR(ev.data) : '', ev.horario ?? ''].filter(Boolean).join(' · ');
+    : [ev.data ? `${dataBR(ev.data)}${ev.data_fim ? ` – ${dataBR(ev.data_fim)}` : ''}` : '', ev.horario ?? ''].filter(Boolean).join(' · ');
 
   const abas: { k: Aba; rotulo: string; icone: keyof typeof Ionicons.glyphMap }[] = [
     { k: 'sobre', rotulo: t('eventos.abaSobre'), icone: 'information-circle-outline' },

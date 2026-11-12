@@ -19,7 +19,7 @@ limpar_locks
 git add App.tsx lib/eventos.ts lib/destinoNotificacao.ts \
   screens/EventoScreen.tsx screens/AgendaScreen.tsx screens/AdminScreen.tsx screens/HomeScreen.tsx \
   components/EventoGestaoModal.tsx components/TesourariaAdmin.tsx \
-  lib/calendario.ts components/CalendarioAnual.tsx components/CalendarioAdmin.tsx components/ChatGeralModal.tsx components/PlayerDeVideo.tsx \
+  lib/calendario.ts lib/datas.ts components/CalendarioAnual.tsx components/CalendarioAdmin.tsx components/ChatGeralModal.tsx components/PlayerDeVideo.tsx \
   locales/pt.json locales/en.json locales/es.json locales/fr.json \
   supabase/migrations/20261112090000_eventos_inscricoes.sql supabase/migrations/20261111220000_conversas_privadas.sql \
   supabase/migrations/20261112120000_calendario_anual.sql supabase/config.toml \

@@ -176,3 +176,25 @@ select 'ceia',
 from generate_series(date '2026-12-01', date '2027-12-01', interval '1 month') as m,
      lateral (select (m::date + ((7 - extract(dow from m)::int) % 7))::date as d) x
 on conflict (semente) do nothing;
+
+-- ─── Agenda: "Outro local" e "Vários dias" (Marcos, 12/11/2026) ───────────
+-- O retiro acontece num local próprio para retiro (nem igreja, nem casa,
+-- nem online) e dura de sexta a segunda.
+alter table public.agenda_eventos add column if not exists data_fim date;
+
+do $$
+declare c record;
+begin
+  for c in select conname from pg_constraint
+           where conrelid = 'public.agenda_eventos'::regclass and contype = 'c'
+             and pg_get_constraintdef(oid) ilike '%tipo%'
+  loop
+    execute format('alter table public.agenda_eventos drop constraint %I', c.conname);
+  end loop;
+end $$;
+alter table public.agenda_eventos add constraint agenda_eventos_tipo_check
+  check (tipo in ('presencial', 'online', 'casa', 'externo'));
+
+alter table public.agenda_eventos drop constraint if exists agenda_eventos_data_fim_check;
+alter table public.agenda_eventos add constraint agenda_eventos_data_fim_check
+  check (data_fim is null or (data is not null and data_fim >= data));

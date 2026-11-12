@@ -360,7 +360,8 @@
       "enviar": "Send",
       "enviada": "Notification sent",
       "erro": "Could not send"
-    }
+    },
+    "tagExterno": "Other venue"
   },
   "devocionais": {
     "titulo": "Devotionals",
@@ -491,7 +492,8 @@
     ],
     "dataDe": "of",
     "idDaReuniao": "Meeting ID",
-    "senhaDaReuniao": "Meeting passcode"
+    "senhaDaReuniao": "Meeting passcode",
+    "externo": "Other venue"
   },
   "midia": {
     "titulo": "Media",
@@ -1302,7 +1304,11 @@
     "semConflitoDesligado": "Off: people rostered here are not put in another area at the same service.",
     "escalaAreasParaGerar": "Areas to generate ({{n}})",
     "escalaNenhumaArea": "Select at least one area to generate.",
-    "aba_stats": "Stats"
+    "aba_stats": "Stats",
+    "variosDias": "Several days",
+    "dataInicio": "Start date (DD/MM/YYYY)",
+    "dataFinal": "End date (DD/MM/YYYY)",
+    "dataFinalInvalida": "Enter the end date (DD/MM/YYYY), on or after the start date."
   },
   "membros": {
     "buscarPeloNome": "Search by name...",

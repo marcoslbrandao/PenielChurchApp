@@ -360,7 +360,8 @@
       "enviar": "Enviar",
       "enviada": "Notificação enviada",
       "erro": "Não foi possível enviar"
-    }
+    },
+    "tagExterno": "Outro local"
   },
   "devocionais": {
     "titulo": "Devocionais",
@@ -491,7 +492,8 @@
     ],
     "dataDe": "de",
     "idDaReuniao": "ID da reunião",
-    "senhaDaReuniao": "Senha da reunião"
+    "senhaDaReuniao": "Senha da reunião",
+    "externo": "Outro local"
   },
   "midia": {
     "titulo": "Mídia",
@@ -1302,7 +1304,11 @@
     "semConflitoDesligado": "Desligado: quem está escalado aqui não entra em outra área no mesmo culto.",
     "escalaAreasParaGerar": "Áreas para gerar ({{n}})",
     "escalaNenhumaArea": "Marque pelo menos uma área para gerar.",
-    "aba_stats": "Estatísticas"
+    "aba_stats": "Estatísticas",
+    "variosDias": "Vários dias",
+    "dataInicio": "Data de início (DD/MM/AAAA)",
+    "dataFinal": "Data final (DD/MM/AAAA)",
+    "dataFinalInvalida": "Informe a data final (DD/MM/AAAA), igual ou depois da data de início."
   },
   "membros": {
     "buscarPeloNome": "Buscar pelo nome...",

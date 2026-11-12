@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
+import { intervaloDeDatas } from '../lib/datas';
 import { useAuth } from '../lib/useAuth';
 import { useNotifications } from '../lib/useNotifications';
 import { useAniversarioHoje } from '../lib/useAniversarioHoje';
@@ -551,7 +552,9 @@ function DestaqueHomeCard({ evento, onAbrirAgenda, onInscrever }: { evento: Dest
   let dataLabel = evento.horario;
   if (!evento.recorrente && evento.data) {
     const d = new Date(`${evento.data}T12:00:00`);
-    const dataStr = `${d.getDate()} ${DE} ${MESES_LONGOS[d.getMonth()]} ${DE} ${d.getFullYear()}`;
+    const dataStr = (evento as any).data_fim
+      ? intervaloDeDatas(evento.data, (evento as any).data_fim, MESES_LONGOS, DE)
+      : `${d.getDate()} ${DE} ${MESES_LONGOS[d.getMonth()]} ${DE} ${d.getFullYear()}`;
     dataLabel = evento.horario ? `${dataStr} · ${evento.horario}` : dataStr;
   } else if (evento.recorrente && evento.dia_semana !== null) {
     const prox = proximaData(evento.dia_semana, i18n.language);
@@ -856,7 +859,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
     useCallback(() => {
       supabase
         .from('agenda_eventos')
-        .select('id, nome, descricao, cor, data, recorrente, dia_semana, horario, cta_texto, cta_url, imagem_url, local')
+        .select('id, nome, descricao, cor, data, data_fim, recorrente, dia_semana, horario, cta_texto, cta_url, imagem_url, local')
         .eq('destaque_home', true)
         .limit(1)
         .maybeSingle()
@@ -1048,9 +1051,9 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   });
 
   const tagStyle = (tipo: string) => ({
-    bg: tipo === 'presencial' ? '#EEEDFE' : tipo === 'online' ? '#E1F5EE' : tipo === 'jovens' ? '#F3E8FF' : '#FEF6DC',
-    text: tipo === 'presencial' ? '#534AB7' : tipo === 'online' ? '#085041' : tipo === 'jovens' ? '#6C3DE8' : '#633806',
-    label: tipo === 'presencial' ? t('grupos.tagPresencial') : tipo === 'online' ? t('grupos.tagOnline') : tipo === 'jovens' ? t('home.tagJovens') : t('grupos.tagCasa'),
+    bg: tipo === 'presencial' ? '#EEEDFE' : tipo === 'online' ? '#E1F5EE' : tipo === 'jovens' ? '#F3E8FF' : tipo === 'externo' ? '#FFEDE3' : '#FEF6DC',
+    text: tipo === 'presencial' ? '#534AB7' : tipo === 'online' ? '#085041' : tipo === 'jovens' ? '#6C3DE8' : tipo === 'externo' ? '#B4380B' : '#633806',
+    label: tipo === 'presencial' ? t('grupos.tagPresencial') : tipo === 'online' ? t('grupos.tagOnline') : tipo === 'jovens' ? t('home.tagJovens') : tipo === 'externo' ? t('grupos.tagExterno') : t('grupos.tagCasa'),
   });
 
   // Antes de qualquer `return` condicional: hook que roda às vezes quebra a

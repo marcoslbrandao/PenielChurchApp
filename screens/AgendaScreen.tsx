@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import CalendarioAnual from '../components/CalendarioAnual';
+import { intervaloDeDatas } from '../lib/datas';
 import { supabase } from '../lib/supabase';
 import { compartilharEvento } from '../lib/compartilharEvento';
 import { useCampoTraduzido } from '../lib/useTraducao';
@@ -57,7 +58,7 @@ function formatDataEspecifica(dataStr: string, meses: string[], mesesLongos: str
 
 type EventoDB = {
   id: string; nome: string; tipo: string; recorrente: boolean; dia_semana: number | null;
-  data: string | null; horario: string; local: string; descricao: string | null;
+  data: string | null; data_fim?: string | null; horario: string; local: string; descricao: string | null;
   link_zoom: string | null; meeting_id: string | null; passcode: string | null;
   map_url: string | null; especial: boolean; cor: string | null;
   imagem_url?: string | null; cta_url?: string | null;
@@ -96,7 +97,7 @@ function EventoCard({ evento, hoje, aberto, onToggleDetalhes, onAbrirZoom, onAbr
         </View>
         <View style={[styles.eventoLinha, {
           backgroundColor: evento.tipo === 'presencial' ? '#534AB7' :
-            evento.tipo === 'online' ? '#1D9E75' : '#BA7517'
+            evento.tipo === 'online' ? '#1D9E75' : evento.tipo === 'externo' ? '#D9480F' : '#BA7517'
         }]} />
       </View>
 
@@ -110,14 +111,14 @@ function EventoCard({ evento, hoje, aberto, onToggleDetalhes, onAbrirZoom, onAbr
           <Text style={styles.eventoNome} numberOfLines={1}>{nome}</Text>
           <View style={[styles.eventoTag, {
             backgroundColor: evento.tipo === 'presencial' ? '#EEEDFE' :
-              evento.tipo === 'online' ? '#E1F5EE' : '#FEF6DC'
+              evento.tipo === 'online' ? '#E1F5EE' : evento.tipo === 'externo' ? '#FFEDE3' : '#FEF6DC'
           }]}>
             <Text style={[styles.eventoTagTexto, {
               color: evento.tipo === 'presencial' ? '#534AB7' :
-                evento.tipo === 'online' ? '#085041' : '#633806'
+                evento.tipo === 'online' ? '#085041' : evento.tipo === 'externo' ? '#B4380B' : '#633806'
             }]}>
               {evento.tipo === 'presencial' ? t('agenda.presencial') :
-                evento.tipo === 'online' ? t('agenda.online') : t('agenda.casa')}
+                evento.tipo === 'online' ? t('agenda.online') : evento.tipo === 'externo' ? t('agenda.externo') : t('agenda.casa')}
             </Text>
           </View>
         </View>
@@ -177,7 +178,7 @@ function EventoCard({ evento, hoje, aberto, onToggleDetalhes, onAbrirZoom, onAbr
         )}
 
         {/* Botão Presencial */}
-        {evento.tipo === 'presencial' && evento.mapUrl && (
+        {(evento.tipo === 'presencial' || evento.tipo === 'externo') && evento.mapUrl && (
           <TouchableOpacity
             style={styles.eventoBtn}
             onPress={onAbrirMapa}
@@ -389,7 +390,9 @@ export default function AgendaScreen() {
     // Ordem pela proxima data a partir de HOJE (antes seguia a ordem de
     // cadastro); no mesmo dia, pelo horario. Evento com data fixa que ja
     // passou sai da lista; sem data nenhuma vai para o fim.
-    .filter(e => !e.dataISO || chaveDoDia(e.dataISO) >= chaveDoDia(new Date().toISOString()))
+    // Evento de vários dias fica na lista até o último dia (12/11/2026).
+    .filter(e => !e.dataISO || chaveDoDia(e.dataISO) >= chaveDoDia(new Date().toISOString())
+      || (eventosNormais.find(n => n.id === e.id)?.data_fim ?? '') >= chaveDoDia(new Date().toISOString()))
     .sort((a, b) =>
       (a.dataISO ? chaveDoDia(a.dataISO) : '9999').localeCompare(b.dataISO ? chaveDoDia(b.dataISO) : '9999')
       || (a.horario ?? '').localeCompare(b.horario ?? ''));
@@ -398,10 +401,11 @@ export default function AgendaScreen() {
   // recorrente mostra o dia da semana e a próxima data.
   const hojeISO = new Date().toLocaleDateString('en-CA');
   const eventosEspeciais: EspecialUI[] = eventosEspeciaisDB
-    .filter(e => e.recorrente || !e.data || e.data >= hojeISO)
+    .filter(e => e.recorrente || !e.data || (e.data_fim ?? e.data) >= hojeISO)
     .map(e => {
       let data = '';
-      if (e.data) data = formatDataEspecifica(e.data, MESES, MESES_LONGOS, DATA_DE).label;
+      if (e.data && e.data_fim) data = intervaloDeDatas(e.data, e.data_fim, MESES_LONGOS, DATA_DE);
+      else if (e.data) data = formatDataEspecifica(e.data, MESES, MESES_LONGOS, DATA_DE).label;
       else if (e.recorrente && e.dia_semana !== null) {
         const p = proximaData(e.dia_semana, MESES);
         data = `${DIAS_SEMANA[e.dia_semana]} · ${p.dia} ${p.mes}`;
@@ -503,14 +507,14 @@ export default function AgendaScreen() {
       <View style={styles.filtrosContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtrosScrollContent}>
           <View style={styles.filtrosRow}>
-            {['todos', 'presencial', 'online', 'casa'].map((f) => (
+            {['todos', 'presencial', 'online', 'casa', 'externo'].map((f) => (
               <TouchableOpacity
                 key={f}
                 style={[styles.filtroPill, filtro === f && styles.filtroPillAtivo]}
                 onPress={() => setFiltro(f)}
               >
                 <Text style={[styles.filtroTexto, filtro === f && styles.filtroTextoAtivo]}>
-                  {f === 'todos' ? t('agenda.todos') : f === 'presencial' ? t('agenda.presencial') : f === 'online' ? t('agenda.online') : t('agenda.casa')}
+                  {f === 'todos' ? t('agenda.todos') : f === 'presencial' ? t('agenda.presencial') : f === 'online' ? t('agenda.online') : f === 'externo' ? t('agenda.externo') : t('agenda.casa')}
                 </Text>
               </TouchableOpacity>
             ))}

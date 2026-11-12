@@ -57,3 +57,14 @@ export function seisDaManhaLondresISO(iso: string): string {
   const emBST = comoUTC >= ultimoDomingoUTC(a, 2) && comoUTC < ultimoDomingoUTC(a, 9);
   return new Date(comoUTC - (emBST ? 3600_000 : 0)).toISOString();
 }
+
+// "27 – 30 de agosto de 2027" / "28 de agosto – 2 de setembro de 2027"
+// (evento de vários dias na Agenda e no destaque da Home, 12/11/2026).
+export function intervaloDeDatas(iniISO: string, fimISO: string, mesesLongos: string[], de: string): string {
+  const a = new Date(`${iniISO}T12:00:00`);
+  const b = new Date(`${fimISO}T12:00:00`);
+  const fim = `${b.getDate()} ${de} ${mesesLongos[b.getMonth()]} ${de} ${b.getFullYear()}`;
+  if (a.getFullYear() !== b.getFullYear()) return `${a.getDate()} ${de} ${mesesLongos[a.getMonth()]} ${de} ${a.getFullYear()} – ${fim}`;
+  if (a.getMonth() !== b.getMonth()) return `${a.getDate()} ${de} ${mesesLongos[a.getMonth()]} – ${fim}`;
+  return `${a.getDate()} – ${fim}`;
+}

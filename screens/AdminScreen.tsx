@@ -76,7 +76,7 @@ type DevocionalGeral = {
 
 type AgendaEvento = {
   id: string; nome: string; tipo: string; recorrente: boolean; dia_semana: number | null;
-  data: string | null; horario: string; local: string; descricao: string | null;
+  data: string | null; data_fim?: string | null; horario: string; local: string; descricao: string | null;
   link_zoom: string | null; especial: boolean; cor: string | null;
   destaque_home: boolean; cta_texto: string | null; cta_url: string | null;
   imagem_url: string | null;
@@ -916,8 +916,11 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
 }) {
   const { t } = useTranslation();
   const [nome, setNome] = useState('');
-  const [tipo, setTipo] = useState<'presencial' | 'online' | 'casa'>('presencial');
+  const [tipo, setTipo] = useState<'presencial' | 'online' | 'casa' | 'externo'>('presencial');
   const [recorrente, setRecorrente] = useState(true);
+  // Vários dias (retiro, conferência): data de início e data final.
+  const [variosDias, setVariosDias] = useState(false);
+  const [dataFim, setDataFim] = useState('');
   const [diaSemana, setDiaSemana] = useState(0);
   const [data, setData] = useState(''); // DD/MM/AAAA (vira AAAA-MM-DD so ao salvar)
   const [horario, setHorario] = useState('');
@@ -936,6 +939,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
     if (!visible) {
       setImagemLocal(null);
       setNome(''); setTipo('presencial'); setRecorrente(true); setDiaSemana(0);
+      setVariosDias(false); setDataFim('');
       setData(''); setHorario(''); setLocal(''); setDescricao('');
       setLinkZoom(''); setMapUrl(''); setEspecial(false);
       setDestaqueHome(false); setCtaTexto(''); setCtaUrl('');
@@ -950,6 +954,11 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
     const dataISO = recorrente ? '' : dataBRparaISO(data);
     if (!recorrente && !dataISO) {
       Alert.alert(t('common.atencao'), t('admin.informeADataNoFormato'));
+      return;
+    }
+    const dataFimISO = !recorrente && variosDias ? dataBRparaISO(dataFim) : '';
+    if (!recorrente && variosDias && (!dataFimISO || dataFimISO < dataISO)) {
+      Alert.alert(t('common.atencao'), t('admin.dataFinalInvalida'));
       return;
     }
     setSaving(true);
@@ -968,10 +977,11 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
       nome: nome.trim(), tipo, recorrente,
       dia_semana: recorrente ? diaSemana : null,
       data: !recorrente ? dataISO : null,
+      data_fim: dataFimISO && dataFimISO !== dataISO ? dataFimISO : null,
       horario: horario.trim(), local: local.trim(),
       descricao: descricao.trim() || null,
       link_zoom: tipo === 'online' ? (linkZoom.trim() || null) : null,
-      map_url: tipo === 'presencial' ? (mapUrl.trim() || null) : null,
+      map_url: tipo === 'presencial' || tipo === 'externo' ? (mapUrl.trim() || null) : null,
       especial,
       cor: especial ? '#E84B1A' : null,
       // Destaque na Home: o banco garante que só um evento fica marcado por
@@ -1028,10 +1038,10 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
             <View style={mo.fieldWrap}>
               <Text style={mo.fieldLabel}>{t('admin.tipoDeLocal')}</Text>
               <View style={mo.daysRow}>
-                {(['presencial', 'online', 'casa'] as const).map(t => (
+                {(['presencial', 'online', 'casa', 'externo'] as const).map(t => (
                   <TouchableOpacity key={t} style={[mo.dayPill, tipo === t && mo.dayPillActive]} onPress={() => setTipo(t)}>
                     <Text style={[mo.dayPillText, tipo === t && mo.dayPillTextActive]}>
-                      {t === 'presencial' ? '⛪ Igreja' : t === 'online' ? '💻 Online' : '🏠 Nas casas'}
+                      {t === 'presencial' ? '⛪ Igreja' : t === 'online' ? '💻 Online' : t === 'casa' ? '🏠 Nas casas' : '📍 Outro local'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -1044,8 +1054,11 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
                 <TouchableOpacity style={[mo.dayPill, recorrente && mo.dayPillActive]} onPress={() => setRecorrente(true)}>
                   <Text style={[mo.dayPillText, recorrente && mo.dayPillTextActive]}>{t('admin.todaSemana')}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[mo.dayPill, !recorrente && mo.dayPillActive]} onPress={() => setRecorrente(false)}>
-                  <Text style={[mo.dayPillText, !recorrente && mo.dayPillTextActive]}>{t('admin.dataUnica')}</Text>
+                <TouchableOpacity style={[mo.dayPill, !recorrente && !variosDias && mo.dayPillActive]} onPress={() => { setRecorrente(false); setVariosDias(false); }}>
+                  <Text style={[mo.dayPillText, !recorrente && !variosDias && mo.dayPillTextActive]}>{t('admin.dataUnica')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[mo.dayPill, !recorrente && variosDias && mo.dayPillActive]} onPress={() => { setRecorrente(false); setVariosDias(true); }}>
+                  <Text style={[mo.dayPillText, !recorrente && variosDias && mo.dayPillTextActive]}>{t('admin.variosDias')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1063,10 +1076,18 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
               </View>
             ) : (
               <View style={mo.fieldWrap}>
-                <Text style={mo.fieldLabel}>{t('admin.dataAaaaMmDd')}</Text>
+                <Text style={mo.fieldLabel}>{variosDias ? t('admin.dataInicio') : t('admin.dataAaaaMmDd')}</Text>
                 <View style={mo.fieldRow}>
                   <TextInput style={mo.fieldInput} placeholder={t('admin.ex20260828')} placeholderTextColor={C.textDim} value={data} onChangeText={v => setData(mascaraDataBR(v))} keyboardType="numeric" maxLength={10} />
                 </View>
+                {variosDias && (
+                  <>
+                    <Text style={[mo.fieldLabel, { marginTop: 10 }]}>{t('admin.dataFinal')}</Text>
+                    <View style={mo.fieldRow}>
+                      <TextInput style={mo.fieldInput} placeholder="30/08/2027" placeholderTextColor={C.textDim} value={dataFim} onChangeText={v => setDataFim(mascaraDataBR(v))} keyboardType="numeric" maxLength={10} />
+                    </View>
+                  </>
+                )}
               </View>
             )}
 
@@ -1093,7 +1114,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
               </View>
             )}
 
-            {tipo === 'presencial' && (
+            {(tipo === 'presencial' || tipo === 'externo') && (
               <View style={mo.fieldWrap}>
                 <Text style={mo.fieldLabel}>{t('admin.linkDoGoogleMaps')}</Text>
                 <View style={mo.fieldRow}>
@@ -3716,16 +3737,16 @@ export default function AdminScreen() {
                         )}
                       </View>
                       <Text style={[s.inviteEmail, { marginTop: 4 }]}>
-                        {e.recorrente ? `Toda ${DIAS_SEMANA_LABELS[e.dia_semana ?? 0]}` : isoParaDataBR(e.data)} · {e.horario} · {e.local}
+                        {e.recorrente ? `Toda ${DIAS_SEMANA_LABELS[e.dia_semana ?? 0]}` : `${isoParaDataBR(e.data)}${e.data_fim ? ` – ${isoParaDataBR(e.data_fim)}` : ''}`} · {e.horario} · {e.local}
                       </Text>
                       <View style={s.inviteMetaRow}>
                         <View style={[s.statusBadge, {
-                          backgroundColor: e.tipo === 'online' ? C.success + '18' : e.tipo === 'casa' ? C.accent + '30' : C.purple + '18',
+                          backgroundColor: e.tipo === 'online' ? C.success + '18' : e.tipo === 'casa' ? C.accent + '30' : e.tipo === 'externo' ? '#D9480F18' : C.purple + '18',
                         }]}>
                           <Text style={[s.statusBadgeText, {
-                            color: e.tipo === 'online' ? C.success : e.tipo === 'casa' ? C.accentDim : C.purple,
+                            color: e.tipo === 'online' ? C.success : e.tipo === 'casa' ? C.accentDim : e.tipo === 'externo' ? '#D9480F' : C.purple,
                           }]}>
-                            {e.tipo === 'presencial' ? 'Igreja' : e.tipo === 'online' ? 'Online' : 'Nas casas'}
+                            {e.tipo === 'presencial' ? 'Igreja' : e.tipo === 'online' ? 'Online' : e.tipo === 'casa' ? 'Nas casas' : 'Outro local'}
                           </Text>
                         </View>
                       </View>

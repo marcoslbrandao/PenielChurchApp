@@ -73,11 +73,12 @@ type EventoUI = {
 
 // Card de um evento da agenda — nome e descrição (digitados pelo admin em
 // português) são traduzidos automaticamente pro idioma do app.
-function EventoCard({ evento, hoje, aberto, onToggleDetalhes, onAbrirZoom, onAbrirMapa, onAbrirWhatsApp, t }: {
-  evento: EventoUI; hoje: boolean; aberto: boolean;
+function EventoCard({ evento, hoje, aberto, onToggleDetalhes, onAbrirZoom, onAbrirMapa, onAbrirWhatsApp, t, inscricoes }: {
+  evento: EventoUI; hoje: boolean; aberto: boolean; inscricoes?: boolean;
   onToggleDetalhes: () => void; onAbrirZoom: () => void; onAbrirMapa: () => void; onAbrirWhatsApp: () => void;
   t: (key: string, opts?: any) => string;
 }) {
+  const navegacao = useNavigation<any>();
   const nome = useCampoTraduzido(evento.nome, 'agenda_eventos', evento.id, 'nome');
   const descricao = useCampoTraduzido(evento.descricao, 'agenda_eventos', evento.id, 'descricao');
   const { isDark } = useTheme();
@@ -132,6 +133,17 @@ function EventoCard({ evento, hoje, aberto, onToggleDetalhes, onAbrirZoom, onAbr
           <Text style={styles.eventoInfoTexto}>{evento.local}</Text>
         </View>
         <Text style={styles.eventoDescricao}>{descricao}</Text>
+
+        {/* Inscrever-se (12/11/2026): também nos eventos que não são especiais. */}
+        {inscricoes && (
+          <TouchableOpacity
+            onPress={() => navegacao.navigate('Evento', { id: evento.id })}
+            style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, marginBottom: 10, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: '#E84B1A' }}
+          >
+            <Ionicons name="ticket-outline" size={15} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{t('eventos.inscreverSe')}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Botões Online */}
         {evento.tipo === 'online' && evento.acao && (
@@ -271,7 +283,7 @@ function EventoEspecialCard({ evento, onAbrirLink, inscricoes }: { evento: Espec
             style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, marginVertical: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: evento.cor }}
           >
             <Ionicons name="ticket-outline" size={14} color="#fff" />
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12.5 }}>{t('eventos.inscricoesAbertasBotao')}</Text>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12.5 }}>{t('eventos.inscreverSe')}</Text>
           </TouchableOpacity>
         )}
         {!!evento.local && (
@@ -546,6 +558,7 @@ export default function AgendaScreen() {
             onAbrirMapa={() => evento.mapUrl && abrirMapa(evento.mapUrl)}
             onAbrirWhatsApp={abrirWhatsApp}
             t={t}
+            inscricoes={comInscricao.has(evento.id)}
           />
         ))}
 

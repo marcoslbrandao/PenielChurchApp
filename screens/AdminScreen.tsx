@@ -3664,7 +3664,7 @@ export default function AdminScreen() {
                 contatoMensagens.map(msg => (
                   <View key={msg.id} style={s.inviteCard}>
                     <View style={s.inviteLeft}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <Text style={s.inviteCode}>{msg.nome}</Text>
                         {!!msg.grupo && (
                           <View style={[s.statusBadge, { backgroundColor: C.purple + '18' }]}>
@@ -3796,8 +3796,12 @@ export default function AdminScreen() {
                 eventosAgenda.map(e => (
                   <View key={e.id} style={s.inviteCard}>
                     <View style={s.inviteLeft}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={s.inviteCode}>{e.nome}</Text>
+                      {/* Nome sozinho na linha: os selos iam para baixo dos botões (12/11/2026). */}
+                      <Text style={s.inviteCode}>{e.nome}</Text>
+                      <Text style={[s.inviteEmail, { marginTop: 4 }]}>
+                        {e.recorrente ? `Toda ${DIAS_SEMANA_LABELS[e.dia_semana ?? 0]}` : `${isoParaDataBR(e.data)}${e.data_fim ? ` – ${isoParaDataBR(e.data_fim)}` : ''}`} · {e.horario} · {e.local}
+                      </Text>
+                      <View style={[s.inviteMetaRow, { flexWrap: 'wrap', gap: 6 }]}>
                         {e.especial && (
                           <View style={[s.statusBadge, { backgroundColor: '#E84B1A18' }]}>
                             <Text style={[s.statusBadgeText, { color: '#E84B1A' }]}>⭐ Especial</Text>
@@ -3808,11 +3812,6 @@ export default function AdminScreen() {
                             <Text style={[s.statusBadgeText, { color: C.accentDim }]}>{t('admin.naHome')}</Text>
                           </View>
                         )}
-                      </View>
-                      <Text style={[s.inviteEmail, { marginTop: 4 }]}>
-                        {e.recorrente ? `Toda ${DIAS_SEMANA_LABELS[e.dia_semana ?? 0]}` : `${isoParaDataBR(e.data)}${e.data_fim ? ` – ${isoParaDataBR(e.data_fim)}` : ''}`} · {e.horario} · {e.local}
-                      </Text>
-                      <View style={s.inviteMetaRow}>
                         <View style={[s.statusBadge, {
                           backgroundColor: e.tipo === 'online' ? C.success + '18' : e.tipo === 'casa' ? C.accent + '30' : e.tipo === 'externo' ? '#D9480F18' : C.purple + '18',
                         }]}>

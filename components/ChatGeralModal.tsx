@@ -27,6 +27,7 @@ import {
 import { formatarTempo, duracaoDoAudio } from '../lib/chatAudio';
 import RegrasDoChat from './RegrasDoChat';
 import PlayerDeVideo from './PlayerDeVideo';
+import CapaDoVideo from './CapaDoVideo';
 import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 import { registrarChatAberto } from '../lib/chatAberto';
 import BotaoNegrito from './BotaoNegrito';
@@ -1266,6 +1267,13 @@ function VideoDaMensagem({
   const H = Math.max(130, Math.min(300, Math.round(W * proporcao)));
   // Toca dentro do app (PlayerDeVideo); só abre fora se não der a URL.
   const [urlTocando, setUrlTocando] = useState<string | null>(null);
+  // Capa com um quadro do próprio vídeo (12/11/2026, CapaDoVideo).
+  const [urlCapa, setUrlCapa] = useState<string | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    urlDaMidia(caminho, bucket).then(u => { if (vivo) setUrlCapa(u); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [caminho, bucket]);
   const abrir = async () => {
     if (abrindo) return;
     setAbrindo(true);
@@ -1282,6 +1290,7 @@ function VideoDaMensagem({
     <Pressable onPress={abrir} onLongPress={onLongPress} delayLongPress={300}>
       <View style={[st.foto, st.video, { width: W, height: H, backgroundColor: cor }]}>
         <Ionicons name="videocam" size={120} color="rgba(255,255,255,0.08)" style={st.videoMarca} />
+        <CapaDoVideo chave={`${bucket}:${caminho}`} url={urlCapa} />
         {!!autorNome && (
           <View style={st.videoAutor}>
             <View style={st.videoIniciais}><Text style={st.videoIniciaisTexto}>{iniciaisDe(autorNome)}</Text></View>

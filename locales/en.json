@@ -2395,5 +2395,8 @@
     "recusarSub": "Want to leave a note for whoever sent it?",
     "pararGravacao": "Stop recording",
     "virarCamera": "Flip camera"
+  },
+  "mensagens": {
+    "ouvir": "Listen to the message"
   }
 }

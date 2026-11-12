@@ -2395,5 +2395,8 @@
     "recusarSub": "Quer deixar um recado para quem enviou?",
     "pararGravacao": "Parar gravação",
     "virarCamera": "Virar câmera"
+  },
+  "mensagens": {
+    "ouvir": "Ouvir a mensagem"
   }
 }

@@ -2342,5 +2342,8 @@
     "recusarSub": "Voulez-vous laisser un message à la personne qui l’a envoyée ?",
     "pararGravacao": "Arrêter l'enregistrement",
     "virarCamera": "Retourner la caméra"
+  },
+  "mensagens": {
+    "ouvir": "Écouter le message"
   }
 }

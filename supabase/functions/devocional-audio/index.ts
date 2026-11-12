@@ -4,6 +4,9 @@
 // 12/11/2026). "Para quem não pode ler — trabalhando, dirigindo."
 //
 //   POST { devocional_id, lang, so_verificar? }
+//   POST { mensagem_id, lang, so_verificar? }   ← Mensagens (resumo do culto),
+//        pedido do Marcos em 12/11/2026. Mesmo provedor e mesmo bucket, em
+//        `mensagens/<id>/`, cache na tabela `mensagem_audios`.
 //     → { disponivel: boolean, url?: string, proprio?: boolean }
 //
 // 1. Português com áudio gravado pelo pastor (`devocionais.audio_proprio_path`)
@@ -103,28 +106,66 @@ async function falar(texto: string, lang: string): Promise<Uint8Array> {
   return out;
 }
 
-async function traduzir(campo: string, texto: string, devId: string, lang: string): Promise<string | null> {
+async function traduzir(campo: string, texto: string, devId: string, lang: string, tabela = 'devocionais'): Promise<string | null> {
   if (lang === 'pt' || !texto.trim()) return texto;
   const r = await fetch(`${SUPABASE_URL}/functions/v1/translate-content`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ table: 'devocionais', rowId: devId, field: campo, text: texto, lang }),
+    body: JSON.stringify({ table: tabela, rowId: devId, field: campo, text: texto, lang }),
   });
   const j = await r.json().catch(() => null);
   if (!j?.translated || j.fallback) return null; // tradução indisponível agora: não lê em português com voz de outro idioma
   return j.translated as string;
 }
 
+// Sem o negrito do app (**texto**) e sem links.
+const limpar = (s: string) => s.replace(/\*\*/g, '').replace(/https?:\/\/\S+/g, '').trim();
+
+// Mensagens (resumo do culto): título, resumo e o texto.
+// deno-lint-ignore no-explicit-any
+async function audioDaMensagem(comoUsuario: any, id: string, lang: string, soVerificar: boolean) {
+  const { data: m } = await comoUsuario.from('mensagens').select('id, titulo, resumo, conteudo').eq('id', id).maybeSingle();
+  if (!m) return json({ disponivel: false }, 404);
+  if (!provedor) return json({ disponivel: false });
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+  const publico = (p: string) => admin.storage.from(BUCKET).getPublicUrl(p).data.publicUrl;
+
+  const h = await hash([lang, nomeVoz, m.titulo, m.resumo, m.conteudo].join('\u0001'));
+  const { data: pronto } = await admin.from('mensagem_audios').select('path')
+    .eq('mensagem_id', m.id).eq('lang', lang).eq('hash', h).maybeSingle();
+  if (pronto) return json({ disponivel: true, url: publico(pronto.path) });
+  if (soVerificar) return json({ disponivel: true });
+
+  const [titulo, resumo, conteudo] = await Promise.all([
+    traduzir('titulo', m.titulo ?? '', m.id, lang, 'mensagens'),
+    traduzir('resumo', m.resumo ?? '', m.id, lang, 'mensagens'),
+    traduzir('conteudo', m.conteudo ?? '', m.id, lang, 'mensagens'),
+  ]);
+  if ([titulo, resumo, conteudo].some(x => x === null)) return json({ disponivel: true, error: 'traducao_indisponivel' }, 503);
+  const roteiro = [limpar(titulo!), limpar(resumo!), limpar(conteudo!)].filter(Boolean).join('\n\n');
+
+  const mp3 = await falar(roteiro, lang);
+  const caminho = `mensagens/${m.id}/${lang}-${h}.mp3`;
+  const up = await admin.storage.from(BUCKET).upload(caminho, mp3, { contentType: 'audio/mpeg', upsert: true });
+  if (up.error) throw up.error;
+  await admin.from('mensagem_audios').upsert(
+    { mensagem_id: m.id, lang, hash: h, path: caminho, caracteres: roteiro.length, voz: nomeVoz },
+    { onConflict: 'mensagem_id,lang,hash' },
+  );
+  return json({ disponivel: true, url: publico(caminho) });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
-    const { devocional_id, lang: langPedido, so_verificar } = await req.json();
+    const { devocional_id, mensagem_id, lang: langPedido, so_verificar } = await req.json();
     const lang = IDIOMAS.includes(langPedido) ? langPedido : 'pt';
-    if (!devocional_id) return json({ error: 'devocional_id' }, 400);
 
-    // Lê COMO quem pediu: se não pode ler o devocional, não pode ouvir.
+    // Lê COMO quem pediu: se não pode ler, não pode ouvir.
     const auth = req.headers.get('authorization') ?? `Bearer ${ANON_KEY}`;
     const comoUsuario = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
+    if (mensagem_id) return await audioDaMensagem(comoUsuario, String(mensagem_id), lang, !!so_verificar);
+    if (!devocional_id) return json({ error: 'devocional_id' }, 400);
     const { data: dev } = await comoUsuario.from('devocionais')
       .select('id, titulo, versiculo, referencia, texto, audio_proprio_path').eq('id', devocional_id).maybeSingle();
     if (!dev) return json({ disponivel: false }, 404);

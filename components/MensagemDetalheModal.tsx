@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useCampoTraduzido } from '../lib/useTraducao';
+import OuvirDevocional from './OuvirDevocional';
 import { linhaCompartilharApp } from '../lib/appLinks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { segmentarReferencias, RefBiblica } from '../lib/referenciasBiblicas';
@@ -78,6 +79,8 @@ export default function MensagemDetalheModal({ mensagem, onClose }: {
           <View style={s.corpo}>
             <Text style={s.titulo}>{titulo}</Text>
             <Text style={s.meta}>{mensagem.autor} · {dataFormatada}</Text>
+            {/* Ouvir a mensagem (12/11/2026): voz neural no idioma do app. */}
+            <OuvirDevocional devocionalId={mensagem.id} titulo={titulo} tipo="mensagem" />
             {paragrafos.map((p, i) => (
               <Text key={i} style={ehSubtitulo(p) ? s.subtitulo : s.paragrafo}>
                 {segmentarReferencias(p).map((pedaco, j) => pedaco.ref ? (

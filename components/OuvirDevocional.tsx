@@ -19,9 +19,11 @@ const VELOCIDADES = [1, 1.25, 1.5, 0.85];
 // Só um devocional tocando por vez no app inteiro.
 let tocandoAgora: AudioPlayer | null = null;
 
-async function pedirAudio(devocionalId: string, lang: string, soVerificar: boolean) {
+// tipo 'mensagem' (12/11/2026): o mesmo player para ouvir as Mensagens
+// (resumo do culto); a função gera a voz a partir de título, resumo e texto.
+async function pedirAudio(id: string, lang: string, soVerificar: boolean, tipo: 'devocional' | 'mensagem') {
   const { data, error } = await supabase.functions.invoke('devocional-audio', {
-    body: { devocional_id: devocionalId, lang, so_verificar: soVerificar },
+    body: { [tipo === 'mensagem' ? 'mensagem_id' : 'devocional_id']: id, lang, so_verificar: soVerificar },
   });
   if (error) {
     let corpo: any = null;
@@ -31,8 +33,8 @@ async function pedirAudio(devocionalId: string, lang: string, soVerificar: boole
   return data as { disponivel: boolean; url?: string; proprio?: boolean; erro?: string };
 }
 
-export default function OuvirDevocional({ devocionalId, titulo, cor = '#F5C842', corTexto = '#fff' }: {
-  devocionalId: string; titulo: string; cor?: string; corTexto?: string;
+export default function OuvirDevocional({ devocionalId, titulo, cor = '#F5C842', corTexto = '#fff', tipo = 'devocional' }: {
+  devocionalId: string; titulo: string; cor?: string; corTexto?: string; tipo?: 'devocional' | 'mensagem';
 }) {
   const { t, i18n } = useTranslation();
   const lang = ['pt', 'en', 'es', 'fr'].includes(i18n.language) ? i18n.language : 'pt';
@@ -47,7 +49,7 @@ export default function OuvirDevocional({ devocionalId, titulo, cor = '#F5C842',
 
   useEffect(() => {
     let vivo = true;
-    pedirAudio(devocionalId, lang, true).then(r => { if (vivo) setDisponivel(!!r?.disponivel); });
+    pedirAudio(devocionalId, lang, true, tipo).then(r => { if (vivo) setDisponivel(!!r?.disponivel); });
     return () => { vivo = false; };
   }, [devocionalId, lang]);
 
@@ -82,7 +84,7 @@ export default function OuvirDevocional({ devocionalId, titulo, cor = '#F5C842',
     }
     setErro(null);
     setPreparando(true);
-    const r = await pedirAudio(devocionalId, lang, false);
+    const r = await pedirAudio(devocionalId, lang, false, tipo);
     if (!r?.url) {
       setPreparando(false);
       setErro(r?.erro === 'traducao_indisponivel' ? t('devocionais.audioSemTraducao') : t('devocionais.audioErro'));
@@ -136,7 +138,7 @@ export default function OuvirDevocional({ devocionalId, titulo, cor = '#F5C842',
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={[st.rotulo, { color: corTexto }]}>
-            🎧 {preparando && !player.current ? t('devocionais.audioPreparando') : t('devocionais.ouvir')}
+            🎧 {preparando && !player.current ? t('devocionais.audioPreparando') : (tipo === 'mensagem' ? t('mensagens.ouvir') : t('devocionais.ouvir'))}
           </Text>
           <View style={[st.trilho, { backgroundColor: corTexto + '33' }]}>
             <View style={[st.cheio, { width: `${progresso * 100}%`, backgroundColor: cor }]} />

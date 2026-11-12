@@ -118,6 +118,17 @@ async function traduzir(campo: string, texto: string, devId: string, lang: strin
   return j.translated as string;
 }
 
+function papelDoToken(auth: string): string | null {
+  try {
+    const token = auth.replace(/^Bearer\s+/i, '');
+    if (token === SERVICE_KEY) return 'service_role';
+    const corpo = token.split('.')[1];
+    if (!corpo) return null;
+    const b64 = corpo.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)))?.role ?? null;
+  } catch { return null; }
+}
+
 // Sem o negrito do app (**texto**) e sem links.
 const limpar = (s: string) => s.replace(/\*\*/g, '').replace(/https?:\/\/\S+/g, '').trim();
 
@@ -158,55 +169,69 @@ async function audioDaMensagem(comoUsuario: any, id: string, lang: string, soVer
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   try {
-    const { devocional_id, mensagem_id, lang: langPedido, so_verificar } = await req.json();
+    const { devocional_id, mensagem_id, lang: langPedido, so_verificar, pre_gerar } = await req.json();
     const lang = IDIOMAS.includes(langPedido) ? langPedido : 'pt';
 
-    // Lê COMO quem pediu: se não pode ler, não pode ouvir.
+    // Lê COMO quem pediu: se não pode ler, não pode ouvir. A exceção é o
+    // gatilho do banco (12/11/2026), que chama com a chave de serviço para
+    // deixar o áudio pronto assim que o devocional/mensagem é publicado.
     const auth = req.headers.get('authorization') ?? `Bearer ${ANON_KEY}`;
-    const comoUsuario = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
-    if (mensagem_id) return await audioDaMensagem(comoUsuario, String(mensagem_id), lang, !!so_verificar);
-    if (!devocional_id) return json({ error: 'devocional_id' }, 400);
-    const { data: dev } = await comoUsuario.from('devocionais')
-      .select('id, titulo, versiculo, referencia, texto, audio_proprio_path').eq('id', devocional_id).maybeSingle();
-    if (!dev) return json({ disponivel: false }, 404);
-
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-    const publico = (p: string) => admin.storage.from(BUCKET).getPublicUrl(p).data.publicUrl;
-
-    if (lang === 'pt' && dev.audio_proprio_path) {
-      return json({ disponivel: true, proprio: true, url: publico(dev.audio_proprio_path) });
+    // pre_gerar (gatilho do banco): lê com a chave de serviço, gera se ainda
+    // não existe e responde só { ok } — sem devolver o link. Quem chamar isto
+    // de fora no máximo deixa pronto um áudio que já existiria; não ouve nada.
+    const preGerar = pre_gerar === true;
+    const comoUsuario = preGerar || papelDoToken(auth) === 'service_role'
+      ? createClient(SUPABASE_URL, SERVICE_KEY)
+      : createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
+    if (mensagem_id) {
+      const r = await audioDaMensagem(comoUsuario, String(mensagem_id), lang, !!so_verificar && !preGerar);
+      return preGerar ? json({ ok: r.status === 200 }, r.status) : r;
     }
-    if (!provedor) return json({ disponivel: false });
+    const r = await (async () => {
+      if (!devocional_id) return json({ error: 'devocional_id' }, 400);
+      const { data: dev } = await comoUsuario.from('devocionais')
+        .select('id, titulo, versiculo, referencia, texto, audio_proprio_path').eq('id', devocional_id).maybeSingle();
+      if (!dev) return json({ disponivel: false }, 404);
 
-    // Versão do texto em português: se o devocional mudar, o áudio muda.
-    const h = await hash([lang, nomeVoz, dev.titulo, dev.versiculo, dev.referencia, dev.texto].join('\u0001'));
-    const { data: pronto } = await admin.from('devocional_audios').select('path')
-      .eq('devocional_id', dev.id).eq('lang', lang).eq('hash', h).maybeSingle();
-    if (pronto) return json({ disponivel: true, url: publico(pronto.path) });
-    if (so_verificar) return json({ disponivel: true });
+      const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+      const publico = (p: string) => admin.storage.from(BUCKET).getPublicUrl(p).data.publicUrl;
 
-    const [titulo, versiculo, referencia, texto] = await Promise.all([
-      traduzir('titulo', dev.titulo ?? '', dev.id, lang),
-      traduzir('versiculo', dev.versiculo ?? '', dev.id, lang),
-      traduzir('referencia', dev.referencia ?? '', dev.id, lang),
-      traduzir('texto', dev.texto ?? '', dev.id, lang),
-    ]);
-    if ([titulo, versiculo, referencia, texto].some(x => x === null)) {
-      return json({ disponivel: true, error: 'traducao_indisponivel' }, 503);
-    }
-    // Sem o negrito do app (**texto**) e sem links.
-    const limpo = (s: string) => s.replace(/\*\*/g, '').replace(/https?:\/\/\S+/g, '').trim();
-    const roteiro = [limpo(titulo!), `${limpo(versiculo!)} — ${limpo(referencia!)}`, limpo(texto!)].filter(Boolean).join('\n\n');
+      if (lang === 'pt' && dev.audio_proprio_path) {
+        return json({ disponivel: true, proprio: true, url: publico(dev.audio_proprio_path) });
+      }
+      if (!provedor) return json({ disponivel: false });
 
-    const mp3 = await falar(roteiro, lang);
-    const caminho = `${dev.id}/${lang}-${h}.mp3`;
-    const up = await admin.storage.from(BUCKET).upload(caminho, mp3, { contentType: 'audio/mpeg', upsert: true });
-    if (up.error) throw up.error;
-    await admin.from('devocional_audios').upsert(
-      { devocional_id: dev.id, lang, hash: h, path: caminho, caracteres: roteiro.length, voz: nomeVoz },
-      { onConflict: 'devocional_id,lang,hash' },
-    );
-    return json({ disponivel: true, url: publico(caminho) });
+      // Versão do texto em português: se o devocional mudar, o áudio muda.
+      const h = await hash([lang, nomeVoz, dev.titulo, dev.versiculo, dev.referencia, dev.texto].join('\u0001'));
+      const { data: pronto } = await admin.from('devocional_audios').select('path')
+        .eq('devocional_id', dev.id).eq('lang', lang).eq('hash', h).maybeSingle();
+      if (pronto) return json({ disponivel: true, url: publico(pronto.path) });
+      if (so_verificar && !preGerar) return json({ disponivel: true });
+
+      const [titulo, versiculo, referencia, texto] = await Promise.all([
+        traduzir('titulo', dev.titulo ?? '', dev.id, lang),
+        traduzir('versiculo', dev.versiculo ?? '', dev.id, lang),
+        traduzir('referencia', dev.referencia ?? '', dev.id, lang),
+        traduzir('texto', dev.texto ?? '', dev.id, lang),
+      ]);
+      if ([titulo, versiculo, referencia, texto].some(x => x === null)) {
+        return json({ disponivel: true, error: 'traducao_indisponivel' }, 503);
+      }
+      // Sem o negrito do app (**texto**) e sem links.
+      const limpo = (s: string) => s.replace(/\*\*/g, '').replace(/https?:\/\/\S+/g, '').trim();
+      const roteiro = [limpo(titulo!), `${limpo(versiculo!)} — ${limpo(referencia!)}`, limpo(texto!)].filter(Boolean).join('\n\n');
+
+      const mp3 = await falar(roteiro, lang);
+      const caminho = `${dev.id}/${lang}-${h}.mp3`;
+      const up = await admin.storage.from(BUCKET).upload(caminho, mp3, { contentType: 'audio/mpeg', upsert: true });
+      if (up.error) throw up.error;
+      await admin.from('devocional_audios').upsert(
+        { devocional_id: dev.id, lang, hash: h, path: caminho, caracteres: roteiro.length, voz: nomeVoz },
+        { onConflict: 'devocional_id,lang,hash' },
+      );
+      return json({ disponivel: true, url: publico(caminho) });
+    })();
+    return preGerar ? json({ ok: r.status === 200 }, r.status) : r;
   } catch (e) {
     return json({ error: String((e as Error)?.message ?? e) }, 500);
   }

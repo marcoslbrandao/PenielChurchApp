@@ -349,7 +349,10 @@ export default function ConversasScreen({ navigation, route }: { navigation: any
               )}
               <TouchableOpacity
                 style={s.linha}
-                onPress={() => navigation.navigate('MainTabs', { screen: 'Inicio', params: { abrirChatIgreja: Date.now() } })}
+                // popTo, e não navigate: no React Navigation 7 o navigate empilha uma
+                // SEGUNDA Home por cima do modal, e os canais Realtime repetidos
+                // dessa Home derrubavam o app (bug da 1.5.3, 12/11/2026).
+                onPress={() => navigation.popTo('MainTabs', { screen: 'Inicio', params: { abrirChatIgreja: Date.now() } })}
               >
                 <View style={[s.avatarIcone, { backgroundColor: COR_IGREJA }]}>
                   <Ionicons name="people" size={22} color="#fff" />

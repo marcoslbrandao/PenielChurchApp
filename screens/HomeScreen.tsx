@@ -723,7 +723,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
       if (ativo) setTraducaoAtiva(!!data?.ativa);
     });
     const canal = supabase
-      .channel('traducao-status-home')
+      .channel(`traducao-status-home-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'traducao_ao_vivo' }, (payload) => {
         setTraducaoAtiva(!!(payload.new as { ativa?: boolean } | null)?.ativa);
       })
@@ -888,7 +888,7 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
   useEffect(() => {
     if (!isLoggedIn || !ehMembro) return;
     const canal = supabase
-      .channel('home_conversas')
+      .channel(`home_conversas-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversa_mensagens' }, () => {
         conversasNaoLidas().then(setConversasNaoLidasN);
       })

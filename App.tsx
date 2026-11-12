@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ComponentType } from 'react';
 import { requireOptionalNativeModule } from 'expo';
 import { Alert, Linking } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, StackActions, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -239,6 +239,12 @@ function RoteadorDeNotificacoes({ navPronta }: { navPronta: boolean }) {
     // sem parâmetro), então a sobrecarga de dois argumentos do `navigate`
     // não aceita `never` no segundo. O cast é na função, não nos valores:
     // assim `nome` e `params` continuam conferidos aqui dentro.
+      // Destino nas abas: volta para a MainTabs que já existe (popTo). Com
+      // navigate, um push tocado com um modal aberto empilhava outra Home.
+      if (destino.nome === 'MainTabs') {
+        navigationRef.dispatch(StackActions.popTo('MainTabs', destino.params));
+        return;
+      }
       (navigationRef.navigate as (nome: string, params?: any) => void)(destino.nome!, destino.params);
     })();
   }, [pendente, navPronta, carregando, ehMembro, ehAdmin, isLoggedIn]);

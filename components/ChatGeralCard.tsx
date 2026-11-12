@@ -31,7 +31,7 @@ export default function ChatGeralCard({
   // Mensagem nova (ou apagada) enquanto a Home está aberta: atualiza o card.
   useEffect(() => {
     const canal = supabase
-      .channel('chat_geral_home')
+      .channel(`chat_geral_home-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_geral_mensagens' }, () => atualizar())
       .subscribe();
     return () => { supabase.removeChannel(canal); };

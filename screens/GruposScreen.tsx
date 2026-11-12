@@ -13,6 +13,7 @@ import { apagarLinha } from '../lib/db';
 import { abrirMaterial, removerMaterialDoDrive, sincronizarMateriais, iconeDoMaterial, tamanhoLegivel, Material } from '../lib/materiais';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
+import OuvirDevocional from '../components/OuvirDevocional';
 import { useAuth } from '../lib/useAuth';
 import GrupoAdminModal from '../components/GrupoAdminModal';
 import GrupoChatModal from '../components/GrupoChatModal';
@@ -303,6 +304,7 @@ function GrupoDevocionalCard({ dev, cor, isOpen, onToggle, onApagar }: {
             <Text style={s.versiculoText}>"{versiculo}"</Text>
             <Text style={[s.versiculoRef, { color: cor }]}>{referencia}</Text>
           </View>
+          <OuvirDevocional devocionalId={dev.id} titulo={titulo} cor={cor} corTexto={C.text} />
           <Text style={s.reflexaoText}>{texto}</Text>
           <BotaoCompartilharDevocional
             original={dev}

@@ -14,6 +14,7 @@ import { compartilharEvento } from '../lib/compartilharEvento';
 import { liveSemCota, liveComApi, urlDoVideo, YOUTUBE_CANAL_URL, YOUTUBE_LIVES_URL, type LiveAtual } from '../lib/youtubeCanal';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import DevocionalCorpo from '../components/DevocionalCorpo';
+import OuvirDevocional from '../components/OuvirDevocional';
 import { SeloSerieSobreFoto, SeloSerieLinha, ProgressoSerie } from '../components/SeloSerie';
 import { useSerie } from '../lib/devocionalSeries';
 import BirthdayBanner from '../components/BirthdayBanner';
@@ -1284,6 +1285,8 @@ export default function HomeScreen({ navigation, route }: { navigation?: any; ro
             {devocionalAberto && (
               <View style={styles.devocionalBody}>
                 <Text style={styles.devocionalVersiculo}>"{devocionalVersiculoTraduzido}"</Text>
+                {/* Ouvir em áudio também na Home (12/11/2026). */}
+                <OuvirDevocional devocionalId={devocional.id} titulo={devocionalTituloTraduzido} />
                 <DevocionalCorpo
                   referencia={devocionalReferenciaTraduzida}
                   texto={devocionalTextoTraduzido}

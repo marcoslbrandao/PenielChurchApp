@@ -88,6 +88,8 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
 
   const cfg = det?.config;
   const precos = det?.precos ?? [];
+  // Só inscrição (confirma a vaga), sem preço nem pagamento — 12/11/2026.
+  const comPag = cfg?.com_pagamento !== false;
   const perguntas = det?.perguntas ?? [];
   const equipe = det?.equipe ?? [];
   const vagasRestantes = cfg?.vagas != null ? Math.max(0, cfg.vagas - (det?.ocupadas ?? 0)) : null;
@@ -171,7 +173,7 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
     setInscVisivel(false);
     await carregar();
     setAba('inscricao');
-    Alert.alert(t('eventos.titulo'), r.estado === 'espera' ? t('eventos.inscritoEspera') : t('eventos.inscritoOk', { total: libras(r.total) }));
+    Alert.alert(t('eventos.titulo'), r.estado === 'espera' ? t('eventos.inscritoEspera') : (comPag ? t('eventos.inscritoOk', { total: libras(r.total) }) : t('eventos.inscritoOkSemPagamento')));
   };
 
   // ── Pagar ─────────────────────────────────────────────────────────────────
@@ -277,7 +279,7 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
               {!!cfg?.contato && <Linha icone="call-outline" texto={cfg.contato} C={C} />}
             </View>
             {!!ev.descricao && <Secao titulo={t('eventos.descricao')} texto={ev.descricao} s={s} />}
-            {precos.length > 0 && (
+            {comPag && precos.length > 0 && (
               <View style={s.bloco}>
                 <Text style={s.secaoTitulo}>{t('eventos.valores')}</Text>
                 {precos.map(p => (
@@ -349,6 +351,7 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
                     </Text>
                   </View>
                 </View>
+                {comPag && (<>
                 <View style={s.barra}><View style={[s.barraCheia, { backgroundColor: cor, width: `${minha.total - minha.desconto > 0 ? Math.min(100, (minha.pago / (minha.total - minha.desconto)) * 100) : 100}%` }]} /></View>
                 <View style={s.trio}>
                   <Trio rotulo={t('eventos.total')} valor={libras(minha.total - minha.desconto)} s={s} />
@@ -356,8 +359,10 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
                   <Trio rotulo={t('eventos.falta')} valor={libras(minha.saldo)} s={s} cor={minha.saldo > 0 ? cor : C.success} />
                 </View>
                 {minha.desconto > 0 && <Text style={s.sub}>{t('eventos.descontoAplicado', { valor: libras(minha.desconto) })}</Text>}
+                </>)}
+                {!comPag && minha.status === 'confirmada' && <Text style={[s.textoForte, { color: C.success, marginTop: 6 }]}>{t('eventos.vagaConfirmada')}</Text>}
 
-                {minha.status === 'confirmada' && minha.saldo > 0 && (
+                {comPag && minha.status === 'confirmada' && minha.saldo > 0 && (
                   <>
                     <Text style={[s.sub, { marginTop: 10 }]}>{t('eventos.sugestao', { valor: libras(minha.sugestao) })}</Text>
                     <TouchableOpacity style={[s.botao, { backgroundColor: cor, marginTop: 10 }]} onPress={abrirPagar}>
@@ -367,18 +372,18 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
                   </>
                 )}
                 {minha.status === 'espera' && <Text style={[s.sub, { marginTop: 10 }]}>{t('eventos.esperaInfo')}</Text>}
-                {minha.saldo <= 0 && minha.status === 'confirmada' && <Text style={[s.textoForte, { color: C.success, marginTop: 10 }]}>{t('eventos.quitado')}</Text>}
+                {comPag && minha.saldo <= 0 && minha.status === 'confirmada' && <Text style={[s.textoForte, { color: C.success, marginTop: 10 }]}>{t('eventos.quitado')}</Text>}
 
                 <Text style={[s.secaoTitulo, { marginTop: 18 }]}>{t('eventos.quemVai')}</Text>
                 {minha.pessoas.map((p, i) => (
                   <View key={i} style={s.linhaPreco}>
                     <Text style={s.texto}>{p.nome}{p.idade != null ? ` (${p.idade})` : ''}</Text>
-                    <Text style={s.texto}>{p.valor > 0 ? libras(p.valor) : t('eventos.gratis')}</Text>
+                    {comPag && <Text style={s.texto}>{p.valor > 0 ? libras(p.valor) : t('eventos.gratis')}</Text>}
                   </View>
                 ))}
 
-                <Text style={[s.secaoTitulo, { marginTop: 18 }]}>{t('eventos.pagamentos')}</Text>
-                {minha.pagamentos.length === 0 ? <Text style={s.sub}>{t('eventos.nenhumPagamento')}</Text> : minha.pagamentos.map((g, i) => (
+                {comPag && <Text style={[s.secaoTitulo, { marginTop: 18 }]}>{t('eventos.pagamentos')}</Text>}
+                {!comPag ? null : minha.pagamentos.length === 0 ? <Text style={s.sub}>{t('eventos.nenhumPagamento')}</Text> : minha.pagamentos.map((g, i) => (
                   <View key={i} style={s.linhaPreco}>
                     <Text style={s.texto}>{dataBR(g.pago_em)} · {t(`eventos.forma_${g.forma}`, { defaultValue: g.forma })}</Text>
                     <Text style={[s.textoForte, { color: g.valor < 0 ? C.danger : C.success }]}>{libras(g.valor)}</Text>
@@ -421,9 +426,9 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
                 <Ionicons name={marcados[p.member_id] ? 'checkbox' : 'square-outline'} size={22} color={cor} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.textoForte}>{p.nome}{p.sou_eu ? ` (${t('eventos.eu')})` : ''}</Text>
-                  <Text style={s.sub}>{p.idade != null ? t('eventos.anosNoEvento', { n: p.idade }) : t('eventos.semData')} · {p.categoria ?? ''}</Text>
+                  <Text style={s.sub}>{p.idade != null ? t('eventos.anosNoEvento', { n: p.idade }) : t('eventos.semData')}{comPag && p.categoria ? ` · ${p.categoria}` : ''}</Text>
                 </View>
-                <Text style={s.textoForte}>{Number(p.valor ?? 0) > 0 ? libras(p.valor) : t('eventos.gratis')}</Text>
+                {comPag && <Text style={s.textoForte}>{Number(p.valor ?? 0) > 0 ? libras(p.valor) : t('eventos.gratis')}</Text>}
               </TouchableOpacity>
             ))}
             {familia.length === 0 && <Text style={s.sub}>{t('eventos.semFicha')}</Text>}
@@ -488,7 +493,7 @@ export default function EventoScreen({ navigation, route }: { navigation: any; r
           </ScrollView>
           <View style={[s.rodape, { paddingBottom: insets.bottom + 12 }]}>
             <Text style={[s.textoForte, { textAlign: 'center', marginBottom: 8 }]}>
-              {t('eventos.resumoTotal', { n: resumoTotal.n, total: libras(resumoTotal.tot) })}
+              {comPag ? t('eventos.resumoTotal', { n: resumoTotal.n, total: libras(resumoTotal.tot) }) : t('eventos.resumoPessoas', { n: resumoTotal.n })}
             </Text>
             <TouchableOpacity style={[s.botao, { backgroundColor: cor }]} onPress={enviarInscricao} disabled={enviando}>
               {enviando ? <ActivityIndicator color="#fff" /> : <Text style={s.botaoTexto}>{t('eventos.confirmarInscricao')}</Text>}

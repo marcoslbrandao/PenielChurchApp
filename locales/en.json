@@ -1308,7 +1308,18 @@
     "variosDias": "🗓️ Several days",
     "dataInicio": "Start date (DD/MM/YYYY)",
     "dataFinal": "End date (DD/MM/YYYY)",
-    "dataFinalInvalida": "Enter the end date (DD/MM/YYYY), on or after the start date."
+    "dataFinalInvalida": "Enter the end date (DD/MM/YYYY), on or after the start date.",
+    "editar": "Edit",
+    "editarEvento": "Edit event",
+    "inscricoes": "Registration",
+    "inscricoesBotao": "Registration",
+    "insc_nenhuma": "No registration",
+    "insc_gratis": "✅ Sign-up only",
+    "insc_paga": "💳 With payment",
+    "insc_nenhuma_dica": "The event only shows in the Agenda.",
+    "insc_gratis_dica": "People sign up to confirm their place, without paying.",
+    "insc_paga_dica": "Registration with prices by age and payment in the app. Adjust prices, places and dates in the Registration button.",
+    "inscricaoTemPagamentos": "This event already has payments recorded, so payment can’t be turned off."
   },
   "membros": {
     "buscarPeloNome": "Search by name...",
@@ -2123,7 +2134,13 @@
     "eqAdicionar": "Add to the team",
     "eqFuncaoPlaceholder": "Role (e.g. Kitchen, Worship, Transport, Children)",
     "eqInfo": "Type the role, then search for the person. The star ⭐ marks the event leader (treasury and admin only). The leader sees registrations and builds the team but cannot handle payments.",
-    "eqRemover": "Remove {{nome}} from the team?"
+    "eqRemover": "Remove {{nome}} from the team?",
+    "inscritoOkSemPagamento": "You’re registered! Your place is confirmed.",
+    "vagaConfirmada": "✅ Place confirmed",
+    "resumoPessoas": "{{n}} person(s)",
+    "cfgComPagamento": "With payment",
+    "cfgComPagamentoSim": "Prices by age and payment in the app.",
+    "cfgComPagamentoNao": "Sign-up only: confirms the place, no prices."
   },
   "tesouraria": {
     "titulo": "Event treasury",

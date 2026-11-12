@@ -21,7 +21,7 @@ import { useAcesso } from '../lib/acesso';
 import { useTheme, type ThemeColors } from '../lib/theme';
 import {
   painelEvento, detalheInscricao, registrarPagamento, definirDesconto, definirStatus, salvarConfig,
-  definirEquipe, removerDaEquipe, libras, dataBR, isoDeBR, mascaraData, PRECOS_PADRAO, PERGUNTAS_PADRAO,
+  definirEquipe, removerDaEquipe, definirPagamento, libras, dataBR, isoDeBR, mascaraData, PRECOS_PADRAO, PERGUNTAS_PADRAO,
   type DetalhesEvento, type LinhaPainel, type Preco, type Pergunta,
 } from '../lib/eventos';
 
@@ -53,6 +53,8 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
   const [descValor, setDescValor] = useState('');
 
   const podeDinheiro = ehAdmin || tesouraria;
+  // Só inscrição (12/11/2026): sem valores, pagamentos nem desconto.
+  const comPag = detalhes.config?.com_pagamento !== false;
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -149,11 +151,11 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
         {detalhe ? (
           // ── Detalhe de uma inscrição ──────────────────────────────────────
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
-            <View style={s.trio}>
+            {comPag && <View style={s.trio}>
               <Trio r={t('eventos.total')} v={libras(detalhe.total - detalhe.desconto)} s={s} />
               <Trio r={t('eventos.pago')} v={libras(detalhe.pago)} s={s} cor={C.success} />
               <Trio r={t('eventos.falta')} v={libras(detalhe.saldo)} s={s} cor={detalhe.saldo > 0 ? cor : C.success} />
-            </View>
+            </View>}
             <Text style={s.sub}>{t(`eventos.status_${detalhe.status}`)} · {t('eventos.inscritoEm', { data: dataBR(detalhe.created_at) })}</Text>
 
             <Text style={s.titulo}>{t('eventos.quemVai')}</Text>
@@ -163,12 +165,12 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
                   <Text style={s.forte}>{p.nome}{p.idade != null ? ` (${p.idade})` : ''}</Text>
                   {Object.entries(p.respostas ?? {}).map(([q, r]) => <Text key={q} style={s.sub}>{q}: {String(r)}</Text>)}
                 </View>
-                <Text style={s.forte}>{libras(p.valor)}</Text>
+                {comPag && <Text style={s.forte}>{libras(p.valor)}</Text>}
               </View>
             ))}
 
-            <Text style={s.titulo}>{t('eventos.pagamentos')}</Text>
-            {(detalhe.pagamentos ?? []).length === 0 ? <Text style={s.sub}>{t('eventos.nenhumPagamento')}</Text> :
+            {comPag && <Text style={s.titulo}>{t('eventos.pagamentos')}</Text>}
+            {!comPag ? null : (detalhe.pagamentos ?? []).length === 0 ? <Text style={s.sub}>{t('eventos.nenhumPagamento')}</Text> :
               detalhe.pagamentos.map((g: any, i: number) => (
                 <View key={i} style={s.linha}>
                   <View style={{ flex: 1 }}>
@@ -179,7 +181,7 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
                 </View>
               ))}
 
-            {podeDinheiro && (
+            {podeDinheiro && comPag && (
               <>
                 <Text style={s.titulo}>{t('eventos.gRegistrarPagamento')}</Text>
                 <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
@@ -245,12 +247,12 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
                   <View>
                     <View style={[s.trio, s.cartaoTotais]}>
                       <Trio r={t('eventos.gPessoas')} v={`${totais.pessoas}${detalhes.config?.vagas ? `/${detalhes.config.vagas}` : ''}`} s={s} />
-                      <Trio r={t('eventos.gArrecadado')} v={libras(totais.arrecadado)} s={s} cor={C.success} />
-                      <Trio r={t('eventos.gFalta')} v={libras(totais.falta)} s={s} cor={cor} />
+                      {comPag && <Trio r={t('eventos.gArrecadado')} v={libras(totais.arrecadado)} s={s} cor={C.success} />}
+                      {comPag && <Trio r={t('eventos.gFalta')} v={libras(totais.falta)} s={s} cor={cor} />}
                     </View>
-                    <Text style={[s.sub, { textAlign: 'center' }]}>{t('eventos.gEsperado', { valor: libras(totais.esperado) })}</Text>
+                    {comPag && <Text style={[s.sub, { textAlign: 'center' }]}>{t('eventos.gEsperado', { valor: libras(totais.esperado) })}</Text>}
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, padding: 12 }}>
-                      {(['todos', 'saldo', 'quitados', 'espera', 'cancelada'] as Filtro[]).map(f => (
+                      {((comPag ? ['todos', 'saldo', 'quitados', 'espera', 'cancelada'] : ['todos', 'espera', 'cancelada']) as Filtro[]).map(f => (
                         <TouchableOpacity key={f} onPress={() => setFiltro(f)} style={[s.chip, filtro === f && { backgroundColor: cor, borderColor: cor }]}>
                           <Text style={{ color: filtro === f ? '#fff' : C.text, fontWeight: '600' }}>{t(`eventos.filtro_${f}`)}</Text>
                         </TouchableOpacity>
@@ -266,10 +268,10 @@ export default function EventoGestaoModal({ visible, eventoId, eventoNome, cor, 
                       <Text style={s.sub} numberOfLines={1}>{l.nomes}</Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={[s.forte, { color: l.saldo > 0 ? cor : C.success }]}>
-                        {l.status === 'confirmada' ? (l.saldo > 0 ? `${t('eventos.falta')} ${libras(l.saldo)}` : t('eventos.quitadoCurto')) : t(`eventos.status_${l.status}`)}
+                      <Text style={[s.forte, { color: !comPag ? (l.status === 'confirmada' ? C.success : cor) : l.saldo > 0 ? cor : C.success }]}>
+                        {!comPag ? t(`eventos.status_${l.status}`) : l.status === 'confirmada' ? (l.saldo > 0 ? `${t('eventos.falta')} ${libras(l.saldo)}` : t('eventos.quitadoCurto')) : t(`eventos.status_${l.status}`)}
                       </Text>
-                      <Text style={s.sub}>{libras(l.pago)} / {libras(l.total - l.desconto)}</Text>
+                      {comPag && <Text style={s.sub}>{libras(l.pago)} / {libras(l.total - l.desconto)}</Text>}
                     </View>
                   </TouchableOpacity>
                 )}
@@ -313,6 +315,7 @@ function ConfigEditor({ eventoId, detalhes, cor, podeSalvar, C, s, t }: {
   const [precos, setPrecos] = useState<Preco[]>(detalhes.precos?.length ? detalhes.precos : PRECOS_PADRAO);
   const [perguntas, setPerguntas] = useState<Pergunta[]>(detalhes.perguntas?.length ? detalhes.perguntas : (c ? [] : PERGUNTAS_PADRAO));
   const [salvando, setSalvando] = useState(false);
+  const [comPag, setComPag] = useState(c?.com_pagamento !== false);
 
   const data = (v: string) => (v.trim() ? isoDeBR(v) : null);
 
@@ -326,12 +329,22 @@ function ConfigEditor({ eventoId, detalhes, cor, podeSalvar, C, s, t }: {
       fim: data(fim) ? `${data(fim)}T12:00:00Z` : null,
       abre_em: data(abre), fecha_em: data(fecha), quitar_ate: data(quitar),
       vagas: vagas.trim() ? Number(vagas) : null,
-      entrada_minima: Number(entrada.replace(',', '.')) || 0,
+      entrada_minima: comPag ? (Number(entrada.replace(',', '.')) || 0) : 0,
       publico: soMembros ? 'membros' : 'todos',
       regras, reembolso, programacao, o_que_levar: levar, contato,
-      precos: precos.map(p => ({ ...p, valor: Number(String(p.valor).replace(',', '.')) || 0 })),
+      ...(comPag ? { precos: precos.map(p => ({ ...p, valor: Number(String(p.valor).replace(',', '.')) || 0 })) } : {}),
       perguntas,
     });
+    // Com/sem pagamento (12/11/2026): só chama se mudou.
+    if (r === 'ok' && comPag !== (c?.com_pagamento !== false)) {
+      const r2 = await definirPagamento(eventoId, comPag);
+      if (r2 !== 'ok') {
+        setSalvando(false);
+        if (r2 === 'tem_pagamentos') setComPag(true);
+        Alert.alert(t('eventos.titulo'), r2 === 'tem_pagamentos' ? t('admin.inscricaoTemPagamentos') : r2);
+        return;
+      }
+    }
     setSalvando(false);
     Alert.alert(t('eventos.titulo'), r === 'ok' ? t('eventos.cfgSalvo') : r === 'sem_acesso' ? t('eventos.semPermissao') : r);
   };
@@ -363,6 +376,13 @@ function ConfigEditor({ eventoId, detalhes, cor, podeSalvar, C, s, t }: {
         </View>
         <Switch value={ativa} onValueChange={setAtiva} disabled={!podeSalvar} trackColor={{ true: cor, false: undefined }} />
       </View>
+      <View style={s.linhaSwitch}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.forte}>{t('eventos.cfgComPagamento')}</Text>
+          <Text style={s.sub}>{comPag ? t('eventos.cfgComPagamentoSim') : t('eventos.cfgComPagamentoNao')}</Text>
+        </View>
+        <Switch value={comPag} onValueChange={setComPag} disabled={!podeSalvar} trackColor={{ true: cor, false: undefined }} />
+      </View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}>{Campo({ rotulo: t('eventos.cfg_inicio'), valor: inicio, set: setInicio, data: true })}</View>
         <View style={{ flex: 1 }}>{Campo({ rotulo: t('eventos.cfg_fim'), valor: fim, set: setFim, data: true })}</View>
@@ -373,16 +393,16 @@ function ConfigEditor({ eventoId, detalhes, cor, podeSalvar, C, s, t }: {
       </View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}>{Campo({ rotulo: t('eventos.cfg_vagas'), valor: vagas, set: setVagas, num: true })}</View>
-        <View style={{ flex: 1 }}>{Campo({ rotulo: t('eventos.cfg_entrada'), valor: entrada, set: setEntrada, num: true })}</View>
+        {comPag && <View style={{ flex: 1 }}>{Campo({ rotulo: t('eventos.cfg_entrada'), valor: entrada, set: setEntrada, num: true })}</View>}
       </View>
-      {Campo({ rotulo: t('eventos.cfg_quitar'), valor: quitar, set: setQuitar, data: true })}
+      {comPag && Campo({ rotulo: t('eventos.cfg_quitar'), valor: quitar, set: setQuitar, data: true })}
       <View style={s.linhaSwitch}>
         <Text style={[s.forte, { flex: 1 }]}>{t('eventos.cfgSoMembros')}</Text>
         <Switch value={soMembros} onValueChange={setSoMembros} disabled={!podeSalvar} trackColor={{ true: cor, false: undefined }} />
       </View>
 
-      <Text style={s.titulo}>{t('eventos.valores')}</Text>
-      {precos.map((p, i) => (
+      {comPag && <Text style={s.titulo}>{t('eventos.valores')}</Text>}
+      {comPag && precos.map((p, i) => (
         <View key={i} style={s.blocoItem}>
           <TextInput style={s.campo} value={p.categoria} editable={podeSalvar} placeholderTextColor={C.textDim}
             onChangeText={v => setPrecos(ps => ps.map((x, j) => (j === i ? { ...x, categoria: v } : x)))} />
@@ -402,7 +422,7 @@ function ConfigEditor({ eventoId, detalhes, cor, podeSalvar, C, s, t }: {
           </View>
         </View>
       ))}
-      {podeSalvar && (
+      {podeSalvar && comPag && (
         <TouchableOpacity onPress={() => setPrecos(ps => [...ps, { categoria: '', idade_min: 0, idade_max: null, valor: 0 }])}>
           <Text style={[s.link, { color: cor }]}>+ {t('eventos.cfgNovaFaixa')}</Text>
         </TouchableOpacity>

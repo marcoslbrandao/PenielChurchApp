@@ -1308,7 +1308,18 @@
     "variosDias": "🗓️ Plusieurs jours",
     "dataInicio": "Date de début (JJ/MM/AAAA)",
     "dataFinal": "Date de fin (JJ/MM/AAAA)",
-    "dataFinalInvalida": "Indiquez la date de fin (JJ/MM/AAAA), égale ou après la date de début."
+    "dataFinalInvalida": "Indiquez la date de fin (JJ/MM/AAAA), égale ou après la date de début.",
+    "editar": "Modifier",
+    "editarEvento": "Modifier l’événement",
+    "inscricoes": "Inscriptions",
+    "inscricoesBotao": "Inscriptions",
+    "insc_nenhuma": "Sans inscription",
+    "insc_gratis": "✅ Inscription seule",
+    "insc_paga": "💳 Avec paiement",
+    "insc_nenhuma_dica": "L’événement apparaît seulement dans l’Agenda.",
+    "insc_gratis_dica": "On s’inscrit pour confirmer sa place, sans rien payer.",
+    "insc_paga_dica": "Inscription avec tarifs par âge et paiement dans l’app. Réglez tarifs, places et dates dans le bouton Inscriptions.",
+    "inscricaoTemPagamentos": "Cet événement a déjà des paiements enregistrés : impossible de retirer le paiement."
   },
   "membros": {
     "buscarPeloNome": "Rechercher par nom...",
@@ -2070,7 +2081,13 @@
     "eqAdicionar": "Ajouter à l’équipe",
     "eqFuncaoPlaceholder": "Rôle (ex. : Cuisine, Louange, Transport, Enfants)",
     "eqInfo": "Saisissez le rôle, puis cherchez la personne. L’étoile ⭐ désigne le responsable (trésorerie et admin uniquement). Il voit les inscrits et forme l’équipe, sans gérer les paiements.",
-    "eqRemover": "Retirer {{nome}} de l’équipe ?"
+    "eqRemover": "Retirer {{nome}} de l’équipe ?",
+    "inscritoOkSemPagamento": "Inscription faite ! Votre place est confirmée.",
+    "vagaConfirmada": "✅ Place confirmée",
+    "resumoPessoas": "{{n}} personne(s)",
+    "cfgComPagamento": "Avec paiement",
+    "cfgComPagamentoSim": "Tarifs par âge et paiement dans l’app.",
+    "cfgComPagamentoNao": "Inscription seule : confirme la place, sans tarifs."
   },
   "tesouraria": {
     "titulo": "Trésorerie des événements",

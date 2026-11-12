@@ -28,6 +28,8 @@ export type ConfigEvento = {
   programacao: string | null;
   o_que_levar: string | null;
   contato: string | null;
+  /** false = só inscrição (confirma a vaga), sem preço nem pagamento (12/11/2026). */
+  com_pagamento?: boolean;
 };
 
 export type Preco = { id?: string; categoria: string; idade_min: number; idade_max: number | null; valor: number };
@@ -124,6 +126,20 @@ export async function definirStatus(inscricaoId: string, status: string) {
 
 export async function salvarConfig(eventoId: string, p: Record<string, unknown>) {
   const { data, error } = await supabase.rpc('evento_salvar_config', { p_evento: eventoId, p });
+  return error ? (error.message || 'erro') : String(data);
+}
+
+export type ModoInscricao = 'nenhuma' | 'gratis' | 'paga';
+
+/** Formulário do evento no Admin: Sem inscrição / Só inscrição / Inscrição e pagamento. */
+export async function definirInscricao(eventoId: string, modo: ModoInscricao) {
+  const { data, error } = await supabase.rpc('evento_definir_inscricao', { p_evento: eventoId, p_modo: modo });
+  return error ? (error.message || 'erro') : String(data);
+}
+
+/** Interruptor "Com pagamento" do Configurar. */
+export async function definirPagamento(eventoId: string, com: boolean) {
+  const { data, error } = await supabase.rpc('evento_definir_pagamento', { p_evento: eventoId, p_com: com });
   return error ? (error.message || 'erro') : String(data);
 }
 

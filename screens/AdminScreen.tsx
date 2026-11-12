@@ -15,6 +15,7 @@ import { supabase } from '../lib/supabase';
 import { apagarLinha } from '../lib/db';
 import { nomeCurto } from '../lib/nomeCurto';
 import { mascaraDataBR, dataBRparaISO, isoParaDataBR, seisDaManhaLondresISO } from '../lib/datas';
+import { definirInscricao, ModoInscricao } from '../lib/eventos';
 import DevocionaisAdmin, { escolherImagemDevocional, enviarImagemDevocional, proximaOrdemDaSerie } from '../components/DevocionaisAdmin';
 import type { SerieDevocional } from '../lib/devocionalSeries';
 import { useAuth } from '../lib/useAuth';
@@ -77,7 +78,7 @@ type DevocionalGeral = {
 type AgendaEvento = {
   id: string; nome: string; tipo: string; recorrente: boolean; dia_semana: number | null;
   data: string | null; data_fim?: string | null; horario: string; local: string; descricao: string | null;
-  link_zoom: string | null; especial: boolean; cor: string | null;
+  link_zoom: string | null; map_url?: string | null; especial: boolean; cor: string | null;
   destaque_home: boolean; cta_texto: string | null; cta_url: string | null;
   imagem_url: string | null;
 };
@@ -915,8 +916,9 @@ async function enviarImagemEvento(uriLocal: string): Promise<string> {
   return supabase.storage.from('eventos').getPublicUrl(caminho).data.publicUrl;
 }
 
-function NovoEventoModal({ visible, onClose, onSaved }: {
-  visible: boolean; onClose: () => void; onSaved: () => void;
+// Criar e EDITAR evento (editar: pedido do Marcos, 12/11/2026).
+function NovoEventoModal({ visible, onClose, onSaved, editar }: {
+  visible: boolean; onClose: () => void; onSaved: () => void; editar?: AgendaEvento | null;
 }) {
   const { t } = useTranslation();
   const [nome, setNome] = useState('');
@@ -938,9 +940,40 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
   const [ctaUrl, setCtaUrl] = useState('');
   const [imagemLocal, setImagemLocal] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Inscrições: nenhuma · só inscrição (confirma a vaga) · inscrição e pagamento.
+  const [modoInsc, setModoInsc] = useState<ModoInscricao>('nenhuma');
+  const [modoInscOriginal, setModoInscOriginal] = useState<ModoInscricao>('nenhuma');
+
+  // Abrindo para editar: preenche com o que está salvo.
+  useEffect(() => {
+    if (!visible || !editar) return;
+    setNome(editar.nome ?? '');
+    setTipo((['presencial', 'online', 'casa', 'externo'].includes(editar.tipo) ? editar.tipo : 'presencial') as any);
+    setRecorrente(!!editar.recorrente);
+    setDiaSemana(editar.dia_semana ?? 0);
+    setData(editar.data ? isoParaDataBR(editar.data) : '');
+    setVariosDias(!!editar.data_fim);
+    setDataFim(editar.data_fim ? isoParaDataBR(editar.data_fim) : '');
+    setHorario(editar.horario ?? '');
+    setLocal(editar.local ?? '');
+    setDescricao(editar.descricao ?? '');
+    setLinkZoom(editar.link_zoom ?? '');
+    setMapUrl(editar.map_url ?? '');
+    setEspecial(!!editar.especial);
+    setDestaqueHome(!!editar.destaque_home);
+    setCtaTexto(editar.cta_texto ?? '');
+    setCtaUrl(editar.cta_url ?? '');
+    setImagemLocal(null);
+    supabase.from('evento_inscricao_config').select('ativa, com_pagamento').eq('evento_id', editar.id).maybeSingle()
+      .then(({ data: c }) => {
+        const m: ModoInscricao = !c || !(c as any).ativa ? 'nenhuma' : (c as any).com_pagamento === false ? 'gratis' : 'paga';
+        setModoInsc(m); setModoInscOriginal(m);
+      });
+  }, [visible, editar]);
 
   useEffect(() => {
     if (!visible) {
+      setModoInsc('nenhuma'); setModoInscOriginal('nenhuma');
       setImagemLocal(null);
       setNome(''); setTipo('presencial'); setRecorrente(true); setDiaSemana(0);
       setVariosDias(false); setDataFim('');
@@ -976,8 +1009,8 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
         return;
       }
     }
-    const { error } = await supabase.from('agenda_eventos').insert({
-      imagem_url: imagemUrl,
+    const linha = {
+      ...(imagemUrl ? { imagem_url: imagemUrl } : {}),
       nome: nome.trim(), tipo, recorrente,
       dia_semana: recorrente ? diaSemana : null,
       data: !recorrente ? dataISO : null,
@@ -994,9 +1027,29 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
       destaque_home: destaqueHome,
       cta_texto: destaqueHome ? (ctaTexto.trim() || null) : null,
       cta_url: destaqueHome ? (ctaUrl.trim() || null) : null,
-    });
+    };
+    let eventoId = editar?.id ?? null;
+    if (editar) {
+      // Cor própria do evento (se já tinha) fica como estava.
+      const { error } = await supabase.from('agenda_eventos')
+        .update({ ...linha, cor: especial ? (editar.cor ?? '#E84B1A') : null }).eq('id', editar.id);
+      if (error) { setSaving(false); Alert.alert(t('common.erro'), error.message); return; }
+    } else {
+      const { data: novo, error } = await supabase.from('agenda_eventos').insert(linha).select('id').single();
+      if (error) { setSaving(false); Alert.alert(t('common.erro'), error.message); return; }
+      eventoId = (novo as any)?.id ?? null;
+    }
+    // Inscrições (12/11/2026): só mexe se mudou.
+    if (eventoId && modoInsc !== modoInscOriginal) {
+      const r = await definirInscricao(eventoId, modoInsc);
+      if (r !== 'ok') {
+        setSaving(false);
+        Alert.alert(t('common.atencao'), r === 'tem_pagamentos' ? t('admin.inscricaoTemPagamentos') : r === 'sem_acesso' ? t('eventos.semPermissao') : r);
+        onSaved();
+        return;
+      }
+    }
     setSaving(false);
-    if (error) { Alert.alert(t('common.erro'), error.message); return; }
     onSaved();
     onClose();
   };
@@ -1008,7 +1061,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
         <View style={[mo.sheet, { maxHeight: '100%' }]}>
           <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={mo.header}>
-              <Text style={mo.title}>{t('admin.novoEvento')}</Text>
+              <Text style={mo.title}>{editar ? t('admin.editarEvento') : t('admin.novoEvento')}</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={22} color={C.textMuted} />
               </TouchableOpacity>
@@ -1021,8 +1074,8 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
                 disabled={saving}
                 onPress={async () => { const uri = await escolherImagemEvento(t); if (uri) setImagemLocal(uri); }}
               >
-                {imagemLocal ? (
-                  <Image source={{ uri: imagemLocal }} style={[nm.imagemPreview, { height: undefined, aspectRatio: 2 }]} resizeMode="cover" />
+                {imagemLocal || editar?.imagem_url ? (
+                  <Image source={{ uri: imagemLocal ?? editar?.imagem_url ?? undefined }} style={[nm.imagemPreview, { height: undefined, aspectRatio: 2 }]} resizeMode="cover" />
                 ) : (
                   <View style={nm.imagemPlaceholder}>
                     <Ionicons name="image-outline" size={24} color={C.textDim} />
@@ -1138,6 +1191,20 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
             </View>
 
             <View style={mo.fieldWrap}>
+              <Text style={mo.fieldLabel}>{t('admin.inscricoes')}</Text>
+              <View style={mo.linhaIgual}>
+                {(['nenhuma', 'gratis', 'paga'] as const).map(m => (
+                  <TouchableOpacity key={m} style={[mo.dayPill, mo.opcaoIgual, modoInsc === m && mo.dayPillActive]} onPress={() => setModoInsc(m)}>
+                    <Text style={[mo.dayPillText, modoInsc === m && mo.dayPillTextActive]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                      {t(`admin.insc_${m}`)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={mo.fieldHint}>{t(`admin.insc_${modoInsc}_dica`)}</Text>
+            </View>
+
+            <View style={mo.fieldWrap}>
               <Text style={mo.fieldLabel}>{t('admin.eventoEspecialApareceEmDestaque')}</Text>
               <View style={mo.daysRow}>
                 <TouchableOpacity style={[mo.dayPill, especial && mo.dayPillActive]} onPress={() => setEspecial(!especial)}>
@@ -1180,7 +1247,7 @@ function NovoEventoModal({ visible, onClose, onSaved }: {
 
             <TouchableOpacity style={[mo.saveBtn, saving && { opacity: 0.7 }]} onPress={handleSave} disabled={saving}>
               {saving ? <ActivityIndicator color="#fff" /> : (
-                <><Ionicons name="calendar-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{t('admin.publicarEvento')}</Text></>
+                <><Ionicons name="calendar-outline" size={18} color="#fff" /><Text style={mo.saveBtnText}>{editar ? t('admin.salvarAlteracoes') : t('admin.publicarEvento')}</Text></>
               )}
             </TouchableOpacity>
           </ScrollView>
@@ -2997,6 +3064,7 @@ export default function AdminScreen() {
   const [devocionalModalVisible, setDevocionalModalVisible] = useState(false);
   const [devAdminRecarregar, setDevAdminRecarregar] = useState(0);
   const [eventoModalVisible, setEventoModalVisible] = useState(false);
+  const [eventoEditando, setEventoEditando] = useState<AgendaEvento | null>(null);
   const [contasVisitantesVisible, setContasVisitantesVisible] = useState(false);
   const [shortModalVisible, setShortModalVisible] = useState(false);
   const [mensagemModalVisible, setMensagemModalVisible] = useState(false);
@@ -3342,7 +3410,7 @@ export default function AdminScreen() {
               if (abaAtual === 'ofertas') setOfertaModalVisible(true);
               else if (abaAtual === 'avisos') setAvisoModalVisible(true);
               else if (abaAtual === 'devocionais') setDevocionalModalVisible(true);
-              else if (abaAtual === 'agenda') setEventoModalVisible(true);
+              else if (abaAtual === 'agenda') { setEventoEditando(null); setEventoModalVisible(true); }
               else if (abaAtual === 'shorts') setShortModalVisible(true);
               else if (abaAtual === 'mensagens') setMensagemModalVisible(true);
               else if (abaAtual === 'escalas') setAreaModalVisible(true);
@@ -3755,6 +3823,25 @@ export default function AdminScreen() {
                           </Text>
                         </View>
                       </View>
+                      {/* Editar e Inscrições com texto, fáceis de achar (12/11/2026). */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                        <TouchableOpacity
+                          style={[s.statusBadge, { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: C.primary + '18' }]}
+                          onPress={() => { setEventoEditando(e); setEventoModalVisible(true); }}
+                        >
+                          <Ionicons name="create-outline" size={14} color={C.primary} />
+                          <Text style={[s.statusBadgeText, { color: C.primary, fontSize: 12 }]}>{t('admin.editar')}</Text>
+                        </TouchableOpacity>
+                        {!e.recorrente && (
+                          <TouchableOpacity
+                            style={[s.statusBadge, { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: C.accent + '30' }]}
+                            onPress={() => navegacaoAdmin.navigate('Evento', { id: e.id, gerenciar: true })}
+                          >
+                            <Ionicons name="ticket-outline" size={14} color={C.accentDim} />
+                            <Text style={[s.statusBadgeText, { color: C.accentDim, fontSize: 12 }]}>{t('admin.inscricoesBotao')}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                     <View style={s.inviteActions}>
                       <TouchableOpacity
@@ -3772,15 +3859,6 @@ export default function AdminScreen() {
                       >
                         <Ionicons name={e.destaque_home ? 'home' : 'home-outline'} size={16} color={e.destaque_home ? C.accent : C.textMuted} />
                       </TouchableOpacity>
-                      {e.especial && (
-                        // Inscrições do evento (11/11/2026): configurar, inscritos, equipe.
-                        <TouchableOpacity
-                          style={[s.actionBtn, { borderColor: C.accent }]}
-                          onPress={() => navegacaoAdmin.navigate('Evento', { id: e.id, gerenciar: true })}
-                        >
-                          <Ionicons name="ticket-outline" size={16} color={C.accent} />
-                        </TouchableOpacity>
-                      )}
                       <TouchableOpacity style={[s.actionBtn, { borderColor: C.danger + '40' }]} onPress={() => deleteEvento(e.id)}>
                         <Ionicons name="trash-outline" size={16} color={C.danger} />
                       </TouchableOpacity>
@@ -4053,7 +4131,8 @@ export default function AdminScreen() {
       <ContasVisitantesModal visible={contasVisitantesVisible} onClose={() => setContasVisitantesVisible(false)} onChanged={fetchData} />
       <NovoEventoModal
         visible={eventoModalVisible}
-        onClose={() => setEventoModalVisible(false)}
+        editar={eventoEditando}
+        onClose={() => { setEventoModalVisible(false); setEventoEditando(null); }}
         onSaved={fetchData}
       />
       <NovoShortModal

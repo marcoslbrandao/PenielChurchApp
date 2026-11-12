@@ -1308,7 +1308,18 @@
     "variosDias": "🗓️ Vários dias",
     "dataInicio": "Data de início (DD/MM/AAAA)",
     "dataFinal": "Data final (DD/MM/AAAA)",
-    "dataFinalInvalida": "Informe a data final (DD/MM/AAAA), igual ou depois da data de início."
+    "dataFinalInvalida": "Informe a data final (DD/MM/AAAA), igual ou depois da data de início.",
+    "editar": "Editar",
+    "editarEvento": "Editar evento",
+    "inscricoes": "Inscrições",
+    "inscricoesBotao": "Inscrições",
+    "insc_nenhuma": "Sem inscrição",
+    "insc_gratis": "✅ Só inscrição",
+    "insc_paga": "💳 Com pagamento",
+    "insc_nenhuma_dica": "O evento só aparece na Agenda.",
+    "insc_gratis_dica": "A pessoa se inscreve para confirmar a vaga, sem pagar nada.",
+    "insc_paga_dica": "Inscrição com valores por idade e pagamento pelo app. Ajuste valores, vagas e datas no botão Inscrições.",
+    "inscricaoTemPagamentos": "Este evento já tem pagamentos registrados, por isso não dá para tirar a cobrança."
   },
   "membros": {
     "buscarPeloNome": "Buscar pelo nome...",
@@ -2123,7 +2134,13 @@
     "eqAdicionar": "Adicionar à equipe",
     "eqFuncaoPlaceholder": "Função (ex.: Cozinha, Louvor, Transporte, Crianças)",
     "eqInfo": "Escreva a função e depois busque a pessoa. A estrela ⭐ marca o líder do evento (só tesouraria e admin). O líder vê os inscritos e monta a equipe, mas não mexe em pagamentos.",
-    "eqRemover": "Tirar {{nome}} da equipe?"
+    "eqRemover": "Tirar {{nome}} da equipe?",
+    "inscritoOkSemPagamento": "Inscrição feita! Sua vaga está confirmada.",
+    "vagaConfirmada": "✅ Vaga confirmada",
+    "resumoPessoas": "{{n}} pessoa(s)",
+    "cfgComPagamento": "Com pagamento",
+    "cfgComPagamentoSim": "Valores por idade e pagamento pelo app.",
+    "cfgComPagamentoNao": "Só inscrição: confirma a vaga, sem valores."
   },
   "tesouraria": {
     "titulo": "Tesouraria dos eventos",

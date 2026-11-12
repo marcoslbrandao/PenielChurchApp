@@ -31,6 +31,8 @@ import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 import { registrarChatAberto } from '../lib/chatAberto';
 import BotaoNegrito from './BotaoNegrito';
 import EscolherEmoji from './EscolherEmoji';
+import MemesModal from './MemesModal';
+import { memeParaEnviar, salvarMemeDeUrl, type Meme } from '../lib/memes';
 import { useEmojisFavoritos } from '../lib/emojisFavoritos';
 import { alternarNegrito, semFormatacao } from '../lib/negrito';
 import { useModeracaoChat, denunciarMensagem, barrarSeOfensivo } from '../lib/moderacao';
@@ -126,6 +128,8 @@ export default function ChatGeralModal({
   const [enviando, setEnviando] = useState(false);
   const [respondendo, setRespondendo] = useState<MensagemGeral | null>(null);
   const [menuDe, setMenuDe] = useState<MensagemGeral | null>(null);
+  // Memes salvos (12/11/2026).
+  const [memesAberto, setMemesAberto] = useState(false);
   // "Reações e visualizações" de uma mensagem (16/10/2026).
   const [infoDe, setInfoDe] = useState<MensagemGeral | null>(null);
   const abrirInfo = (m: MensagemGeral) => {
@@ -380,6 +384,27 @@ export default function ChatGeralModal({
       return false;
     } finally {
       setEnviando(false);
+    }
+  };
+
+  // Meme escolhido: vai como uma foto comum (mesma moderação de sempre).
+  const enviarMeme = async (m: Meme) => {
+    setMemesAberto(false);
+    setEnviando(true);
+    const a = await memeParaEnviar(m);
+    setEnviando(false);
+    if (!a) { Alert.alert(t('chatGeral.erroEnviar'), t('chatGeral.erroEnviarTexto')); return; }
+    await enviarImagem(a);
+  };
+  const salvarComoMeme = async (msg: MensagemGeral) => {
+    setMenuDe(null);
+    if (!msg.midia_path) return;
+    try {
+      const url = await urlDaMidia(msg.midia_path, fonte.bucket);
+      const r = await salvarMemeDeUrl(url, userId);
+      Alert.alert(t('memes.titulo'), r === 'ok' ? t('memes.salvo') : r === 'limite' ? t('memes.limite') : r);
+    } catch (e: any) {
+      Alert.alert(t('memes.titulo'), e?.message ?? t('chatGeral.erroEnviarTexto'));
     }
   };
 
@@ -906,6 +931,12 @@ export default function ChatGeralModal({
                 </TouchableOpacity>
               )}
               {!gravando && (
+                <TouchableOpacity onPress={() => { Keyboard.dismiss(); setMemesAberto(true); }} style={cs.anexarBtn} disabled={enviando} hitSlop={6}
+                  accessibilityLabel={t('memes.titulo')}>
+                  <Ionicons name="happy-outline" size={26} color={COR} />
+                </TouchableOpacity>
+              )}
+              {!gravando && (
                 <TextInput
                   ref={inputRef}
                   style={cs.input}
@@ -952,6 +983,8 @@ export default function ChatGeralModal({
           )}
         </KeyboardAvoidingView>
 
+        <MemesModal visivel={memesAberto} onFechar={() => setMemesAberto(false)} onEscolher={enviarMeme} userId={userId} ehAdmin={ehAdmin} cor={COR} />
+
         {/* ── Menu ao segurar a mensagem ─────────────────────────────────── */}
         <Modal visible={!!menuDe} transparent animationType="fade" onRequestClose={() => setMenuDe(null)}>
           <Pressable style={cs.menuFundo} onPress={() => setMenuDe(null)}>
@@ -970,6 +1003,9 @@ export default function ChatGeralModal({
                 </View>
                 {!euSilenciado && (
                   <ItemMenu icone="arrow-undo-outline" texto={t('chatGeral.responder')} cor={C.text} onPress={() => responder(menuDe)} />
+                )}
+                {menuDe.tipo === 'imagem' && !!menuDe.midia_path && (
+                  <ItemMenu icone="happy-outline" texto={t('memes.salvarComoMeme')} cor={C.text} onPress={() => salvarComoMeme(menuDe)} />
                 )}
                 <ItemMenu
                   icone="information-circle-outline"

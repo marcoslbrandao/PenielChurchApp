@@ -463,3 +463,17 @@ entrypoint = "./functions/youtube-culto/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/calendario/index.ts"
+
+# Devocional em áudio (12/11/2026): visitante sem conta também ouve o
+# devocional geral; a função lê o devocional com o token de quem pediu.
+[functions.devocional-audio]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/devocional-audio/index.ts"
+
+# Shorts dos grupos (12/11/2026): o GitHub Actions chama com a senha
+# SHORTS_SEGREDO (conferida dentro da função), sem JWT.
+[functions.shorts-trabalho]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/shorts-trabalho/index.ts"

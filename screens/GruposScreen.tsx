@@ -16,6 +16,7 @@ import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocion
 import { useAuth } from '../lib/useAuth';
 import GrupoAdminModal from '../components/GrupoAdminModal';
 import GrupoChatModal from '../components/GrupoChatModal';
+import ShortsDoGrupo from '../components/ShortsDoGrupo';
 import ContatoModal from '../components/ContatoModal';
 import ChamadaModal from '../components/ChamadaModal';
 import FrequenciaModal from '../components/FrequenciaModal';
@@ -1254,6 +1255,16 @@ export default function GruposScreen() {
 
             {/* Shorts */}
             <Text style={s.sectionLabel}>{t('grupos.shortsGrupo')}</Text>
+            {/* Gravar/enviar Short e fila do líder (12/11/2026). */}
+            <ShortsDoGrupo
+              key={activeTab}
+              grupo={activeTab}
+              cor={grupo.cor}
+              podeEnviar={temAcessoConteudo}
+              ehLider={souLiderDesteGrupo}
+              userId={user?.id ?? null}
+              onPublicado={() => fetchGrupoData(activeTab, temAcessoConteudo, true)}
+            />
             {!loading && shorts.length === 0 && (
               <View style={s.emptyWrap}>
                 <Text style={s.emptyText}>{t('grupos.nenhumShortAinda')}</Text>

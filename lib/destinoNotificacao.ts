@@ -30,6 +30,8 @@ export type DadosNotificacao = {
   // Link do aviso (`avisos.cta_url`, ex.: o Zoom). Com ele, o toque abre o
   // link direto em vez do sininho (26/10/2026).
   url?: string | null;
+  /** Aba a abrir (Área do Pastor: 'lembretes'). */
+  aba?: string | null;
 };
 
 // `url` = abrir um link fora do app; senão é uma rota do app.
@@ -112,6 +114,15 @@ export function destinoDaNotificacao(
       // parcela, inscrição cancelada (gestão). Precisa estar logado.
       if (!acesso.logado || !dados.id) return SININHO;
       return { nome: 'Evento', params: { id: dados.id, gerenciar: type === 'evento_painel' || undefined } };
+    case 'shorts':
+      // Shorts do grupo (12/11/2026): novo vídeo na fila (líder) ou vídeo
+      // publicado/recusado (quem enviou). Abre o grupo.
+      if (!podeMembros || !dados.grupo) return SININHO;
+      return abaMembros('Grupos', { grupoInicial: dados.grupo });
+    case 'pastor':
+      // Área do Pastor (12/11/2026): lembrete de compromisso ou avulso.
+      if (!acesso.logado) return SININHO;
+      return { nome: 'Pastor', params: dados.aba ? { aba: dados.aba } : undefined };
     case 'conversa':
       // Conversa privada (11/11/2026): abre a tela Conversas já na conversa.
       // Rota do Stack (modal), como Devocionais.

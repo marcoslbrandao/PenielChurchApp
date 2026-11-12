@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useCampoTraduzido } from '../lib/useTraducao';
 import BotaoCompartilharDevocional from '../components/BotaoCompartilharDevocional';
 import DevocionalCorpo from '../components/DevocionalCorpo';
+import OuvirDevocional from '../components/OuvirDevocional';
 import { ProgressoSerie, textoOrdem } from '../components/SeloSerie';
 import { SerieDevocional, guardarSeries, useSerie, dataBR } from '../lib/devocionalSeries';
 
@@ -80,6 +81,8 @@ function DevocionalItem({ dev, aberto, onToggle, totalSerie, nav }: {
       {aberto && (
         <View style={styles.body}>
           <Text style={styles.versiculo}>"{versiculo}"</Text>
+          {/* Ouvir em áudio, no idioma do app (12/11/2026). */}
+          <OuvirDevocional devocionalId={dev.id} titulo={titulo} />
           <DevocionalCorpo referencia={referencia} texto={texto} estiloReferencia={styles.referencia} estiloTexto={styles.texto} />
           <BotaoCompartilharDevocional
             original={dev}

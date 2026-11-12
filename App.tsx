@@ -26,6 +26,7 @@ import ConversasScreen from './screens/ConversasScreen';
 import EventoScreen from './screens/EventoScreen';
 import TraducaoAoVivoScreen from './screens/TraducaoAoVivoScreen';
 import AuthScreen from './screens/AuthScreen';
+import PastorScreen from './screens/PastorScreen';
 import AtivarMembroScreen from './screens/AtivarMembroScreen';
 import BemVindoScreen from './screens/BemVindoScreen';
 import { supabase } from './lib/supabase';
@@ -341,6 +342,12 @@ export default function App() {
               <Stack.Screen
                 name="Evento"
                 component={EventoScreen}
+                options={{ presentation: 'modal' }}
+              />
+              {/* Área do Pastor (12/11/2026): Face ID, agenda, anotações, lembretes. */}
+              <Stack.Screen
+                name="Pastor"
+                component={PastorScreen}
                 options={{ presentation: 'modal' }}
               />
               <Stack.Screen

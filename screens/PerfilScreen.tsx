@@ -661,6 +661,12 @@ export default function ProfileScreen() {
   const [podeRegistrarVisitante, setPodeRegistrarVisitante] = useState(false);
   // Peniel Kids: pai com filho cadastrado, quem lidera a sala, e o admin.
   const [temAcessoKids, setTemAcessoKids] = useState(false);
+  // Área do Pastor (12/11/2026): pastores e o admin (que escolhe os pastores).
+  const [ehPastor, setEhPastor] = useState(false);
+  useEffect(() => {
+    if (!isLoggedIn) { setEhPastor(false); return; }
+    supabase.rpc('eh_pastor').then(({ data }) => setEhPastor(data === true));
+  }, [isLoggedIn]);
   useEffect(() => {
     if (!isLoggedIn) {
       setEhAcolhimento(false); setPodeRegistrarVisitante(false); setTemAcessoKids(false);
@@ -924,6 +930,7 @@ export default function ProfileScreen() {
         ...(podeRegistrarVisitante ? [{ icon: 'person-add-outline' as const, label: t('perfil.registrarVisitante'), onPress: () => navigation.navigate('RegistrarVisitante' as never) }] : []),
         // A LISTA, com telefone e anotações, é só do admin (`eh_acolhimento()`).
         ...(ehAcolhimento ? [{ icon: 'hand-left-outline' as const, label: t('perfil.visitantes'), onPress: () => navigation.navigate('Visitantes' as never) }] : []),
+        ...((ehPastor || papel === 'admin') ? [{ icon: 'shield-checkmark-outline' as const, label: t('pastor.tituloTela'), onPress: () => navigation.navigate('Pastor' as never) }] : []),
       ],
     },
     {

@@ -1,0 +1,60 @@
+# .github/workflows/publicar-short.yml
+#
+# Shorts dos grupos (Peniel Church App, 12/11/2026).
+# Disparado pelo app (Edge Function shorts-publicar) quando o líder publica.
+# Aplica a arte (título/faixa), gera a legenda automática (Whisper) e sobe
+# para o YouTube da igreja, na playlist do grupo.
+#
+# Segredo necessário (Settings › Secrets and variables › Actions):
+#   SHORTS_SEGREDO — a mesma senha guardada nos secrets do Supabase.
+# O repositório é público: nada de chave do Supabase/YouTube aqui.
+name: Publicar Short do grupo
+
+on:
+  repository_dispatch:
+    types: [publicar-short]
+  workflow_dispatch:
+    inputs:
+      id:
+        description: 'id do vídeo (shorts_fila)'
+        required: true
+
+concurrency:
+  group: publicar-short
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/shorts
+
+      - name: Ferramentas (ffmpeg + fontes)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core > /dev/null
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scripts/shorts/requirements.txt
+
+      - name: Dependências
+        run: pip install -q -r scripts/shorts/requirements.txt
+
+      - name: Cache do modelo da legenda
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-v1
+
+      - name: Montar e publicar
+        env:
+          SHORT_ID: ${{ github.event.client_payload.id || inputs.id }}
+          SUPABASE_URL: https://yudulaqsqhzbbarhxbnr.supabase.co
+          SHORTS_SEGREDO: ${{ secrets.SHORTS_SEGREDO }}
+        run: python scripts/shorts/publicar_short.py

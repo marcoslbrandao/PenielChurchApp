@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import { extractYoutubeId } from '../lib/youtube';
 import { videosRecentes } from '../lib/youtubeCanal';
 import MensagemDetalheModal, { Mensagem } from '../components/MensagemDetalheModal';
+import ShortsDoGrupo from '../components/ShortsDoGrupo';
 import { useCampoTraduzido } from '../lib/useTraducao';
 
 const LOCALE_POR_IDIOMA: Record<string, string> = { pt: 'pt-BR', en: 'en-GB', es: 'es-ES', fr: 'fr-FR' };
@@ -99,6 +100,19 @@ export default function MidiaScreen() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const [shorts, setShorts] = useState<Short[]>([]);
+  // Pastores (e admin) gravam Shorts "gerais", que vão para a playlist
+  // "Shorts · Peniel Church" e aparecem aqui (12/11/2026).
+  const [meuId, setMeuId] = useState<string | null>(null);
+  const [gravaGeral, setGravaGeral] = useState(false);
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      const id = data.user?.id ?? null;
+      setMeuId(id);
+      if (!id) return;
+      const { data: pode } = await supabase.rpc('gere_shorts', { p_grupo: 'geral' });
+      setGravaGeral(pode === true);
+    });
+  }, []);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [mensagemAberta, setMensagemAberta] = useState<Mensagem | null>(null);
   const [loadingVideos, setLoadingVideos] = useState(true);
@@ -289,6 +303,9 @@ export default function MidiaScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={C.primary} />}
         >
           <Text style={s.sectionLabel}>{t('midia.videosCurtos')}</Text>
+          {gravaGeral && (
+            <ShortsDoGrupo grupo="geral" cor="#534AB7" podeEnviar ehLider userId={meuId} onPublicado={fetchShorts} />
+          )}
           {loadingShorts ? (
             <View style={s.loadingWrap}>
               <ActivityIndicator color={C.primary} size="large" />

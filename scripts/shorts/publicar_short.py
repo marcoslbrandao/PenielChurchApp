@@ -35,6 +35,8 @@ GRUPOS = {
     'homens': ('Homens', '2B6CB0'),
     'estudo_biblico': ('Estudo Bíblico', '1F8A70'),
     'infantil': ('Peniel Kids', 'F2B705'),
+    # Shorts dos pastores na aba Mídia (12/11/2026).
+    'geral': ('Peniel Church', '534AB7'),
 }
 
 

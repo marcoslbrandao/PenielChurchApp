@@ -1,10 +1,10 @@
 #!/bin/bash
-# Publica 12/11/2026 (noite): Shorts aceitam a chave SHORTS_SEGREDO/GITHUB_TOKEN com quebra de linha no fim.
+# Publica 12/11/2026 (noite): Shorts gerais dos pastores na aba Midia + playlist do grupo "geral" no robo.
 cd "$(dirname "$0")/.."
 LOG=".vscode/publicar.log"
 exec > >(tee "$LOG") 2>&1
 echo "== inicio $(date)"
-MSG="fix(shorts): ignora quebra de linha no fim das chaves SHORTS_SEGREDO e GITHUB_TOKEN
+MSG="feat(shorts): pastores gravam Shorts gerais na aba Midia (playlist Shorts · Peniel Church)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_015Hcwi7ss5yv5jjSBzy6K1T"
@@ -12,12 +12,11 @@ limpar_locks() { for f in .git/index.lock .git/HEAD.lock .git/objects/maintenanc
 
 echo "== 1/2 git"
 limpar_locks
-git add scripts/shorts/publicar_short.py supabase/functions/shorts-trabalho/index.ts supabase/functions/shorts-publicar/index.ts .vscode/publicar-ajustes.sh
+git add screens/MidiaScreen.tsx scripts/shorts/publicar_short.py supabase/migrations/20261112220000_shorts_geral_midia_e_playlists.sql .vscode/publicar-ajustes.sh
 git commit -m "$MSG" || echo "(nada novo para commitar)"
 git push origin main || { echo "FALHOU: git push"; exit 1; }
 
-echo "== 2/2 deploy das funcoes"
-npx --yes supabase@2 functions deploy shorts-trabalho --project-ref yudulaqsqhzbbarhxbnr --use-api --no-verify-jwt || { echo "FALHOU: deploy shorts-trabalho"; exit 1; }
-npx --yes supabase@2 functions deploy shorts-publicar --project-ref yudulaqsqhzbbarhxbnr --use-api || { echo "FALHOU: deploy shorts-publicar"; exit 1; }
+echo "== 2/2 eas update"
+npx eas update --branch production --environment production --message "Midia: pastores gravam Shorts gerais" --non-interactive || { echo "FALHOU: eas update"; exit 1; }
 
 echo "== TUDO PUBLICADO $(date)"

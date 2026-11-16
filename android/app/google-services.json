@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "724493655203",
+    "project_id": "peniel-church-app-505521",
+    "storage_bucket": "peniel-church-app-505521.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:724493655203:android:cf402e8144ea751f31f316",
+        "android_client_info": {
+          "package_name": "org.uk.penielchurch.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLRUE6FMeM36ZbO67flH4eVWA4kFZ6Y2o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

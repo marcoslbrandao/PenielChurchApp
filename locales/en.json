@@ -1669,7 +1669,8 @@
     "agoraNao": "Not now",
     "obrigatoriaTitulo": "Update to continue",
     "obrigatoriaTexto": "This version of the app ({{instalada}}) is no longer supported. Install version {{minima}} or newer from the store to keep using Peniel Church.",
-    "erroLoja": "Couldn't open the store. Search for \"Peniel Church\" on the App Store or Google Play."
+    "erroLoja": "Couldn't open the store. Search for \"Peniel Church\" on the App Store or Google Play.",
+    "novaTextoPlay": "A new version of Peniel Church is available on Google Play. You have {{instalada}}. Update to get the latest features."
   },
   "compartilharApp": {
     "baixeLink": "Get the app (iPhone & Android): {{url}}",
@@ -2407,9 +2408,25 @@
     "horaInvalida": "Type the time like this: 19:30.",
     "horaPassada": "Choose a time at least 15 minutes from now.",
     "desagendar": "Cancel schedule",
-    "desagendarSub": "The video goes back to the queue with no date, and you can publish or schedule it again."
+    "desagendarSub": "The video goes back to the queue with no date, and you can publish or schedule it again.",
+    "comprimindo": "Preparing the video… {{pct}}% (don't close the app)"
   },
   "mensagens": {
     "ouvir": "Listen to the message"
+  },
+  "galeria": {
+    "titulo": "Save to phone",
+    "salvar": "Save",
+    "fotoSalva": "Photo saved to your gallery.",
+    "videoSalvo": "Video saved to your gallery.",
+    "semPermissao": "To save, allow Peniel Church to add photos and videos in your phone's Settings.",
+    "abrirAjustes": "Open Settings",
+    "erro": "Couldn't save. Please try again.",
+    "salvando": "Saving…"
+  },
+  "player": {
+    "naoTocou": "Couldn't play the video here.",
+    "abrirFora": "Open in the phone's player",
+    "fechar": "Close video"
   }
 }

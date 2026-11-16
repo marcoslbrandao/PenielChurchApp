@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, PanResponder, Linking, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Linking, Alert, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -90,40 +92,28 @@ function AvisoResultRow({ aviso, onPress }: { aviso: AvisoResult; onPress: () =>
 
 const LOCALE_POR_IDIOMA: Record<string, string> = { pt: 'pt-BR', en: 'en-GB', es: 'es-ES', fr: 'fr-FR' };
 
-// Envolve um item de lista com gesto de arrastar-pra-esquerda-e-soltar-pra-
-// apagar. Feito só com PanResponder + Animated (API nativa do React Native)
-// de propósito — react-native-gesture-handler daria uma experiência mais
-// fluida, mas é um módulo nativo: instalar ele exigiria gerar uma build nova
-// na loja (não dá só com `eas update`), quebrando o fluxo rápido de OTA que
-// o app usa hoje. Isso aqui já publica na hora.
-const SWIPE_LIMIAR = -80;
+// Arrastar para a esquerda e soltar para apagar (notificações).
+// Desde a 1.6.0 usa o react-native-gesture-handler (gesto nativo, mais fluido
+// e sem brigar com a rolagem). Antes era PanResponder, para poder ir por OTA.
+// O GestureHandlerRootView local é porque o item fica dentro de um <Modal>,
+// que no Android não herda a raiz de gestos do App.
 function SwipeParaRemover({ onRemover, children }: { onRemover: () => void; children: React.ReactNode }) {
-  const translateX = useRef(new Animated.Value(0)).current;
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
-      onPanResponderMove: (_, g) => {
-        if (g.dx < 0) translateX.setValue(g.dx);
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dx < SWIPE_LIMIAR) {
-          Animated.timing(translateX, { toValue: -500, duration: 180, useNativeDriver: true }).start(onRemover);
-        } else {
-          Animated.spring(translateX, { toValue: 0, useNativeDriver: true, bounciness: 6 }).start();
-        }
-      },
-    })
-  ).current;
-
   return (
-    <View style={sm.swipeWrap}>
-      <View style={sm.swipeDeleteBg}>
-        <Ionicons name="trash-outline" size={18} color="#fff" />
-      </View>
-      <Animated.View style={{ transform: [{ translateX }] }} {...panResponder.panHandlers}>
+    <GestureHandlerRootView style={sm.swipeWrap}>
+      <Swipeable
+        friction={1.5}
+        rightThreshold={70}
+        overshootRight={false}
+        renderRightActions={() => (
+          <View style={sm.swipeAcao}>
+            <Ionicons name="trash-outline" size={18} color="#fff" />
+          </View>
+        )}
+        onSwipeableOpen={direcao => { if (direcao === 'right') onRemover(); }}
+      >
         {children}
-      </Animated.View>
-    </View>
+      </Swipeable>
+    </GestureHandlerRootView>
   );
 }
 
@@ -309,7 +299,7 @@ function SearchModal({ visible, onClose, navigation }: {
 const sm = StyleSheet.create({
   swipeHint: { fontSize: 11, color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginBottom: 10 },
   swipeWrap: { marginBottom: 10, borderRadius: 12, overflow: 'hidden' },
-  swipeDeleteBg: { position: 'absolute', top: 0, right: 0, bottom: 0, width: 70, backgroundColor: '#C0392B', alignItems: 'center', justifyContent: 'center' },
+  swipeAcao: { width: 80, backgroundColor: '#C0392B', alignItems: 'center', justifyContent: 'center' },
   // Opaco de propósito (não translúcido como antes): esse card fica em cima
   // do fundo vermelho de "remover" que aparece ao arrastar — se fosse
   // translúcido, o vermelho vazaria por trás mesmo sem arrastar nada.

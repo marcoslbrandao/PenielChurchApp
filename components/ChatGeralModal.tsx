@@ -28,6 +28,7 @@ import { formatarTempo, duracaoDoAudio } from '../lib/chatAudio';
 import RegrasDoChat from './RegrasDoChat';
 import PlayerDeVideo from './PlayerDeVideo';
 import CapaDoVideo from './CapaDoVideo';
+import { salvarNaGaleria } from '../lib/salvarNaGaleria';
 import { useFolgaDoTeclado } from '../lib/folgaDoTeclado';
 import { registrarChatAberto } from '../lib/chatAberto';
 import BotaoNegrito from './BotaoNegrito';
@@ -1113,6 +1114,13 @@ export default function ChatGeralModal({
             <View style={[cs.fotoFechar, { top: padTop + 6 }]}>
               <Ionicons name="close" size={28} color="#fff" />
             </View>
+            {!!fotoAberta && (
+              <Pressable style={[cs.fotoFechar, { top: padTop + 6, right: undefined, left: 18 }]} hitSlop={12}
+                accessibilityLabel={t('galeria.titulo')}
+                onPress={() => { if (fotoAberta) salvarNaGaleria(fotoAberta, 'foto'); }}>
+                <Ionicons name="download-outline" size={26} color="#fff" />
+              </Pressable>
+            )}
           </Pressable>
         </Modal>
       </View>

@@ -1669,7 +1669,8 @@
     "agoraNao": "Plus tard",
     "obrigatoriaTitulo": "Mettez à jour pour continuer",
     "obrigatoriaTexto": "Cette version de l'app ({{instalada}}) n'est plus prise en charge. Installez la version {{minima}} ou plus récente depuis le store pour continuer à utiliser Peniel Church.",
-    "erroLoja": "Impossible d'ouvrir le store. Cherchez « Peniel Church » sur l'App Store ou Google Play."
+    "erroLoja": "Impossible d'ouvrir le store. Cherchez « Peniel Church » sur l'App Store ou Google Play.",
+    "novaTextoPlay": "Une nouvelle version de Peniel Church est disponible sur Google Play. Vous avez la {{instalada}}. Mettez à jour pour profiter des nouveautés."
   },
   "compartilharApp": {
     "baixeLink": "Téléchargez l'app (iPhone et Android) : {{url}}",
@@ -2354,9 +2355,25 @@
     "horaInvalida": "Écrivez l'heure ainsi : 19:30.",
     "horaPassada": "Choisissez une heure dans au moins 15 minutes.",
     "desagendar": "Annuler la programmation",
-    "desagendarSub": "La vidéo revient dans la file sans date, et vous pouvez la publier ou la programmer à nouveau."
+    "desagendarSub": "La vidéo revient dans la file sans date, et vous pouvez la publier ou la programmer à nouveau.",
+    "comprimindo": "Préparation de la vidéo… {{pct}} % (ne fermez pas l'app)"
   },
   "mensagens": {
     "ouvir": "Écouter le message"
+  },
+  "galeria": {
+    "titulo": "Enregistrer sur le téléphone",
+    "salvar": "Enregistrer",
+    "fotoSalva": "Photo enregistrée dans la galerie.",
+    "videoSalvo": "Vidéo enregistrée dans la galerie.",
+    "semPermissao": "Pour enregistrer, autorisez Peniel Church à ajouter des photos et vidéos dans les Réglages du téléphone.",
+    "abrirAjustes": "Ouvrir les Réglages",
+    "erro": "Impossible d'enregistrer. Réessayez.",
+    "salvando": "Enregistrement…"
+  },
+  "player": {
+    "naoTocou": "Impossible de lire la vidéo ici.",
+    "abrirFora": "Ouvrir dans le lecteur du téléphone",
+    "fechar": "Fermer la vidéo"
   }
 }

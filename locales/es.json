@@ -1669,7 +1669,8 @@
     "agoraNao": "Ahora no",
     "obrigatoriaTitulo": "Actualiza para continuar",
     "obrigatoriaTexto": "Esta versión de la app ({{instalada}}) ya no es compatible. Instala la versión {{minima}} o más reciente desde la tienda para seguir usando Peniel Church.",
-    "erroLoja": "No se pudo abrir la tienda. Busca \"Peniel Church\" en la App Store o en Google Play."
+    "erroLoja": "No se pudo abrir la tienda. Busca \"Peniel Church\" en la App Store o en Google Play.",
+    "novaTextoPlay": "Ya hay una nueva versión de Peniel Church en Google Play. Tienes la {{instalada}}. Actualiza para tener las novedades."
   },
   "compartilharApp": {
     "baixeLink": "Descarga la app (iPhone y Android): {{url}}",
@@ -2354,9 +2355,25 @@
     "horaInvalida": "Escribe la hora así: 19:30.",
     "horaPassada": "Elige una hora dentro de al menos 15 minutos.",
     "desagendar": "Cancelar programación",
-    "desagendarSub": "El video vuelve a la cola sin fecha y puedes publicarlo o programarlo de nuevo."
+    "desagendarSub": "El video vuelve a la cola sin fecha y puedes publicarlo o programarlo de nuevo.",
+    "comprimindo": "Preparando el video… {{pct}}% (no cierres la app)"
   },
   "mensagens": {
     "ouvir": "Escuchar el mensaje"
+  },
+  "galeria": {
+    "titulo": "Guardar en el móvil",
+    "salvar": "Guardar",
+    "fotoSalva": "Foto guardada en la galería.",
+    "videoSalvo": "Video guardado en la galería.",
+    "semPermissao": "Para guardar, permite que Peniel Church añada fotos y videos en los Ajustes del móvil.",
+    "abrirAjustes": "Abrir Ajustes",
+    "erro": "No se pudo guardar. Inténtalo de nuevo.",
+    "salvando": "Guardando…"
+  },
+  "player": {
+    "naoTocou": "No se pudo reproducir aquí.",
+    "abrirFora": "Abrir en el reproductor del móvil",
+    "fechar": "Cerrar video"
   }
 }

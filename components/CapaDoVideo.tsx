@@ -10,7 +10,14 @@
 //
 // Quando o servidor permite (CORS), o quadro também volta como JPEG pequeno e
 // fica guardado na memória: rolar o chat não baixa o vídeo de novo.
-import React, { useMemo, useState } from 'react';
+//
+// 16/11/2026 (app 1.6.0): a WebView não resolvia a capa verde. No iPhone ela
+// não carrega vídeo sem toque, e no Android não abre o .mov/HEVC gravado no
+// iPhone. Agora o quadro sai do módulo nativo expo-video-thumbnails, que lê
+// o próprio arquivo (também os vídeos antigos). A WebView ficou só de reserva,
+// se o módulo falhar.
+import React, { useEffect, useMemo, useState } from 'react';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Image, StyleSheet, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
@@ -49,10 +56,21 @@ export default function CapaDoVideo({ chave, url }: { chave: string; url: string
   // assim, tenta sem: o quadro aparece, só não fica guardado.
   const [cruzado, setCruzado] = useState(true);
   const [desistiu, setDesistiu] = useState(false);
+  // 'nativo' → tentando o expo-video-thumbnails; 'web' → reserva (WebView).
+  const [modo, setModo] = useState<'nativo' | 'web'>('nativo');
   const html = useMemo(() => (url ? htmlDaCapa(url, cruzado) : ''), [url, cruzado]);
 
+  useEffect(() => {
+    if (imagem || !url || modo !== 'nativo') return;
+    let vivo = true;
+    VideoThumbnails.getThumbnailAsync(url, { time: 500, quality: 0.6 })
+      .then(r => { if (vivo && r?.uri) { guardadas.set(chave, r.uri); setImagem(r.uri); } })
+      .catch(() => { if (vivo) setModo('web'); });
+    return () => { vivo = false; };
+  }, [url, chave, imagem, modo]);
+
   if (imagem) return <Image source={{ uri: imagem }} style={StyleSheet.absoluteFill} resizeMode="cover" />;
-  if (!url || desistiu) return null;
+  if (!url || desistiu || modo === 'nativo') return null;
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <WebView

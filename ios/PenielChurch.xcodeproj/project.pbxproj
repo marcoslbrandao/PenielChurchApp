@@ -8,46 +8,68 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		2091FC12710C4A30941E4477 /* alerta_kids.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7DA2F2EDA5944BFF8F064076 /* alerta_kids.wav */; };
+		269774E332624E93A52FA401 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CCF787D6FFC943E284CBBA53 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		6984CF40A30B551AC99CE592 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0BD48515EEB5A1EC4872FC0A /* PrivacyInfo.xcprivacy */; };
+		8A26CC368AA14290AF471CFD /* Peniel.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = AB89B93F25444920AF7A2B44 /* Peniel.appex */; };
 		8D7E45323273472FB4814AD1 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7476E858F5804EC39D0554FD /* noop-file.swift */; };
 		97D5379AD10602A7B09840C9 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D28CEC68D94A336C47998C80 /* ExpoModulesProvider.swift */; };
+		A89DDDAEE1234BEF9827987E /* ShareExtensionPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = 0FEDF4AFAB6C4071B029FB6F /* ShareExtensionPreprocessor.js */; };
 		AFD8B3622D16BDDAB58AC16B /* libPods-PenielChurch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 12B8F288002F1DC29A22AB8E /* libPods-PenielChurch.a */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 		D3DA7808D0E14ACD89AA26D3 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F2B62CEF3415E86467BE1 /* ShareViewController.swift */; };
 		ED9EFBA71853407BA72B0466 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 075F2E18CBFF455E9FD18DF5 /* MainInterface.storyboard */; };
-		A89DDDAEE1234BEF9827987E /* ShareExtensionPreprocessor.js in Resources */ = {isa = PBXBuildFile; fileRef = 0FEDF4AFAB6C4071B029FB6F /* ShareExtensionPreprocessor.js */; };
-		269774E332624E93A52FA401 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = CCF787D6FFC943E284CBBA53 /* PrivacyInfo.xcprivacy */; };
-		32ADF2CDB3764A98AC8DADF7 /* ShareExtension-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DF5EE6279C0D40B29EB3BCBC /* ShareExtension-Info.plist */; };
-		ADD53494ACC04F7792DB2449 /* ShareExtension.entitlements in Resources */ = {isa = PBXBuildFile; fileRef = 42B63D88A8DB4994B5E44E8A /* ShareExtension.entitlements */; };
-		8A26CC368AA14290AF471CFD /* Peniel.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = AB89B93F25444920AF7A2B44 /* Peniel.appex */; };
-		2091FC12710C4A30941E4477 /* alerta_kids.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7DA2F2EDA5944BFF8F064076 /* alerta_kids.wav */; };
+		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		D65338AE1C664BD6BDBACFD5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BB05B817776D48B6AAA0F219;
+			remoteInfo = Peniel;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		738DF8ADEDE04D98A4FD1F72 /* Copy Files */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8A26CC368AA14290AF471CFD /* Peniel.appex in Copy Files */,
+			);
+			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		075F2E18CBFF455E9FD18DF5 /* MainInterface.storyboard */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = MainInterface.storyboard; path = MainInterface.storyboard; sourceTree = "<group>"; };
 		0BD48515EEB5A1EC4872FC0A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = PenielChurch/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		0FEDF4AFAB6C4071B029FB6F /* ShareExtensionPreprocessor.js */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ShareExtensionPreprocessor.js; path = ShareExtensionPreprocessor.js; sourceTree = "<group>"; };
 		12B8F288002F1DC29A22AB8E /* libPods-PenielChurch.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PenielChurch.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07F961A680F5B00A75B9A /* PenielChurch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PenielChurch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = PenielChurch/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = PenielChurch/Info.plist; sourceTree = "<group>"; };
+		42B63D88A8DB4994B5E44E8A /* ShareExtension.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ShareExtension.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		560D8BD02AC6288F1A09F0D2 /* Pods-PenielChurch.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PenielChurch.release.xcconfig"; path = "Target Support Files/Pods-PenielChurch/Pods-PenielChurch.release.xcconfig"; sourceTree = "<group>"; };
 		7476E858F5804EC39D0554FD /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "PenielChurch/noop-file.swift"; sourceTree = "<group>"; };
+		7DA2F2EDA5944BFF8F064076 /* alerta_kids.wav */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = alerta_kids.wav; path = PenielChurch/alerta_kids.wav; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = PenielChurch/SplashScreen.storyboard; sourceTree = "<group>"; };
+		AB89B93F25444920AF7A2B44 /* Peniel.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = undefined; name = Peniel.appex; path = Peniel.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		C38CFA735A0EF42A3D90009C /* Pods-PenielChurch.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PenielChurch.debug.xcconfig"; path = "Target Support Files/Pods-PenielChurch/Pods-PenielChurch.debug.xcconfig"; sourceTree = "<group>"; };
+		CCF787D6FFC943E284CBBA53 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = PrivacyInfo.xcprivacy; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		D28CEC68D94A336C47998C80 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-PenielChurch/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		DF5EE6279C0D40B29EB3BCBC /* ShareExtension-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "ShareExtension-Info.plist"; path = "ShareExtension-Info.plist"; sourceTree = "<group>"; };
+		EC5F2B62CEF3415E86467BE1 /* ShareViewController.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = ShareViewController.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = PenielChurch/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* PenielChurch-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "PenielChurch-Bridging-Header.h"; path = "PenielChurch/PenielChurch-Bridging-Header.h"; sourceTree = "<group>"; };
-		EC5F2B62CEF3415E86467BE1 /* ShareViewController.swift */ = {isa = PBXFileReference; name = "ShareViewController.swift"; path = "ShareViewController.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
-		075F2E18CBFF455E9FD18DF5 /* MainInterface.storyboard */ = {isa = PBXFileReference; name = "MainInterface.storyboard"; path = "MainInterface.storyboard"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		0FEDF4AFAB6C4071B029FB6F /* ShareExtensionPreprocessor.js */ = {isa = PBXFileReference; name = "ShareExtensionPreprocessor.js"; path = "ShareExtensionPreprocessor.js"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		CCF787D6FFC943E284CBBA53 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; name = "PrivacyInfo.xcprivacy"; path = "PrivacyInfo.xcprivacy"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		DF5EE6279C0D40B29EB3BCBC /* ShareExtension-Info.plist */ = {isa = PBXFileReference; name = "ShareExtension-Info.plist"; path = "ShareExtension-Info.plist"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = text.plist.xml; explicitFileType = undefined; includeInIndex = 0; };
-		42B63D88A8DB4994B5E44E8A /* ShareExtension.entitlements */ = {isa = PBXFileReference; name = "ShareExtension.entitlements"; path = "ShareExtension.entitlements"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
-		AB89B93F25444920AF7A2B44 /* Peniel.appex */ = {isa = PBXFileReference; name = "Peniel.appex"; path = "Peniel.appex"; sourceTree = BUILT_PRODUCTS_DIR; fileEncoding = undefined; lastKnownFileType = undefined; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; };
-		7DA2F2EDA5944BFF8F064076 /* alerta_kids.wav */ = {isa = PBXFileReference; name = "alerta_kids.wav"; path = "PenielChurch/alerta_kids.wav"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +124,20 @@
 				12B8F288002F1DC29A22AB8E /* libPods-PenielChurch.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		5648A41B67C04AC68AB0A702 /* Peniel */ = {
+			isa = PBXGroup;
+			children = (
+				EC5F2B62CEF3415E86467BE1 /* ShareViewController.swift */,
+				075F2E18CBFF455E9FD18DF5 /* MainInterface.storyboard */,
+				0FEDF4AFAB6C4071B029FB6F /* ShareExtensionPreprocessor.js */,
+				CCF787D6FFC943E284CBBA53 /* PrivacyInfo.xcprivacy */,
+				DF5EE6279C0D40B29EB3BCBC /* ShareExtension-Info.plist */,
+				42B63D88A8DB4994B5E44E8A /* ShareExtension.entitlements */,
+			);
+			name = Peniel;
+			path = Peniel;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -161,20 +197,6 @@
 			name = PenielChurch;
 			sourceTree = "<group>";
 		};
-		5648A41B67C04AC68AB0A702 /* Peniel */ = {
-			isa = PBXGroup;
-			children = (
-				EC5F2B62CEF3415E86467BE1 /* ShareViewController.swift */,
-				075F2E18CBFF455E9FD18DF5 /* MainInterface.storyboard */,
-				0FEDF4AFAB6C4071B029FB6F /* ShareExtensionPreprocessor.js */,
-				CCF787D6FFC943E284CBBA53 /* PrivacyInfo.xcprivacy */,
-				DF5EE6279C0D40B29EB3BCBC /* ShareExtension-Info.plist */,
-				42B63D88A8DB4994B5E44E8A /* ShareExtension.entitlements */,
-			);
-			name = Peniel;
-			path = Peniel;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -202,13 +224,9 @@
 			productReference = 13B07F961A680F5B00A75B9A /* PenielChurch.app */;
 			productType = "com.apple.product-type.application";
 		};
-		BB05B817776D48B6AAA0F219 /* "Peniel" */ = {
+		BB05B817776D48B6AAA0F219 /* Peniel */ = {
 			isa = PBXNativeTarget;
-			name = "Peniel";
-			productName = "Peniel";
-			productReference = AB89B93F25444920AF7A2B44;
-			productType = "com.apple.product-type.app-extension";
-			buildConfigurationList = AE7AFC0B0ACF4C8B9243D210;
+			buildConfigurationList = AE7AFC0B0ACF4C8B9243D210 /* Build configuration list for PBXNativeTarget "Peniel" */;
 			buildPhases = (
 				DB5843C744EA44C5BE386955 /* Sources */,
 				157007C70D05477D97E8457E /* Resources */,
@@ -218,6 +236,10 @@
 			);
 			dependencies = (
 			);
+			name = Peniel;
+			productName = Peniel;
+			productReference = AB89B93F25444920AF7A2B44 /* Peniel.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -246,7 +268,7 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* PenielChurch */,
-				BB05B817776D48B6AAA0F219 /* "Peniel" */,
+				BB05B817776D48B6AAA0F219 /* Peniel */,
 			);
 		};
 /* End PBXProject section */
@@ -268,9 +290,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				ED9EFBA71853407BA72B0466 /* "MainInterface.storyboard" in Resources */,
-				A89DDDAEE1234BEF9827987E /* "ShareExtensionPreprocessor.js" in Resources */,
-				269774E332624E93A52FA401 /* "PrivacyInfo.xcprivacy" in Resources */,
+				ED9EFBA71853407BA72B0466 /* MainInterface.storyboard in Resources */,
+				A89DDDAEE1234BEF9827987E /* ShareExtensionPreprocessor.js in Resources */,
+				269774E332624E93A52FA401 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -377,10 +399,12 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoDevice/ExpoDevice_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoLocalization/ExpoLocalization_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoMediaLibrary/ExpoMediaLibrary_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ReachabilitySwift/ReachabilitySwift.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/SDWebImage/SDWebImage.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/Stripe/StripeBundle.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/StripeCore/StripeCoreBundle.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/StripeFinancialConnections/StripeFinancialConnectionsBundle.bundle",
@@ -402,10 +426,12 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoDevice_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoLocalization_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoMediaLibrary_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ReachabilitySwift.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SDWebImage.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeBundle.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeCoreBundle.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeFinancialConnectionsBundle.bundle",
@@ -439,11 +465,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D3DA7808D0E14ACD89AA26D3 /* "ShareViewController.swift" in Sources */,
+				D3DA7808D0E14ACD89AA26D3 /* ShareViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0136AD90A8D54C63B7DDC42C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BB05B817776D48B6AAA0F219 /* Peniel */;
+			targetProxy = D65338AE1C664BD6BDBACFD5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
@@ -465,7 +499,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.3;
+				MARKETING_VERSION = 1.6.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -473,11 +507,11 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = org.uk.penielchurch.app;
-				PRODUCT_NAME = "PenielChurch";
+				PRODUCT_NAME = PenielChurch;
 				SWIFT_OBJC_BRIDGING_HEADER = "PenielChurch/PenielChurch-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
@@ -496,7 +530,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5.3;
+				MARKETING_VERSION = 1.6.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -504,13 +538,67 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = org.uk.penielchurch.app;
-				PRODUCT_NAME = "PenielChurch";
+				PRODUCT_NAME = PenielChurch;
 				SWIFT_OBJC_BRIDGING_HEADER = "PenielChurch/PenielChurch-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1";
+				TARGETED_DEVICE_FAMILY = 1;
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
+		};
+		62DA9B945F634C4E8FA18B6E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Peniel/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Peniel/ShareExtension-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.6.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.uk.penielchurch.app.share-extension";
+				PRODUCT_NAME = Peniel;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7182A3ECAD6B4261866987DA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = Peniel/ShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Peniel/ShareExtension-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.6.0;
+				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.uk.penielchurch.app.share-extension";
+				PRODUCT_NAME = Peniel;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		83CBBA201A601CBA00E9B192 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -630,50 +718,6 @@
 			};
 			name = Release;
 		};
-		7182A3ECAD6B4261866987DA /* Debug */ = {
-			name = Debug;
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				INFOPLIST_FILE = "Peniel/ShareExtension-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_NAME = "Peniel";
-				SKIP_INSTALL = YES;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = "Peniel/ShareExtension.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = "1";
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.5.3;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.uk.penielchurch.app.share-extension";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-		};
-		62DA9B945F634C4E8FA18B6E /* Release */ = {
-			name = Release;
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				INFOPLIST_FILE = "Peniel/ShareExtension-Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
-				PRODUCT_NAME = "Peniel";
-				SKIP_INSTALL = YES;
-				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = "Peniel/ShareExtension.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = "1";
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.5.3;
-				PRODUCT_BUNDLE_IDENTIFIER = "org.uk.penielchurch.app.share-extension";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -705,38 +749,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin PBXTargetDependency section */
-		0136AD90A8D54C63B7DDC42C /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = BB05B817776D48B6AAA0F219 /* "Peniel" */;
-			targetProxy = D65338AE1C664BD6BDBACFD5 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
-/* Begin PBXContainerItemProxy section */
-		D65338AE1C664BD6BDBACFD5 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = BB05B817776D48B6AAA0F219;
-			remoteInfo = "Peniel";
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		738DF8ADEDE04D98A4FD1F72 /* Copy Files */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				8A26CC368AA14290AF471CFD /* Peniel.appex in Copy Files */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			name = "Copy Files";
-			dstPath = "";
-			dstSubfolderSpec = 13;
-		};
-/* End PBXCopyFilesBuildPhase section */
 	};
 	rootObject = 83CBB9F71A601CBA00E9B192 /* Project object */;
 }

@@ -3,8 +3,8 @@
     "name": "Peniel Church",
     "slug": "PenielChurchApp",
     "scheme": "penielchurch",
-    "version": "1.5.3",
-    "runtimeVersion": "1.5.0",
+    "version": "1.6.0",
+    "runtimeVersion": "1.6.0",
     "updates": {
       "url": "https://u.expo.dev/f53e9e07-9556-4ea8-80e0-da4487b38e56",
       "requestHeaders": {
@@ -27,7 +27,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Usado para tirar fotos, gravar vídeos no chat, atualizar sua foto de perfil e ler QR codes de check-in.",
         "NSMicrophoneUsageDescription": "Usado para gravar mensagens de voz e vídeos no chat.",
-        "NSPhotoLibraryUsageDescription": "Usado para selecionar sua foto de perfil.",
+        "NSPhotoLibraryUsageDescription": "Usado para escolher fotos e vídeos para o chat, os Shorts dos grupos e a sua foto de perfil.",
+        "NSPhotoLibraryAddUsageDescription": "Usado para salvar no seu celular as fotos e vídeos recebidos no chat.",
         "NSUserNotificationsUsageDescription": "Receba notificações de aniversários e avisos da igreja.",
         "ITSAppUsesNonExemptEncryption": false,
         "NSFaceIDUsageDescription": "Usado para proteger o acesso à Área do Pastor.",
@@ -40,6 +41,7 @@
       }
     },
     "android": {
+      "googleServicesFile": "./android/app/google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
@@ -121,7 +123,8 @@
         {
           "faceIDPermission": "Usado para proteger o acesso à Área do Pastor."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
       "eas": {

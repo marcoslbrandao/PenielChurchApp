@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../lib/theme';
 import {
-  verificarVersao, avisoFoiAdiado, adiarAviso, LINK_DA_LOJA, LINK_DA_LOJA_WEB, type SituacaoDaVersao,
+  verificarVersao, avisoFoiAdiado, adiarAviso, atualizarPeloPlay, LINK_DA_LOJA, LINK_DA_LOJA_WEB, type SituacaoDaVersao,
 } from '../lib/versaoDoApp';
 
 // Confere a versão ao abrir o app e ao voltar para ele (no máximo 1x por
@@ -40,6 +40,8 @@ export default function AvisoDeAtualizacao() {
   }, [conferir]);
 
   const abrirLoja = async () => {
+    // Android: a atualização do próprio Google Play, por cima do app.
+    if (Platform.OS === 'android' && (await atualizarPeloPlay())) { ultima.current = 0; return; }
     try {
       await Linking.openURL(LINK_DA_LOJA);
     } catch {
@@ -87,7 +89,9 @@ export default function AvisoDeAtualizacao() {
           </View>
           <Text style={[st.titulo, { color: C.text }]}>{t('atualizacao.novaTitulo')}</Text>
           <Text style={[st.texto, { color: C.textMuted }]}>
-            {t('atualizacao.novaTexto', { nova: situacao.nova, instalada: situacao.instalada })}
+            {situacao.semNumero
+              ? t('atualizacao.novaTextoPlay', { instalada: situacao.instalada })
+              : t('atualizacao.novaTexto', { nova: situacao.nova, instalada: situacao.instalada })}
           </Text>
           <TouchableOpacity style={[st.botao, { backgroundColor: C.primary }]} onPress={abrirLoja} accessibilityRole="button">
             <Text style={[st.botaoTexto, { color: '#fff' }]}>{t('atualizacao.atualizar')}</Text>

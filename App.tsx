@@ -38,6 +38,7 @@ import * as Notifications from 'expo-notifications';
 import { useAuth } from './lib/useAuth';
 import { destinoDaNotificacao } from './lib/destinoNotificacao';
 import AvisoDeAtualizacao from './components/AvisoDeAtualizacao';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AtualizacaoRapida from './components/AtualizacaoRapida';
 
 const Tab = createBottomTabNavigator();
@@ -286,6 +287,8 @@ export default function App() {
   }, [novaSenhaPendente, navPronta]);
 
   return (
+    // Gestos nativos (react-native-gesture-handler, app 1.6.0).
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <StripeProvider
       publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY!}
       merchantIdentifier="merchant.org.uk.penielchurch.app"
@@ -391,5 +394,6 @@ export default function App() {
         </ThemeProvider>
       </SafeAreaProvider>
     </StripeProvider>
+    </GestureHandlerRootView>
   );
 }

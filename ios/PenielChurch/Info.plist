@@ -62,7 +62,9 @@
     <key>NSMicrophoneUsageDescription</key>
     <string>Usado para gravar mensagens de voz e vídeos no chat.</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Usado para selecionar sua foto de perfil.</string>
+    <string>Usado para escolher fotos e vídeos para o chat, os Shorts dos grupos e a sua foto de perfil.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Usado para salvar no seu celular as fotos e vídeos recebidos no chat.</string>
     <key>NSUserNotificationsUsageDescription</key>
     <string>Receba notificações de aniversários e avisos da igreja.</string>
     <key>RCTNewArchEnabled</key>

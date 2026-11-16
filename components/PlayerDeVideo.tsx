@@ -1,76 +1,78 @@
 // components/PlayerDeVideo.tsx
 //
-// Vídeo do chat tocando DENTRO do app (pedido do Marcos, 11/11/2026). Antes
-// o toque abria o link no navegador/player do celular, fora do app.
-//
-// Usa o react-native-webview, que já está no binário (o mesmo do YouTube da
-// Home): um <video> HTML5 em tela cheia, com os controles do próprio sistema.
-// Assim funciona por atualização rápida, sem build. No próximo build dá para
-// trocar por um player nativo (expo-video).
-
-import React, { useMemo, useState } from 'react';
-import { Modal, View, TouchableOpacity, ActivityIndicator, StyleSheet, StatusBar, Linking, Text } from 'react-native';
-import { WebView } from 'react-native-webview';
+// Vídeo do chat (e da fila de Shorts) tocando DENTRO do app.
+// • 11/11/2026: primeira versão, com um <video> HTML numa WebView (dava para
+//   mandar por OTA).
+// • 16/11/2026 (app 1.6.0): player nativo do expo-video. Abre mais rápido,
+//   toca o .mov/HEVC do iPhone também no Android, tem tela cheia de verdade e,
+//   no iPhone, Picture-in-Picture. Botão "Salvar" grava o vídeo na galeria.
+import React, { useState } from 'react';
+import { Modal, View, TouchableOpacity, ActivityIndicator, StyleSheet, StatusBar, Linking, Text, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useEvent } from 'expo';
+import { salvarNaGaleria } from '../lib/salvarNaGaleria';
 
-function htmlDoVideo(url: string) {
-  const seguro = url.replace(/"/g, '&quot;');
-  return `<!doctype html><html><head>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}
-video{width:100%;height:100%;object-fit:contain;background:#000}</style></head>
-<body><video src="${seguro}" controls autoplay playsinline webkit-playsinline preload="auto"></video>
-<script>
-  var v=document.querySelector('video');
-  v.addEventListener('playing',function(){window.ReactNativeWebView.postMessage('tocando')});
-  v.addEventListener('error',function(){window.ReactNativeWebView.postMessage('erro')});
-</script></body></html>`;
+function Tocador({ url }: { url: string }) {
+  const { t } = useTranslation();
+  const player = useVideoPlayer(url, p => { p.loop = false; p.play(); });
+  const { status } = useEvent(player, 'statusChange', { status: player.status });
+  return (
+    <>
+      <VideoView
+        player={player}
+        style={st.video}
+        contentFit="contain"
+        nativeControls
+        fullscreenOptions={{ enable: true }}
+        allowsPictureInPicture={Platform.OS === 'ios'}
+      />
+      {(status === 'loading' || status === 'idle') && (
+        <View style={st.centro} pointerEvents="none"><ActivityIndicator color="#fff" size="large" /></View>
+      )}
+      {status === 'error' && (
+        <View style={st.centro}>
+          <Text style={st.erroTexto}>{t('player.naoTocou')}</Text>
+          <TouchableOpacity style={st.botao} onPress={() => Linking.openURL(url).catch(() => {})}>
+            <Ionicons name="open-outline" size={16} color="#fff" />
+            <Text style={st.botaoTexto}>{t('player.abrirFora')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </>
+  );
 }
 
-export default function PlayerDeVideo({ url, onFechar }: { url: string | null; onFechar: () => void }) {
+export default function PlayerDeVideo({ url, onFechar, podeSalvar = true }: {
+  url: string | null; onFechar: () => void; podeSalvar?: boolean;
+}) {
   const insets = useSafeAreaInsets();
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState(false);
-  const html = useMemo(() => (url ? htmlDoVideo(url) : ''), [url]);
+  const { t } = useTranslation();
+  const [salvando, setSalvando] = useState(false);
 
-  const fechar = () => { setCarregando(true); setErro(false); onFechar(); };
+  const salvar = async () => {
+    if (!url || salvando) return;
+    setSalvando(true);
+    await salvarNaGaleria(url, 'video');
+    setSalvando(false);
+  };
 
   return (
-    <Modal visible={!!url} animationType="fade" onRequestClose={fechar} supportedOrientations={['portrait', 'landscape']}>
+    <Modal visible={!!url} animationType="fade" onRequestClose={onFechar} supportedOrientations={['portrait', 'landscape']}>
       <StatusBar barStyle="light-content" />
       <View style={st.fundo}>
-        {!!url && (
-          <WebView
-            source={{ html, baseUrl: 'https://localhost' }}
-            style={st.web}
-            originWhitelist={['*']}
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            allowsFullscreenVideo
-            javaScriptEnabled
-            onMessage={e => {
-              if (e.nativeEvent.data === 'tocando') setCarregando(false);
-              if (e.nativeEvent.data === 'erro') { setCarregando(false); setErro(true); }
-            }}
-            onLoadEnd={() => setTimeout(() => setCarregando(false), 2500)}
-          />
-        )}
-        {carregando && !erro && (
-          <View style={st.centro} pointerEvents="none"><ActivityIndicator color="#fff" size="large" /></View>
-        )}
-        {erro && (
-          <View style={st.centro}>
-            <Text style={st.erroTexto}>Não foi possível tocar aqui.</Text>
-            <TouchableOpacity style={st.botao} onPress={() => { if (url) Linking.openURL(url).catch(() => {}); }}>
-              <Ionicons name="open-outline" size={16} color="#fff" />
-              <Text style={st.botaoTexto}>Abrir no player do celular</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        <TouchableOpacity style={[st.fechar, { top: insets.top + 10 }]} onPress={fechar} hitSlop={12} accessibilityLabel="Fechar vídeo">
+        {!!url && <Tocador key={url} url={url} />}
+        <TouchableOpacity style={[st.redondo, { top: insets.top + 10, left: 14 }]} onPress={onFechar} hitSlop={12} accessibilityLabel={t('player.fechar')}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>
+        {podeSalvar && !!url && (
+          <TouchableOpacity style={[st.redondo, { top: insets.top + 10, right: 14 }]} onPress={salvar} hitSlop={12}
+            accessibilityLabel={t('galeria.titulo')} disabled={salvando}>
+            {salvando ? <ActivityIndicator color="#fff" /> : <Ionicons name="download-outline" size={22} color="#fff" />}
+          </TouchableOpacity>
+        )}
       </View>
     </Modal>
   );
@@ -78,9 +80,9 @@ export default function PlayerDeVideo({ url, onFechar }: { url: string | null; o
 
 const st = StyleSheet.create({
   fundo: { flex: 1, backgroundColor: '#000' },
-  web: { flex: 1, backgroundColor: '#000' },
+  video: { flex: 1, backgroundColor: '#000' },
   centro: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 14 },
-  fechar: { position: 'absolute', left: 14, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  redondo: { position: 'absolute', width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   erroTexto: { color: '#fff', fontSize: 15 },
   botao: { flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 16 },
   botaoTexto: { color: '#fff', fontWeight: '700' },

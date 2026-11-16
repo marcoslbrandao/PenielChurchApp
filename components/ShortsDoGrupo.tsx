@@ -23,6 +23,7 @@ import { enviarArquivo, tamanhoLocal } from '../lib/chatGeral';
 import { useTheme } from '../lib/theme';
 import PlayerDeVideo from './PlayerDeVideo';
 import { requireOptionalNativeModule } from 'expo-modules-core';
+import { Video as Compressor } from 'react-native-compressor';
 
 // Câmera própria (720p, 2,5 Mbps) só no app 1.5.3 em diante, que tem o
 // expo-camera. No app antigo, o import do expo-camera quebraria, por isso o
@@ -62,7 +63,10 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
   const insets = useSafeAreaInsets();
   const [fila, setFila] = useState<ItemFila[]>([]);
   const [filaAberta, setFilaAberta] = useState(false);
-  const [envio, setEnvio] = useState<{ uri: string; duracao: number; mime?: string | null } | null>(null);
+  // comprimir: vídeo da galeria no Android, que o sistema entrega sem
+  // compressão (Full HD de 10 min pode passar de 300 MB). App 1.6.0.
+  const [envio, setEnvio] = useState<{ uri: string; duracao: number; mime?: string | null; comprimir?: boolean } | null>(null);
+  const [progresso, setProgresso] = useState<number | null>(null);
   const [mensagem, setMensagem] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [editando, setEditando] = useState<ItemFila | null>(null);
@@ -77,18 +81,20 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
   useEffect(() => { carregar(); }, [carregar]);
 
   // ── Escolher / gravar ──
-  const aceitar = (a: ImagePicker.ImagePickerAsset) => {
+  const aceitar = (a: ImagePicker.ImagePickerAsset, daGaleria = false) => {
     const dur = Math.round((a.duration ?? 0) / 1000);
     if (dur > MAX_S + 3) { Alert.alert(t('shorts.titulo'), t('shorts.muitoLongo')); return; }
     setMensagem('');
-    setEnvio({ uri: a.uri, duracao: dur, mime: a.mimeType });
+    setEnvio({ uri: a.uri, duracao: dur, mime: a.mimeType, comprimir: daGaleria && Platform.OS === 'android' });
   };
   const daGaleria = async () => {
     const r = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['videos'], videoMaxDuration: MAX_S, quality: 1,
       videoExportPreset: ImagePicker.VideoExportPreset.H264_960x540,
+      // iPhone: abre a tela do sistema para cortar o começo e o fim (1.6.0).
+      allowsEditing: Platform.OS === 'ios',
     });
-    if (!r.canceled && r.assets?.[0]) aceitar(r.assets[0]);
+    if (!r.canceled && r.assets?.[0]) aceitar(r.assets[0], true);
   };
   const [cameraAberta, setCameraAberta] = useState(false);
   const gravar = async () => {
@@ -112,13 +118,30 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
 
   const enviar = async () => {
     if (!envio || !userId) return;
-    const tam = await tamanhoLocal(envio.uri);
-    if (tam && tam > MAX_MB * 1024 * 1024) { Alert.alert(t('shorts.titulo'), t('shorts.muitoGrande', { mb: MAX_MB })); return; }
     setEnviando(true);
+    let uri = envio.uri;
+    let mime = envio.mime ?? null;
+    // Android, vídeo da galeria: comprime no próprio celular antes de subir
+    // (~720p, 2,5 Mbps, igual à câmera do app: ~19 MB por minuto).
+    if (envio.comprimir) {
+      try {
+        setProgresso(0);
+        uri = await Compressor.compress(envio.uri, {
+          compressionMethod: 'manual', maxSize: 1280, bitrate: 2_500_000, preserveMetadata: false, progressDivider: 5,
+        }, p => setProgresso(p));
+        mime = 'video/mp4';
+      } catch (e) {
+        console.log('compressao falhou, envia o original:', e);
+      } finally {
+        setProgresso(null);
+      }
+    }
+    const tam = await tamanhoLocal(uri);
+    if (tam && tam > MAX_MB * 1024 * 1024) { setEnviando(false); Alert.alert(t('shorts.titulo'), t('shorts.muitoGrande', { mb: MAX_MB })); return; }
     let caminho: string | null = null;
     try {
-      const ehMov = (envio.mime ?? '').includes('quicktime') || /\.mov$/i.test(envio.uri);
-      caminho = await enviarArquivo(envio.uri, userId, ehMov ? 'mov' : 'mp4', ehMov ? 'video/quicktime' : 'video/mp4', false,
+      const ehMov = (mime ?? '').includes('quicktime') || /\.mov$/i.test(uri);
+      caminho = await enviarArquivo(uri, userId, ehMov ? 'mov' : 'mp4', ehMov ? 'video/quicktime' : 'video/mp4', false,
         { bucket: 'shorts-fila', prefixo: grupo });
       const { data, error } = await supabase.from('shorts_fila')
         .insert({ grupo, video_path: caminho, duracao_s: envio.duracao || null, mensagem: mensagem.trim() || null })
@@ -190,7 +213,11 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
             <TouchableOpacity style={[st.botaoGrande, { backgroundColor: cor }, enviando && { opacity: 0.6 }]} onPress={enviar} disabled={enviando}>
               {enviando ? <ActivityIndicator color="#fff" /> : <Text style={st.botaoTexto}>{ehLider ? t('shorts.continuar') : t('shorts.enviar')}</Text>}
             </TouchableOpacity>
-            {enviando && <Text style={[st.sub, { color: C.textMuted, textAlign: 'center' }]}>{t('shorts.enviandoAguarde')}</Text>}
+            {enviando && (
+              <Text style={[st.sub, { color: C.textMuted, textAlign: 'center' }]}>
+                {progresso !== null ? t('shorts.comprimindo', { pct: Math.round(progresso * 100) }) : t('shorts.enviandoAguarde')}
+              </Text>
+            )}
             {!enviando && (
               <TouchableOpacity onPress={() => setEnvio(null)} style={{ alignSelf: 'center', padding: 12 }}>
                 <Text style={{ color: C.textMuted, fontWeight: '700' }}>{t('common.cancelar')}</Text>
@@ -237,7 +264,7 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
           </View>
         </View>
       </Modal>
-      <PlayerDeVideo url={videoUrl} onFechar={() => setVideoUrl(null)} />
+      <PlayerDeVideo url={videoUrl} onFechar={() => setVideoUrl(null)} podeSalvar={false} />
     </View>
   );
 }

@@ -9,6 +9,8 @@ buildscript {
     classpath('com.android.tools.build:gradle')
     classpath('com.facebook.react:react-native-gradle-plugin')
     classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    // Firebase Cloud Messaging: notificacoes no Android (16/11/2026, app 1.6.0)
+    classpath('com.google.gms:google-services:4.4.2')
   }
 }
 

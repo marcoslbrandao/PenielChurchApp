@@ -6,8 +6,10 @@
 //    versão publicada. Se for maior que a instalada, o app mostra um aviso que
 //    dá para fechar. A Apple demora algumas horas (até ~1 dia) para essa
 //    consulta enxergar uma versão recém-aprovada — normal.
-//    No Android não existe consulta pública equivalente; a API oficial
-//    (in-app updates) é nativa e precisaria de um build novo.
+//    No Android (desde a 1.6.0): a API oficial do Google Play (in-app updates,
+//    pacote expo-in-app-updates) diz se há versão nova. Ela não informa o
+//    número da versão, só que existe uma, e o botão abre a atualização do
+//    próprio Play por cima do app.
 //
 // 2. `app_versao.versao_minima` (Supabase), MANUAL, iPhone e Android: quem
 //    está abaixo dela vê uma tela sem botão de fechar. Para correções que não
@@ -19,6 +21,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { versaoDoBinario } from './recursosNativos';
+import * as InAppUpdates from 'expo-in-app-updates';
 
 const BUNDLE_ID = 'org.uk.penielchurch.app';
 const APPLE_ID = '6776841788';
@@ -82,7 +85,21 @@ async function versoesDoBanco(): Promise<{ minima: string | null; recomendada: s
 export type SituacaoDaVersao =
   | { tipo: 'ok' }
   | { tipo: 'obrigatoria'; instalada: string; minima: string }
-  | { tipo: 'disponivel'; instalada: string; nova: string };
+  // semNumero: o Google Play avisou que há versão nova, mas sem o número.
+  | { tipo: 'disponivel'; instalada: string; nova: string; semNumero?: boolean };
+
+/** Android: o Google Play diz se há versão nova (sem o número). */
+async function haVersaoNoPlay(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  const r = await comTempoLimite(InAppUpdates.checkForUpdate(), 8000);
+  return !!r?.updateAvailable;
+}
+
+/** Android: abre a atualização do Google Play por cima do app. false = não deu. */
+export async function atualizarPeloPlay(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  try { return await InAppUpdates.startUpdate(true); } catch { return false; }
+}
 
 // Qualquer falha (sem internet, loja fora, tabela ainda não criada) cai em
 // 'ok': na dúvida, NUNCA bloquear o app de ninguém.
@@ -90,9 +107,10 @@ export async function verificarVersao(): Promise<SituacaoDaVersao> {
   const instalada = versaoDoBinario();
   if (!instalada || (Platform.OS !== 'ios' && Platform.OS !== 'android')) return { tipo: 'ok' };
 
-  const [{ minima, recomendada }, naAppStore] = await Promise.all([
+  const [{ minima, recomendada }, naAppStore, noPlay] = await Promise.all([
     versoesDoBanco(),
     Platform.OS === 'ios' ? versaoNaAppStore() : Promise.resolve(null),
+    haVersaoNoPlay(),
   ]);
   // A maior entre a App Store (só iPhone) e a recomendada pelo admin.
   const naLoja = [naAppStore, recomendada]
@@ -105,6 +123,8 @@ export async function verificarVersao(): Promise<SituacaoDaVersao> {
   if (naLoja && compararVersoes(instalada, naLoja) < 0) {
     return { tipo: 'disponivel', instalada, nova: naLoja };
   }
+  // O "Agora não" é guardado por versão; sem número, vale a chave 'play'.
+  if (noPlay) return { tipo: 'disponivel', instalada, nova: 'play', semNumero: true };
   return { tipo: 'ok' };
 }
 

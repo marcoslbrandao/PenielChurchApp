@@ -7,6 +7,8 @@
 //   autorização de imagem e publica (ou recusa). Publicar dispara o GitHub
 //   Actions, que aplica a arte, legenda e sobe para o YouTube da igreja. O
 //   Short pronto aparece sozinho na seção Shorts do grupo.
+// • Agendar (16/11/2026): o líder escolhe dia e hora; o vídeo fica na fila
+//   como "Agendado" e um cron no Supabase manda publicar na hora certa.
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, ScrollView, Switch,
@@ -39,12 +41,17 @@ const MAX_MB = 300;
 
 type ItemFila = {
   id: string; grupo: string; autor: string; autor_nome: string | null; video_path: string; duracao_s: number | null;
-  mensagem: string | null; status: 'na_fila' | 'aprovado' | 'processando' | 'publicado' | 'recusado' | 'erro';
+  mensagem: string | null; status: 'na_fila' | 'agendado' | 'aprovado' | 'processando' | 'publicado' | 'recusado' | 'erro';
+  publicar_em: string | null;
   titulo: string | null; subtitulo: string | null; legendas: boolean; arte: 'faixa' | 'limpa'; erro: string | null; created_at: string;
 };
 
 const p2 = (n: number) => String(n).padStart(2, '0');
 const dataBR = (iso: string) => { const d = new Date(iso); return `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`; };
+const horaBR = (iso: string) => { const d = new Date(iso); return `${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+const quandoBR = (iso: string) => `${dataBR(iso)} · ${horaBR(iso)}`;
+// Hora digitada: só números, com os dois-pontos colocados sozinhos (1930 → 19:30).
+const mascaraHora = (txt: string) => { const d = txt.replace(/\D/g, '').slice(0, 4); return d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d; };
 const minSeg = (s: number | null) => (s ? `${Math.floor(s / 60)}:${p2(Math.round(s % 60))}` : '');
 
 export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId, onPublicado }: {
@@ -64,7 +71,7 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
   const carregar = useCallback(async () => {
     if (!ehLider) return;
     const { data } = await supabase.from('shorts_fila').select('*').eq('grupo', grupo)
-      .in('status', ['na_fila', 'aprovado', 'processando', 'erro']).order('created_at', { ascending: true });
+      .in('status', ['na_fila', 'agendado', 'aprovado', 'processando', 'erro']).order('created_at', { ascending: true });
     setFila((data ?? []) as ItemFila[]);
   }, [grupo, ehLider]);
   useEffect(() => { carregar(); }, [carregar]);
@@ -216,6 +223,7 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: C.text, fontWeight: '700' }} numberOfLines={1}>{item.titulo || item.autor_nome || t('shorts.semTitulo')}</Text>
                         <Text style={[st.sub, { color: C.textMuted }]}>{item.autor_nome} · {dataBR(item.created_at)} · {minSeg(item.duracao_s)}</Text>
+                        {item.status === 'agendado' && !!item.publicar_em && <Text style={[st.sub, { color: cor, fontWeight: '700' }]}>📅 {quandoBR(item.publicar_em)}</Text>}
                         {!!item.mensagem && <Text style={[st.sub, { color: C.text }]} numberOfLines={2}>💬 {item.mensagem}</Text>}
                       </View>
                       <Text style={[st.selo, { color: item.status === 'erro' ? '#C0392B' : cor, backgroundColor: (item.status === 'erro' ? '#C0392B' : cor) + '18' }]}>
@@ -237,9 +245,18 @@ export default function ShortsDoGrupo({ grupo, cor, podeEnviar, ehLider, userId,
 function EditorShort({ item, cor, onVoltar, onVer, onFeito }: {
   item: ItemFila; cor: string; onVoltar: () => void; onVer: () => void; onFeito: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors: C } = useTheme();
   const [titulo, setTitulo] = useState(item.titulo ?? '');
+  // Agendar: dia (próximos 14 dias) + hora digitada.
+  const inicioDoDia = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dias = Array.from({ length: 14 }, (_, i) => { const d = inicioDoDia(new Date()); d.setDate(d.getDate() + i); return d; });
+  const [quando, setQuando] = useState<'agora' | 'agendar'>(item.status === 'agendado' ? 'agendar' : 'agora');
+  const [dia, setDia] = useState<Date>(() => item.publicar_em ? inicioDoDia(new Date(item.publicar_em)) : dias[1]);
+  const [hora, setHora] = useState(item.publicar_em ? horaBR(item.publicar_em) : '19:00');
+  const nomeDia = (d: Date) => {
+    try { return d.toLocaleDateString(i18n.language || 'pt', { weekday: 'short' }).replace('.', ''); } catch { return ''; }
+  };
   const [subtitulo, setSubtitulo] = useState(item.subtitulo ?? '');
   const [legendas, setLegendas] = useState(item.legendas ?? true);
   const [arte, setArte] = useState<'faixa' | 'limpa'>(item.arte ?? 'faixa');
@@ -250,15 +267,38 @@ function EditorShort({ item, cor, onVoltar, onVer, onFeito }: {
   const publicar = async () => {
     if (!titulo.trim()) return Alert.alert(t('shorts.titulo'), t('shorts.faltaTitulo'));
     if (!ok) return Alert.alert(t('shorts.titulo'), t('shorts.faltaConsentimento'));
+    let publicarEm: Date | null = null;
+    if (quando === 'agendar') {
+      const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(hora.trim());
+      if (!m) return Alert.alert(t('shorts.titulo'), t('shorts.horaInvalida'));
+      publicarEm = new Date(dia.getFullYear(), dia.getMonth(), dia.getDate(), Number(m[1]), Number(m[2]));
+      if (publicarEm.getTime() < Date.now() + 15 * 60_000) return Alert.alert(t('shorts.titulo'), t('shorts.horaPassada'));
+    }
     setSalvando(true);
     const { data, error } = await supabase.rpc('shorts_aprovar', {
       p_id: item.id, p_titulo: titulo, p_subtitulo: subtitulo, p_legendas: legendas, p_arte: arte, p_consentimento: ok,
+      p_publicar_em: publicarEm ? publicarEm.toISOString() : null,
     });
+    if (!error && data === 'agendado' && publicarEm) {
+      setSalvando(false);
+      Alert.alert(t('shorts.titulo'), t('shorts.agendadoOk', { quando: quandoBR(publicarEm.toISOString()) }));
+      return onFeito();
+    }
     if (error || data !== 'ok') { setSalvando(false); return Alert.alert(t('shorts.titulo'), String(error?.message ?? data)); }
     const r = await supabase.functions.invoke('shorts-publicar', { body: { id: item.id } });
     setSalvando(false);
     Alert.alert(t('shorts.titulo'), r.data?.disparado ? t('shorts.publicando') : t('shorts.aprovadoAguardando'));
     onFeito();
+  };
+  const desagendar = () => {
+    Alert.alert(t('shorts.desagendar'), t('shorts.desagendarSub'), [
+      { text: t('common.cancelar'), style: 'cancel' },
+      { text: t('shorts.desagendar'), style: 'destructive', onPress: async () => {
+        const { data, error } = await supabase.rpc('shorts_desagendar', { p_id: item.id });
+        if (error || data !== 'ok') return Alert.alert(t('shorts.titulo'), String(error?.message ?? data));
+        onFeito();
+      } },
+    ]);
   };
   // Recusado: o vídeo não vai ser usado, então sai do Storage (12/11/2026).
   const apagarVideo = async () => {
@@ -283,6 +323,9 @@ function EditorShort({ item, cor, onVoltar, onVer, onFeito }: {
       {!!item.mensagem && <Text style={[st.sub, { color: C.text, marginTop: 6 }]}>💬 {item.mensagem}</Text>}
       {item.status === 'erro' && <Text style={[st.sub, { color: '#C0392B', marginTop: 6 }]}>⚠️ {t('shorts.deuErro')} {item.erro ?? ''}</Text>}
       {travado && <Text style={[st.sub, { color: cor, marginTop: 6 }]}>⏳ {t('shorts.emPreparo')}</Text>}
+      {item.status === 'agendado' && !!item.publicar_em && (
+        <Text style={[st.sub, { color: cor, marginTop: 6, fontWeight: '700' }]}>📅 {t('shorts.agendadoPara', { quando: quandoBR(item.publicar_em) })}</Text>
+      )}
 
       <TouchableOpacity style={[st.botao, { backgroundColor: cor + '18', alignSelf: 'flex-start', marginTop: 10 }]} onPress={onVer}>
         <Ionicons name="play-circle-outline" size={18} color={cor} />
@@ -318,9 +361,47 @@ function EditorShort({ item, cor, onVoltar, onVer, onFeito }: {
       </TouchableOpacity>
 
       {!travado && (
-        <TouchableOpacity style={[st.botaoGrande, { backgroundColor: cor }, salvando && { opacity: 0.6 }]} onPress={publicar} disabled={salvando}>
-          {salvando ? <ActivityIndicator color="#fff" /> : <Text style={st.botaoTexto}>{item.status === 'erro' ? t('shorts.tentarDeNovo') : t('shorts.publicar')}</Text>}
-        </TouchableOpacity>
+        <>
+          <Text style={[st.rotulo, { color: C.textMuted }]}>{t('shorts.quando')}</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {(['agora', 'agendar'] as const).map(q => (
+              <TouchableOpacity key={q} onPress={() => setQuando(q)}
+                style={[st.chip, { borderColor: cor + '66', backgroundColor: quando === q ? cor : 'transparent' }]}>
+                <Text style={{ color: quando === q ? '#fff' : C.text, fontWeight: '700', fontSize: 12.5 }}>{t(`shorts.quando_${q}`)}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {quando === 'agendar' && (
+            <>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }} contentContainerStyle={{ gap: 8 }}>
+                {dias.map(d => {
+                  const sel = d.getTime() === dia.getTime();
+                  return (
+                    <TouchableOpacity key={d.getTime()} onPress={() => setDia(d)}
+                      style={[st.diaChip, { borderColor: cor + '66', backgroundColor: sel ? cor : 'transparent' }]}>
+                      <Text style={{ color: sel ? '#fff' : C.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'capitalize' }}>{nomeDia(d)}</Text>
+                      <Text style={{ color: sel ? '#fff' : C.text, fontSize: 14, fontWeight: '800' }}>{p2(d.getDate())}/{p2(d.getMonth() + 1)}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                <Text style={{ color: C.text, fontWeight: '700' }}>{t('shorts.hora')}</Text>
+                <TextInput style={[st.campo, { color: C.text, borderColor: C.border, width: 90, textAlign: 'center' }]} value={hora}
+                  onChangeText={x => setHora(mascaraHora(x))} keyboardType="number-pad" maxLength={5} placeholder="19:00" placeholderTextColor={C.textDim} />
+              </View>
+              <Text style={[st.sub, { color: C.textMuted, marginTop: 6 }]}>{t('shorts.agendarSub')}</Text>
+            </>
+          )}
+          <TouchableOpacity style={[st.botaoGrande, { backgroundColor: cor }, salvando && { opacity: 0.6 }]} onPress={publicar} disabled={salvando}>
+            {salvando ? <ActivityIndicator color="#fff" /> : <Text style={st.botaoTexto}>{quando === 'agendar' ? t('shorts.agendarBotao') : item.status === 'erro' ? t('shorts.tentarDeNovo') : t('shorts.publicar')}</Text>}
+          </TouchableOpacity>
+          {item.status === 'agendado' && (
+            <TouchableOpacity onPress={desagendar} style={{ alignSelf: 'center', padding: 12 }}>
+              <Text style={{ color: C.textMuted, fontWeight: '700' }}>{t('shorts.desagendar')}</Text>
+            </TouchableOpacity>
+          )}
+        </>
       )}
       {!travado && (
         <TouchableOpacity onPress={recusar} style={{ alignSelf: 'center', padding: 12 }}>
@@ -346,5 +427,6 @@ const st = StyleSheet.create({
   item: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   selo: { fontSize: 11, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, overflow: 'hidden' },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1 },
+  diaChip: { alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, minWidth: 58 },
   linhaSwitch: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14 },
 });

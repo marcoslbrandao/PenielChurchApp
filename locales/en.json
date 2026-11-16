@@ -2394,7 +2394,20 @@
     "recusar": "Don’t publish",
     "recusarSub": "Want to leave a note for whoever sent it?",
     "pararGravacao": "Stop recording",
-    "virarCamera": "Flip camera"
+    "virarCamera": "Flip camera",
+    "status_agendado": "Scheduled",
+    "quando": "When to publish",
+    "quando_agora": "⚡ Now",
+    "quando_agendar": "📅 Schedule",
+    "hora": "Time",
+    "agendarSub": "The video starts being prepared about 10 minutes before and goes live on YouTube and in the app around the chosen time. Until then it stays in the queue and you can change or cancel it.",
+    "agendarBotao": "Schedule",
+    "agendadoOk": "Scheduled! The video goes out on {{quando}}. It stays in the Queue as \"Scheduled\" until then.",
+    "agendadoPara": "Scheduled for {{quando}}",
+    "horaInvalida": "Type the time like this: 19:30.",
+    "horaPassada": "Choose a time at least 15 minutes from now.",
+    "desagendar": "Cancel schedule",
+    "desagendarSub": "The video goes back to the queue with no date, and you can publish or schedule it again."
   },
   "mensagens": {
     "ouvir": "Listen to the message"

@@ -2394,7 +2394,20 @@
     "recusar": "Não publicar",
     "recusarSub": "Quer deixar um recado para quem enviou?",
     "pararGravacao": "Parar gravação",
-    "virarCamera": "Virar câmera"
+    "virarCamera": "Virar câmera",
+    "status_agendado": "Agendado",
+    "quando": "Quando publicar",
+    "quando_agora": "⚡ Agora",
+    "quando_agendar": "📅 Agendar",
+    "hora": "Hora",
+    "agendarSub": "O vídeo começa a ser preparado uns 10 minutos antes e sai no YouTube e no app por volta da hora marcada. Até lá, ele fica guardado na fila e você pode mudar ou cancelar.",
+    "agendarBotao": "Agendar publicação",
+    "agendadoOk": "Agendado! O vídeo sai em {{quando}}. Ele fica na Fila como \"Agendado\" até lá.",
+    "agendadoPara": "Agendado para {{quando}}",
+    "horaInvalida": "Digite a hora assim: 19:30.",
+    "horaPassada": "Escolha um horário daqui a pelo menos 15 minutos.",
+    "desagendar": "Cancelar agendamento",
+    "desagendarSub": "O vídeo volta para a fila sem data, e você pode publicar ou agendar de novo."
   },
   "mensagens": {
     "ouvir": "Ouvir a mensagem"

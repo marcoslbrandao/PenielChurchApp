@@ -21,7 +21,11 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { versaoDoBinario } from './recursosNativos';
-import * as InAppUpdates from 'expo-in-app-updates';
+// SO ANDROID. O expo-in-app-updates pede iOS 16.4 e o projeto e iOS 15.1, entao
+// o modulo nativo NAO entrou no binario do iPhone. Importar no topo fazia o
+// app fechar ao abrir no iPhone (1.6.0). Nunca trocar por import no topo.
+const InAppUpdates: typeof import('expo-in-app-updates') | null =
+  Platform.OS === 'android' ? require('expo-in-app-updates') : null;
 
 const BUNDLE_ID = 'org.uk.penielchurch.app';
 const APPLE_ID = '6776841788';
@@ -91,14 +95,14 @@ export type SituacaoDaVersao =
 /** Android: o Google Play diz se há versão nova (sem o número). */
 async function haVersaoNoPlay(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
-  const r = await comTempoLimite(InAppUpdates.checkForUpdate(), 8000);
+  const r = await comTempoLimite(InAppUpdates!.checkForUpdate(), 8000);
   return !!r?.updateAvailable;
 }
 
 /** Android: abre a atualização do Google Play por cima do app. false = não deu. */
 export async function atualizarPeloPlay(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
-  try { return await InAppUpdates.startUpdate(true); } catch { return false; }
+  try { return await InAppUpdates!.startUpdate(true); } catch { return false; }
 }
 
 // Qualquer falha (sem internet, loja fora, tabela ainda não criada) cai em
